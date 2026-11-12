@@ -4,3 +4,7 @@
 # Local OS/editor noise
 .DS_Store
 *.swp
+
+# Python bytecode
+__pycache__/
+*.pyc
