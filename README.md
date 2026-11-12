@@ -2,12 +2,13 @@
 
 Signed package repository for [EthOS NAS](https://github.com/SyncHot/ethos-nas).
 
-The catalog currently contains two demo apps:
+The catalog currently contains three packages:
 
 | Package | Version | Port | What it is |
 |---|---|---|---|
 | `ethos-welcome` 🌅 | 1.0.0 | 8090 | Static welcome page served by nginx |
 | `tic-tac-toe` ❌ | 1.0.0 | 8091 | Two-player tic-tac-toe with score tracking |
+| `ethos-antivirus` 🛡️ | 1.0.0 | 8092 | ClamAV on-demand scanner for `/home`, `/mnt`, `/media` |
 
 ## Add this repository
 
@@ -25,7 +26,12 @@ A pinned source verifies `index.json.sig` before reading the catalog, and every
 manifest, compose file and package file is checked against its `sha256`.
 
 After adding the source, open **Available**, select a package, and click
-**Install**. Each app publishes its own nginx port (8090 or 8091).
+**Install**. Each web UI publishes its own port (8090, 8091 or 8092).
+
+The antivirus package runs ClamD as root **inside its container** so it can read
+shares with `0660` permissions. The host shares are mounted read-only and the
+container has no writable host bind. Its web panel has no separate login, so use
+it on a trusted LAN and do not expose port 8092 to the internet.
 
 ## Repository layout
 

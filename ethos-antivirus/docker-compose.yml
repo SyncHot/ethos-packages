@@ -1,0 +1,44 @@
+services:
+  clamav:
+    image: clamav/clamav:stable
+    container_name: ethos-antivirus-clamd
+    # NAS files often use 0660 permissions; scan as root to reach every share.
+    # The host mounts below are read-only and the container has no write binds.
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        sed -i 's/^User clamav$/User root/' /etc/clamav/clamd.conf
+        exec /init
+    environment:
+      CLAMD_CONF_User: root
+    volumes:
+      - clamav-db:/var/lib/clamav
+      - /home:/scan/home:ro
+      - /mnt:/scan/mnt:ro
+      - /media:/scan/media:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+
+  ui:
+    image: python:3.12-alpine
+    container_name: ethos-antivirus
+    command: ["python", "/app/app.py"]
+    ports:
+      - "8092:8092"
+    volumes:
+      - ./server:/app:ro
+    environment:
+      CLAMD_HOST: clamav
+      CLAMD_PORT: "3310"
+    depends_on:
+      - clamav
+    restart: unless-stopped
+
+volumes:
+  clamav-db:

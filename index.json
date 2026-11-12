@@ -4,8 +4,27 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-12T15:58:23+00:00",
+  "generated_at": "2026-11-12T16:12:22+00:00",
   "packages": [
+    {
+      "id": "ethos-antivirus",
+      "name": "EthOS AntiVirus",
+      "version": "1.0.0",
+      "description": "ClamAV-powered on-demand antivirus scanner for NAS shares. Read-only scans, signature updates, and a simple web panel. Independent EthOS package, not affiliated with Synology.",
+      "icon": "🛡️",
+      "icon_url": null,
+      "category": "security",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "screenshots": [],
+      "changelog": "Initial release: ClamAV scanning panel with clean/infected results and EICAR-ready verification.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
+      "manifest_sha256": "3d2f0392f96b653c0445d54dd9db08ee20b58af50da68562897992501aad74a2",
+      "size_bytes": 19969
+    },
     {
       "id": "ethos-welcome",
       "name": "EthOS Welcome",
@@ -42,7 +61,7 @@
       "changelog": "Initial release: local two-player game with score tracking.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/manifest.json",
       "manifest_sha256": "3ec7328305a075a0db30f1ef6a9e694111a6b3b0d6a3fb0d077cf22f9b17eb52",
-      "size_bytes": 7808
+      "size_bytes": 7611
     }
   ]
 }
