@@ -4,12 +4,12 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-12T16:12:22+00:00",
+  "generated_at": "2026-11-12T16:26:08+00:00",
   "packages": [
     {
       "id": "ethos-antivirus",
       "name": "EthOS AntiVirus",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "ClamAV-powered on-demand antivirus scanner for NAS shares. Read-only scans, signature updates, and a simple web panel. Independent EthOS package, not affiliated with Synology.",
       "icon": "🛡️",
       "icon_url": null,
@@ -20,10 +20,10 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "Initial release: ClamAV scanning panel with clean/infected results and EICAR-ready verification.",
+      "changelog": "1.0.1: clearer first-start status and a longer scan timeout for large shares. 1.0.0: initial ClamAV panel with clean/infected results and EICAR-ready verification.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
-      "manifest_sha256": "3d2f0392f96b653c0445d54dd9db08ee20b58af50da68562897992501aad74a2",
-      "size_bytes": 19969
+      "manifest_sha256": "e5cc48062fbdeda9ac63718db77253c55b17076092800335317525ee8e408d44",
+      "size_bytes": 20174
     },
     {
       "id": "ethos-welcome",

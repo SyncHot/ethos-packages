@@ -3,6 +3,7 @@
 
     const healthEl = document.getElementById('health');
     const statusEl = document.getElementById('status');
+    const startupEl = document.getElementById('startup');
     const pathEl = document.getElementById('path');
     const scanBtn = document.getElementById('scan');
     const results = document.getElementById('results');
@@ -23,19 +24,29 @@
             const response = await fetch('/api/health', { cache: 'no-store' });
             const data = await response.json();
             if (response.ok && data.status === 'ready') {
+                if (!ready && !scanning) statusEl.textContent = 'Ready.';
                 ready = true;
                 healthEl.className = 'pill ready';
                 healthEl.textContent = 'Scanner ready';
+                healthEl.title = data.engine || '';
                 engineEl.textContent = data.engine || '';
+                startupEl.hidden = true;
             } else {
                 ready = false;
                 healthEl.className = 'pill starting';
                 healthEl.textContent = 'Starting scanner…';
+                healthEl.title = data.detail || 'ClamAV is loading signatures';
+                startupEl.hidden = false;
+                if (!scanning) {
+                    statusEl.textContent = 'ClamAV is starting. The first run downloads signatures and can take a few minutes.';
+                }
             }
         } catch (_) {
             ready = false;
             healthEl.className = 'pill offline';
             healthEl.textContent = 'Scanner offline';
+            startupEl.hidden = false;
+            if (!scanning) statusEl.textContent = 'Waiting for the scanner container…';
         }
         scanBtn.disabled = scanning || !ready;
     }

@@ -23,6 +23,7 @@ HOST = "0.0.0.0"
 PORT = int(os.environ.get("PORT", "8092"))
 CLAMD_HOST = os.environ.get("CLAMD_HOST", "clamav")
 CLAMD_PORT = int(os.environ.get("CLAMD_PORT", "3310"))
+SCAN_TIMEOUT = int(os.environ.get("SCAN_TIMEOUT", "1800"))
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 ALLOWED_ROOTS = ("/home", "/mnt", "/media")
 MAX_RESPONSE = 16 * 1024 * 1024
@@ -59,7 +60,9 @@ def health() -> tuple[int, dict]:
     try:
         pong = clamd("zPING", timeout=5).strip()
     except OSError as exc:
-        return 503, {"status": "starting", "detail": str(exc)}
+        return 503, {"status": "starting",
+                      "detail": "ClamAV is starting; the first run downloads signatures",
+                      "error": str(exc)}
     if pong != "PONG":
         return 503, {"status": "starting", "detail": f"unexpected PING reply: {pong!r}"}
     return 200, {"status": "ready", "engine": engine_version(), "allowed_roots": list(ALLOWED_ROOTS)}
@@ -78,7 +81,7 @@ def scan_path(raw: str) -> dict:
     host_path = safe_host_path(raw)
     container_path = "/scan" + host_path
     # CONTSCAN handles both a single file and a directory tree.
-    output = clamd("zCONTSCAN " + container_path, timeout=600)
+    output = clamd("zCONTSCAN " + container_path, timeout=SCAN_TIMEOUT)
     clean = 0
     infected: list[dict] = []
     errors: list[str] = []
