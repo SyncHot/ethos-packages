@@ -1,0 +1,29 @@
+{
+  "schema": 2,
+  "name": "EthOS Community Packages",
+  "publisher": {
+    "name": "SyncHot"
+  },
+  "generated_at": "2026-11-12T15:47:50+00:00",
+  "packages": [
+    {
+      "id": "ethos-welcome",
+      "name": "EthOS Welcome",
+      "version": "1.0.0",
+      "description": "A tiny static welcome page for your NAS, served by nginx on port 8090.",
+      "icon": "🌅",
+      "icon_url": null,
+      "category": "demo",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "screenshots": [],
+      "changelog": "Initial release: static welcome page with a live clock.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/manifest.json",
+      "manifest_sha256": "117123ad6cde1a87176983daa3b4c5a5cbc1bb2ab88a9c0575372a8dcc8cfe85",
+      "size_bytes": 3155
+    }
+  ]
+}

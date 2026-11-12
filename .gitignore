@@ -1,0 +1,6 @@
+# Private keys never belong in a package repository
+*.key
+
+# Local OS/editor noise
+.DS_Store
+*.swp

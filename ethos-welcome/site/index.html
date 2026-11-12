@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EthOS Welcome</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main>
+        <div class="mark">◈</div>
+        <h1>Welcome to your NAS</h1>
+        <p class="lead">This page is served from a package installed through EthOS Package Center.</p>
+        <div class="clock" id="clock">--:--:--</div>
+        <div class="grid">
+            <section>
+                <h2>Package</h2>
+                <p><strong>ethos-welcome</strong> v1.0.0</p>
+            </section>
+            <section>
+                <h2>Container</h2>
+                <p>nginx:alpine · port 8090</p>
+            </section>
+            <section>
+                <h2>Next step</h2>
+                <p>Edit <code>site/index.html</code> in the package directory, then restart the package.</p>
+            </section>
+        </div>
+        <footer>Signed and delivered by <code>ethos-pack</code>.</footer>
+    </main>
+    <script>
+        const clock = document.getElementById('clock');
+        const tick = () => {
+            clock.textContent = new Date().toLocaleTimeString();
+        };
+        tick();
+        setInterval(tick, 1000);
+    </script>
+</body>
+</html>
