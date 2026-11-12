@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-12T15:47:50+00:00",
+  "generated_at": "2026-11-12T15:58:23+00:00",
   "packages": [
     {
       "id": "ethos-welcome",
@@ -24,6 +24,25 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/manifest.json",
       "manifest_sha256": "117123ad6cde1a87176983daa3b4c5a5cbc1bb2ab88a9c0575372a8dcc8cfe85",
       "size_bytes": 3155
+    },
+    {
+      "id": "tic-tac-toe",
+      "name": "Tic-Tac-Toe",
+      "version": "1.0.0",
+      "description": "A tiny two-player tic-tac-toe game for your NAS, served by nginx on port 8091.",
+      "icon": "❌",
+      "icon_url": null,
+      "category": "games",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "screenshots": [],
+      "changelog": "Initial release: local two-player game with score tracking.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/manifest.json",
+      "manifest_sha256": "3ec7328305a075a0db30f1ef6a9e694111a6b3b0d6a3fb0d077cf22f9b17eb52",
+      "size_bytes": 7808
     }
   ]
 }

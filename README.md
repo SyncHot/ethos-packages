@@ -2,11 +2,12 @@
 
 Signed package repository for [EthOS NAS](https://github.com/SyncHot/ethos-nas).
 
-The catalog currently contains one demo app:
+The catalog currently contains two demo apps:
 
 | Package | Version | Port | What it is |
 |---|---|---|---|
 | `ethos-welcome` 🌅 | 1.0.0 | 8090 | Static welcome page served by nginx |
+| `tic-tac-toe` ❌ | 1.0.0 | 8091 | Two-player tic-tac-toe with score tracking |
 
 ## Add this repository
 
@@ -23,8 +24,8 @@ sXiL7v0droY2BVyttuDt0Bqq6jB7MpknylJo+/iavqE=
 A pinned source verifies `index.json.sig` before reading the catalog, and every
 manifest, compose file and package file is checked against its `sha256`.
 
-After adding the source, open **Available**, select **EthOS Welcome**, and click
-**Install**. The package starts nginx on port 8090.
+After adding the source, open **Available**, select a package, and click
+**Install**. Each app publishes its own nginx port (8090 or 8091).
 
 ## Repository layout
 

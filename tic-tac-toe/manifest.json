@@ -1,0 +1,38 @@
+{
+  "schema": 2,
+  "id": "tic-tac-toe",
+  "name": "Tic-Tac-Toe",
+  "version": "1.0.0",
+  "description": "A tiny two-player tic-tac-toe game for your NAS, served by nginx on port 8091.",
+  "icon": "❌",
+  "category": "games",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "changelog": "Initial release: local two-player game with score tracking.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/docker-compose.yml",
+    "sha256": "dfeb0fa196bb147a26ec3d3c6bc69266ef0010cbb87bdfe72a9606bd7f204126"
+  },
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/site/index.html",
+      "sha256": "2d5a5034b39932849a3cc73f018651be7bc0ea5bd22225aa7c42d1f76a8859a6",
+      "path": "site/index.html",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/site/style.css",
+      "sha256": "c7ef2961f654a8f2976132c758a5847380ea30b0e2a1512bf45035322c76c90f",
+      "path": "site/style.css",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/site/game.js",
+      "sha256": "71e0da9b9229ec385e7f1a93f653c851c6dcec8566852dc470709eef68726420",
+      "path": "site/game.js",
+      "mode": 420
+    }
+  ]
+}

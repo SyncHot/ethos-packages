@@ -1,0 +1,9 @@
+services:
+  tic-tac-toe:
+    image: nginx:alpine
+    container_name: ethos-tic-tac-toe
+    ports:
+      - "8091:80"
+    volumes:
+      - ./site:/usr/share/nginx/html:ro
+    restart: unless-stopped
