@@ -29,7 +29,7 @@
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/frontend/app.js",
-      "sha256": "a6dc8e45b64df7fb2e37aa85f420c5dcac243687265caf921d14e90d2b89a8ff",
+      "sha256": "50307d14e42e07c66de8f1cc1251a8571981a6d4a202146f116e82c55db37ca8",
       "path": "frontend/app.js",
       "mode": 420
     },

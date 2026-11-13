@@ -637,7 +637,17 @@ export function render(container, ctx) {
         engineEl.textContent = data.engine || '';
     }
 
-    async function runScan(paths, label) {
+    function mergeResults(target, data) {
+        target.clean += data.clean || 0;
+        target.skipped += data.skipped || 0;
+        target.infected.push(...(data.infected || []));
+        target.errors.push(...(data.errors || []));
+        target.quarantined.push(...(data.quarantined || []));
+        target.engine = data.engine || target.engine;
+        return target;
+    }
+
+    async function runScan(paths, label, options = {}) {
         if (state.scanning) return;
         if (!state.ready) {
             setStatus('Scanner is not ready yet — wait for ClamAV to finish starting.', 'warn');
@@ -650,21 +660,27 @@ export function render(container, ctx) {
             setStatus('Enter a folder or file to scan.', 'warn');
             return;
         }
+        const groups = options.sequential ? targets.map((path) => [path]) : [targets];
+        const merged = { clean: 0, skipped: 0, infected: [], errors: [], quarantined: [], engine: '' };
         state.scanning = true;
         updateBusy();
         setStatus(`${label}: scanning ${targets.join(', ')}… this can take a while.`);
         try {
-            const data = await ctx.proxy('api/scan', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paths: targets, trigger: 'manual' }),
-            });
-            renderResults(data);
-            const threats = (data.infected || []).length;
-            const skipped = data.skipped || 0;
+            for (let index = 0; index < groups.length; index += 1) {
+                if (options.sequential) {
+                    setStatus(`${label}: scanning ${groups[index][0]}… (${index + 1}/${groups.length})`);
+                }
+                const data = await ctx.proxy('api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paths: groups[index], trigger: 'manual' }),
+                });
+                renderResults(mergeResults(merged, data));
+            }
+            const threats = merged.infected.length;
             setStatus(threats
                 ? `${label} finished: ${threats} threat${threats === 1 ? '' : 's'} found.`
-                : `${label} finished: ${data.clean || 0} clean file${data.clean === 1 ? '' : 's'} checked${skipped ? `, ${skipped} skipped` : ''}.`,
+                : `${label} finished: ${merged.clean} clean file${merged.clean === 1 ? '' : 's'} checked${merged.skipped ? `, ${merged.skipped} skipped` : ''}.`,
                 threats ? 'error' : '');
             if (threats) {
                 notify(`AntiVirus: ${threats} threat${threats === 1 ? '' : 's'} found`, 'error');
@@ -976,7 +992,7 @@ export function render(container, ctx) {
 
     root.querySelectorAll('[data-scan]').forEach((button) => {
         button.addEventListener('click', () => {
-            if (button.dataset.scan === 'full') runScan(state.allowedRoots, 'Full scan');
+            if (button.dataset.scan === 'full') runScan(state.allowedRoots, 'Full scan', { sequential: true });
             else if (button.dataset.scan === 'quick') {
                 const home = state.allowedRoots.includes('/home') ? '/home' : state.allowedRoots[0];
                 runScan([home], 'Quick scan');

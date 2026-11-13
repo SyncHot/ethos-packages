@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-13T08:33:44+00:00",
+  "generated_at": "2026-11-13T08:35:20+00:00",
   "packages": [
     {
       "id": "ethos-antivirus",
@@ -22,8 +22,8 @@
       "screenshots": [],
       "changelog": "2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
-      "manifest_sha256": "232c27ae1e99eafbe0bf39dc3028a0793f6d74594e3218e682cbe80acc59011c",
-      "size_bytes": 85233
+      "manifest_sha256": "1bbb822a98714cac2036eb03049ad9fbddd980a4c208eadc039752fe42d4cff0",
+      "size_bytes": 86105
     },
     {
       "id": "ethos-welcome",
