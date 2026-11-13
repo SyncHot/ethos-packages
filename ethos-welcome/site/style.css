@@ -1,4 +1,15 @@
 :root {
+    color-scheme: light;
+    --bg: #eef2f7;
+    --panel: #ffffff;
+    --border: #e3e5e8;
+    --text: #1f2430;
+    --muted: #5b6472;
+    --accent: #2563eb;
+    --glow-1: rgba(37, 99, 235, 0.08);
+    --glow-2: rgba(139, 92, 246, 0.06);
+}
+:root[data-theme="dark"] {
     color-scheme: dark;
     --bg: #0b1220;
     --panel: rgba(148, 163, 184, 0.08);
@@ -6,6 +17,21 @@
     --text: #e2e8f0;
     --muted: #94a3b8;
     --accent: #38bdf8;
+    --glow-1: rgba(56, 189, 248, 0.16);
+    --glow-2: rgba(167, 139, 250, 0.14);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg: #0b1220;
+        --panel: rgba(148, 163, 184, 0.08);
+        --border: rgba(148, 163, 184, 0.22);
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #38bdf8;
+        --glow-1: rgba(56, 189, 248, 0.16);
+        --glow-2: rgba(167, 139, 250, 0.14);
+    }
 }
 
 * { box-sizing: border-box; }
@@ -17,8 +43,8 @@ body {
     place-items: center;
     padding: 32px;
     background:
-        radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.16), transparent 45%),
-        radial-gradient(circle at 85% 90%, rgba(167, 139, 250, 0.14), transparent 45%),
+        radial-gradient(circle at 15% 10%, var(--glow-1), transparent 45%),
+        radial-gradient(circle at 85% 90%, var(--glow-2), transparent 45%),
         var(--bg);
     color: var(--text);
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;

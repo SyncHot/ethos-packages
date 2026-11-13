@@ -4,6 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>EthOS Welcome</title>
+    <script>
+        (function () {
+            var theme = new URLSearchParams(location.search).get('theme');
+            if (theme === 'light' || theme === 'dark') {
+                document.documentElement.dataset.theme = theme;
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +23,7 @@
         <div class="grid">
             <section>
                 <h2>Package</h2>
-                <p><strong>ethos-welcome</strong> v1.0.0</p>
+                <p><strong>ethos-welcome</strong> v1.0.2</p>
             </section>
             <section>
                 <h2>Container</h2>

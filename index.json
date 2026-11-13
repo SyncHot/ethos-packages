@@ -4,12 +4,12 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-13T08:35:20+00:00",
+  "generated_at": "2026-11-13T08:49:04+00:00",
   "packages": [
     {
       "id": "ethos-antivirus",
       "name": "EthOS AntiVirus",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "description": "ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only scans of /home, /mnt and /media; signatures update automatically.",
       "icon": "🛡️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
@@ -20,15 +20,15 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
+      "changelog": "2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
-      "manifest_sha256": "1bbb822a98714cac2036eb03049ad9fbddd980a4c208eadc039752fe42d4cff0",
-      "size_bytes": 86105
+      "manifest_sha256": "d6542dec6ae5f182eed8a0b98b0a835a649044ae3e1fa4f96a908838615e1bbe",
+      "size_bytes": 87947
     },
     {
       "id": "ethos-welcome",
       "name": "EthOS Welcome",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "description": "A tiny static welcome page for your NAS, served by nginx on port 8090.",
       "icon": "🌅",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/icon.svg",
@@ -39,15 +39,15 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
+      "changelog": "1.0.2: light and dark themes, honours the ?theme= passed by EthOS and falls back to prefers-color-scheme. 1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/manifest.json",
-      "manifest_sha256": "cda13c73b8e154582d2a134540d38dd956870a9978f9dd38858e4ff0c14435d3",
-      "size_bytes": 4422
+      "manifest_sha256": "76a802f5c58086f4fa88ec215535f889e14d39fbbc56555d50836739a508daee",
+      "size_bytes": 5408
     },
     {
       "id": "tic-tac-toe",
       "name": "Tic-Tac-Toe",
-      "version": "2.0.1",
+      "version": "2.1.0",
       "description": "A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port.",
       "icon": "❌",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/icon.svg",
@@ -58,10 +58,10 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "2.0.1: Package Center icon. 2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
+      "changelog": "2.1.0: light and dark themes follow the EthOS appearance toggle. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/manifest.json",
-      "manifest_sha256": "e847ebbad8f2b4b3ded09b41cb6cda41992333e360349183f56e0397783bf698",
-      "size_bytes": 7996
+      "manifest_sha256": "68d557db89260a1dcd3a7568e4e9bc5f34ace57fb3758f86548fdb8d42f13a2d",
+      "size_bytes": 8848
     }
   ]
 }

@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "tic-tac-toe",
   "name": "Tic-Tac-Toe",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port.",
   "icon": "❌",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/icon.svg",
@@ -15,12 +15,12 @@
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "2.0.1: Package Center icon. 2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
+  "changelog": "2.1.0: light and dark themes follow the EthOS appearance toggle. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/frontend/app.js",
-      "sha256": "aad52b98e4602328454dfd2234d561a6d5fc8441e2c67061a79cff859ab66ef7",
+      "sha256": "aa0a098519fda90d5088216620064c031efa815ec865f86dbe9f515b1522af07",
       "path": "frontend/app.js",
       "mode": 420
     },

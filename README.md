@@ -6,9 +6,9 @@ The catalog currently contains three packages:
 
 | Package | Version | UI | What it is |
 |---|---|---|---|
-| `ethos-welcome` 🌅 | 1.0.1 | port 8090 | Static welcome page served by nginx |
-| `tic-tac-toe` ❌ | 2.0.1 | native | Two-player game inside an EthOS window; no container or port |
-| `ethos-antivirus` 🛡️ | 2.1.0 | native | ClamAV scanner with quarantine, logs, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
+| `ethos-welcome` 🌅 | 1.0.2 | port 8090 | Static welcome page served by nginx |
+| `tic-tac-toe` ❌ | 2.1.0 | native | Two-player game inside an EthOS window; no container or port |
+| `ethos-antivirus` 🛡️ | 2.1.1 | native | ClamAV scanner with quarantine, logs, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
 
 Every package ships a Package Center icon (`<package-id>/icon.svg`) referenced by
 `icon_url` in its manifest.
@@ -74,6 +74,18 @@ detail header; the emoji `icon` stays as the desktop-shortcut fallback.
 
 Details and a checklist: [`AGENTS.md`](AGENTS.md) and
 [`.github/skills/package-icon/SKILL.md`](.github/skills/package-icon/SKILL.md).
+
+## Light and dark themes
+
+Every package UI supports both themes; EthOS keeps one appearance for the whole session and the
+topbar toggle switches `<html class="light">` / `<html class="dark">` at runtime.
+
+- Native modules (`ui.mode: "native"`) define light defaults on the package root and dark
+  overrides under `:root.dark`, using CSS variables and `color-scheme`.
+- Port/iframe UIs receive `?theme=light|dark` and fall back to `prefers-color-scheme`.
+- No dark-only palettes or hard-coded surface/text colours.
+
+Details and a checklist: [`.github/skills/package-theme/SKILL.md`](.github/skills/package-theme/SKILL.md).
 
 ## Rebuilding and signing
 

@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-welcome",
   "name": "EthOS Welcome",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A tiny static welcome page for your NAS, served by nginx on port 8090.",
   "icon": "🌅",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/icon.svg",
@@ -11,7 +11,7 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
-  "changelog": "1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
+  "changelog": "1.0.2: light and dark themes, honours the ?theme= passed by EthOS and falls back to prefers-color-scheme. 1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/docker-compose.yml",
     "sha256": "bf860c16265967f720d5709acbf467bcdcea864f8d56bd4c8298519e40c329e2"
@@ -19,13 +19,13 @@
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/site/index.html",
-      "sha256": "a0b6e64bce1f892c9f5027206097bcfd0006d9c8d1df0cc420a7f6ae97075558",
+      "sha256": "92e896412466fb3f81f40bcedfe1299073aacc4abc3a3a84d5dc966241faaebb",
       "path": "site/index.html",
       "mode": 420
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/site/style.css",
-      "sha256": "40e6936801c7a57f74066205e04eaf67977d0c8849c455c39fb01a5f77d44487",
+      "sha256": "7ec45a22209efb2009ed06316d0271fdcaab743306256f863f8384240fb8b141",
       "path": "site/style.css",
       "mode": 420
     },

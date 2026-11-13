@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-antivirus",
   "name": "EthOS AntiVirus",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only scans of /home, /mnt and /media; signatures update automatically.",
   "icon": "🛡️",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
@@ -21,7 +21,7 @@
     "port": 8092,
     "path": "/api/health"
   },
-  "changelog": "2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
+  "changelog": "2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/docker-compose.yml",
     "sha256": "aceaf98acb9927dfa7639bb6654f3b925d283ffb9575b2eb2aa505bb53f8eda3"
@@ -29,7 +29,7 @@
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/frontend/app.js",
-      "sha256": "50307d14e42e07c66de8f1cc1251a8571981a6d4a202146f116e82c55db37ca8",
+      "sha256": "e14ffe00eab059588f9b4ac0eb63bc345859f2f637663ad267a526bbfb8b7d33",
       "path": "frontend/app.js",
       "mode": 420
     },
