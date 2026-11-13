@@ -4,12 +4,12 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-13T10:27:15+00:00",
+  "generated_at": "2026-11-13T10:32:13+00:00",
   "packages": [
     {
       "id": "domains",
       "name": "Domains",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "description": "Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another device, a container, or EthOS itself - without touching nginx by hand. Caddy issues and renews Let's Encrypt certificates on its own, and the stack keeps routing even when EthOS is restarting.",
       "icon": "🌐",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/icon.svg",
@@ -20,10 +20,10 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "1.1.0: per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
+      "changelog": "1.1.1: read certificates from Caddy's actual storage root (/data/caddy/certificates), so the certificate list and expiry show up. per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/manifest.json",
-      "manifest_sha256": "f1e4f08cdbb3c9dbc204f068e101d7e68f0f2c67f63845f8bd2a0968d464d425",
-      "size_bytes": 64680
+      "manifest_sha256": "0bed4c2b1426fbfcb5717f2a0945fc101ae08d027be59f44dae8385d72f686f0",
+      "size_bytes": 65036
     },
     {
       "id": "ethos-antivirus",

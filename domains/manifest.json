@@ -35,13 +35,13 @@
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/server/app.py",
-      "sha256": "e33b837fe1af24c0ccf6e479654d8ce254a3b2b6b144fe31b3133233d603fbef",
+      "sha256": "9af09b979232937232ef83c6ae288cbaf2f75a130b400cd7e4411d274ad78832",
       "path": "server/app.py",
       "mode": 420
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/server/certs.py",
-      "sha256": "58d4ff0549cbfce0311cc7a502d3db34f49b7c3115deddb0814007719aa8a045",
+      "sha256": "8548348dc834cf0709a17225eca739b0842a91cec5b0574fb69950f20b5ffd0f",
       "path": "server/certs.py",
       "mode": 420
     },
