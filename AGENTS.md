@@ -23,6 +23,12 @@ repo.pub            publisher public key (private key never committed)
   `<package-id>/icon.svg` in this repository, and `"icon.svg"` must be listed in `files[]`. The
   emoji `icon` stays as the desktop-shortcut fallback. See
   `.github/skills/package-icon/SKILL.md`.
+- **Every package UI ships light _and_ dark themes.** EthOS persists one theme for the
+  whole session: the `<html>` element always carries `light` or `dark`, and the topbar toggle
+  switches it at runtime. Native modules must define both palettes and follow the class
+  (light is the default); port/iframe UIs receive `?theme=light|dark` and must also fall back to
+  `prefers-color-scheme`. No dark-only palettes, no hard-coded surface/text colours outside the
+  variable block. See `.github/skills/package-theme/SKILL.md`.
 - **Bump `version` and prepend `changelog`** for anything users can receive. Without a bump,
   Package Center never offers the update and installed rows keep the old manifest (including the
   old icon).
