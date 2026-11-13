@@ -1,0 +1,39 @@
+services:
+  vmm:
+    # A bare Debian: QEMU, noVNC and Python are provisioned by bootstrap.sh and
+    # cached in the vmm-data volume, so a package update reinstalls them offline.
+    image: debian:12-slim
+    container_name: ethos-vmm
+    # Root inside the container: /dev/kvm access and 0660 NAS files on the
+    # mounted shares. The shares are the only writable host paths, and the
+    # service validates every path against /vmhost before touching it.
+    user: "0:0"
+    command: ["sh", "/app/bootstrap.sh"]
+    # The only device a package may request: it needs the `kvm` capability in
+    # manifest.json, and EthOS still rejects every other device.
+    devices: ["/dev/kvm"]
+    ports:
+      # JSON API: NAS loopback only, reached through the authenticated EthOS
+      # /api/packages/vmm/proxy/ endpoint.
+      - "127.0.0.1:8095:8095"
+      # Browser console: noVNC page + WebSocket bridge, every request needs a
+      # signed 120 s ticket. This port carries no API.
+      - "8094:8094"
+    volumes:
+      - vmm-data:/data
+      - ./server:/app:ro
+      - /home:/vmhost/home
+      - /mnt:/vmhost/mnt
+      - /media:/vmhost/media
+    stop_grace_period: 60s
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8095/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # The first start installs QEMU from the Debian mirror.
+      start_period: 600s
+
+volumes:
+  vmm-data: {}

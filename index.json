@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-13T10:53:38+00:00",
+  "generated_at": "2026-11-13T14:04:17+00:00",
   "packages": [
     {
       "id": "domains",
@@ -19,6 +19,9 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
+      "capabilities": [
+        "compose"
+      ],
       "screenshots": [],
       "changelog": "1.2.0: the window follows the AntiVirus layout — a left rail with Overview, Routes, Certificates, Settings and Diagnostics, status pills, stat tiles and action cards. Routes show their options as chips, the form keeps headers/Host/streaming under Advanced, and the ACME email field is no longer overwritten by the background refresh. 1.1.1: read certificates from Caddy's actual storage root (/data/caddy/certificates), so the certificate list and expiry show up. per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/manifest.json",
@@ -38,6 +41,9 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
+      "capabilities": [
+        "compose"
+      ],
       "screenshots": [],
       "changelog": "2.1.4: Browse… in the scan target and schedule forms uses the EthOS folder picker, restricted to /home, /mnt and /media. 2.1.3: health/status report which shares are visible in the scanner container and the UI warns instead of failing scans silently. 2.1.2: fix scans failing with 'not visible in the scanner container' — the UI container now mounts /home, /mnt and /media read-only at /scan. 2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
@@ -57,6 +63,9 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
+      "capabilities": [
+        "compose"
+      ],
       "screenshots": [],
       "changelog": "1.0.2: light and dark themes, honours the ?theme= passed by EthOS and falls back to prefers-color-scheme. 1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/manifest.json",
@@ -76,11 +85,37 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
+      "capabilities": [
+        "compose"
+      ],
       "screenshots": [],
       "changelog": "2.1.0: light and dark themes follow the EthOS appearance toggle. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/manifest.json",
       "manifest_sha256": "68d557db89260a1dcd3a7568e4e9bc5f34ace57fb3758f86548fdb8d42f13a2d",
       "size_bytes": 8848
+    },
+    {
+      "id": "vmm",
+      "name": "EthOS VM Manager",
+      "version": "1.0.0",
+      "description": "Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO, boot it, and use it from the browser console - no separate computer left running. Disks live on your own shares, VMs start again after a restart, and every VM is isolated in its own process.",
+      "icon": "🖥️",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/icon.svg",
+      "category": "tools",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "capabilities": [
+        "compose",
+        "kvm"
+      ],
+      "screenshots": [],
+      "changelog": "1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/manifest.json",
+      "manifest_sha256": "d662d7831406724d8d332b702aa89f23fbdd2cf574884fa628f62f0565ac38f2",
+      "size_bytes": 81791
     }
   ]
 }

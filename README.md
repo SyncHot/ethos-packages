@@ -2,13 +2,15 @@
 
 Signed package repository for [EthOS NAS](https://github.com/SyncHot/ethos-nas).
 
-The catalog currently contains three packages:
+The catalog currently contains five packages:
 
 | Package | Version | UI | What it is |
 |---|---|---|---|
 | `ethos-welcome` 🌅 | 1.0.2 | port 8090 | Static welcome page served by nginx |
 | `tic-tac-toe` ❌ | 2.1.0 | native | Two-player game inside an EthOS window; no container or port |
 | `ethos-antivirus` 🛡️ | 2.1.4 | native | ClamAV scanner with quarantine, logs, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
+| `domains` 🌐 | 1.2.0 | native | Caddy reverse proxy with automatic Let's Encrypt certificates for your own domains |
+| `vmm` 🖥️ | 1.0.0 | native | EthOS VM Manager — KVM virtual machines with a browser console, qcow2 disks on your shares and autostart; needs `/dev/kvm` (`capabilities: ["kvm"]`) |
 
 Every package ships a Package Center icon (`<package-id>/icon.svg`) referenced by
 `icon_url` in its manifest.

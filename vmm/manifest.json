@@ -1,0 +1,89 @@
+{
+  "schema": 2,
+  "id": "vmm",
+  "name": "EthOS VM Manager",
+  "version": "1.0.0",
+  "description": "Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO, boot it, and use it from the browser console - no separate computer left running. Disks live on your own shares, VMs start again after a restart, and every VM is isolated in its own process.",
+  "icon": "🖥️",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/icon.svg",
+  "category": "tools",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "capabilities": [
+    "compose",
+    "kvm"
+  ],
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js",
+    "port": 8095
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 8095,
+    "path": "/api/health"
+  },
+  "changelog": "1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/docker-compose.yml",
+    "sha256": "0ae6de3b70cecd12ef246ab9158397431b518375035df6f02fe03072e00d4fd8"
+  },
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/icon.svg",
+      "sha256": "b5e3fab0c9c6d9212f458c889b9f905a7d3ec634f9ba7c8eab2277fd0fab36c7",
+      "path": "icon.svg",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/server/bootstrap.sh",
+      "sha256": "3ab78bf65196810540ea7c636ca8985c2b9dcfd91119f4b4010b73a7dd187b64",
+      "path": "server/bootstrap.sh",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/server/app.py",
+      "sha256": "bdf5450105d25c998b3d05bd7d72d7d92d810db45e550d2b24bf403da6d4c6b7",
+      "path": "server/app.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/server/engine.py",
+      "sha256": "7ab3b1ef4584bfd0a967e78af9204e382cf733b40bdeda44daa7909a694f645f",
+      "path": "server/engine.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/server/qmp.py",
+      "sha256": "b1e92844dd89dbce7b3349a4649f02feece5cea299fb896be4a6558eadcde8da",
+      "path": "server/qmp.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/server/qemu.py",
+      "sha256": "bee0d175f4458cdb698481f961b5d7a0945d812c778ed40d40821f461a7f89c2",
+      "path": "server/qemu.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/server/store.py",
+      "sha256": "5dc6aaf85110004a34bcde7af6b52d1b55855f080d9506bbcc8db31c70d69874",
+      "path": "server/store.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/server/console.py",
+      "sha256": "1baaf25c3eb8cc13382bcd518f9a6ccd7777e6cf80c0bd66cd747e64c03f352a",
+      "path": "server/console.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/frontend/app.js",
+      "sha256": "fedcd6fd4c409e56589b62292e0e02ac1cce78b76c8b3a656b92266346257a2e",
+      "path": "frontend/app.js",
+      "mode": 420
+    }
+  ]
+}
