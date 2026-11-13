@@ -15,12 +15,16 @@ The catalog currently contains three packages:
 In EthOS open **Package Center → Sources → Add source** and use:
 
 - **URL:** `https://raw.githubusercontent.com/SyncHot/ethos-packages/main/index.json`
-- **Trust:** pinned
+- **Trust:** Signed (pinned key)
 - **Public key:**
 
 ```text
 sXiL7v0droY2BVyttuDt0Bqq6jB7MpknylJo+/iavqE=
 ```
+
+- **Key fingerprint:** `47254c572056ec99` — compare it out-of-band with the
+  publisher before adding the source. The private key is never stored in this
+  repository.
 
 A pinned source verifies `index.json.sig` before reading the catalog, and every
 manifest, compose file and package file is checked against its `sha256`.
