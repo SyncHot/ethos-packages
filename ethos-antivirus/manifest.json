@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-antivirus",
   "name": "EthOS AntiVirus",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only scans of /home, /mnt and /media; signatures update automatically.",
   "icon": "🛡️",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
@@ -21,7 +21,7 @@
     "port": 8092,
     "path": "/api/health"
   },
-  "changelog": "2.1.3: health/status report which shares are visible in the scanner container and the UI warns instead of failing scans silently. 2.1.2: fix scans failing with 'not visible in the scanner container' — the UI container now mounts /home, /mnt and /media read-only at /scan. 2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
+  "changelog": "2.1.4: Browse… in the scan target and schedule forms uses the EthOS folder picker, restricted to /home, /mnt and /media. 2.1.3: health/status report which shares are visible in the scanner container and the UI warns instead of failing scans silently. 2.1.2: fix scans failing with 'not visible in the scanner container' — the UI container now mounts /home, /mnt and /media read-only at /scan. 2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/docker-compose.yml",
     "sha256": "a5086258fc6df1f2fedcd2143be1cd4cfdc040abde05a7b9410dbbc826edf5f2"
@@ -29,7 +29,7 @@
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/frontend/app.js",
-      "sha256": "34f7c148d734a63c235d7af410c27046468ae684a4ea6e1400915171faada673",
+      "sha256": "32533a903694b683648e5d9ead7dfc88fdb68dc404b5a6b3139dfd61cd342f25",
       "path": "frontend/app.js",
       "mode": 420
     },

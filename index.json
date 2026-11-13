@@ -4,12 +4,12 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-13T08:53:16+00:00",
+  "generated_at": "2026-11-13T09:09:07+00:00",
   "packages": [
     {
       "id": "ethos-antivirus",
       "name": "EthOS AntiVirus",
-      "version": "2.1.3",
+      "version": "2.1.4",
       "description": "ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only scans of /home, /mnt and /media; signatures update automatically.",
       "icon": "🛡️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
@@ -20,10 +20,10 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "2.1.3: health/status report which shares are visible in the scanner container and the UI warns instead of failing scans silently. 2.1.2: fix scans failing with 'not visible in the scanner container' — the UI container now mounts /home, /mnt and /media read-only at /scan. 2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
+      "changelog": "2.1.4: Browse… in the scan target and schedule forms uses the EthOS folder picker, restricted to /home, /mnt and /media. 2.1.3: health/status report which shares are visible in the scanner container and the UI warns instead of failing scans silently. 2.1.2: fix scans failing with 'not visible in the scanner container' — the UI container now mounts /home, /mnt and /media read-only at /scan. 2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
-      "manifest_sha256": "a6bba650448db948517b756c96d510ef569029d37b65cee80b8b1520df5f04ff",
-      "size_bytes": 89900
+      "manifest_sha256": "a981badb93fbdac80f6299167230ecdd51fab7308f2ee6a6b700913a2c894c5c",
+      "size_bytes": 91550
     },
     {
       "id": "ethos-welcome",

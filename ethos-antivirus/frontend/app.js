@@ -306,6 +306,7 @@ export function render(container, ctx) {
                     <label class="av-label" for="av-path">Custom scan target</label>
                     <div class="av-row">
                         <input id="av-path" class="av-input" type="text" value="/home" spellcheck="false">
+                        <button class="av-btn" type="button" data-browse-path>Browse…</button>
                         <button class="av-btn primary" type="button" data-scan-custom disabled>Scan target</button>
                     </div>
                     <p class="av-hint">Allowed roots: <code>/home</code>, <code>/mnt</code>, <code>/media</code>. Start with a subfolder for a faster first scan.</p>
@@ -439,7 +440,10 @@ export function render(container, ctx) {
                     <p class="av-muted">Schedules run inside the package service; EthOS does not need to stay open.</p>
                     <div class="av-field">
                         <label for="av-sched-path">Folder to scan</label>
-                        <input id="av-sched-path" class="av-input" data-sched-path value="/home" spellcheck="false">
+                        <div class="av-row">
+                            <input id="av-sched-path" class="av-input" data-sched-path value="/home" spellcheck="false">
+                            <button class="av-btn" type="button" data-browse-schedule>Browse…</button>
+                        </div>
                     </div>
                     <div class="av-sched-grid">
                         <div class="av-field">
@@ -515,6 +519,8 @@ export function render(container, ctx) {
     const fullHint = $('[data-full-hint]');
     const pathEl = $('#av-path');
     const customBtn = $('[data-scan-custom]');
+    const browsePathBtn = $('[data-browse-path]');
+    const browseScheduleBtn = $('[data-browse-schedule]');
     const quickPaths = $('[data-quick-paths]');
     const results = $('[data-results]');
     const cleanEl = $('[data-clean]');
@@ -724,6 +730,28 @@ export function render(container, ctx) {
         target.quarantined.push(...(data.quarantined || []));
         target.engine = data.engine || target.engine;
         return target;
+    }
+
+    async function chooseFolder(input, title) {
+        if (typeof ctx.pickFolder !== 'function') {
+            setStatus('The EthOS folder picker is unavailable in this version — type the path instead.', 'warn');
+            return;
+        }
+        try {
+            const selected = await ctx.pickFolder({
+                title,
+                startPath: input.value || state.allowedRoots[0],
+                roots: state.allowedRoots,
+                acceptLabel: 'Use this folder',
+            });
+            if (selected) {
+                input.value = selected;
+                input.focus();
+                input.select();
+            }
+        } catch (err) {
+            setStatus(`Folder picker failed: ${errorText(err)}`, 'error');
+        }
     }
 
     async function runScan(paths, label, options = {}) {
@@ -1093,6 +1121,14 @@ export function render(container, ctx) {
         });
     });
     customBtn.addEventListener('click', () => runScan([pathEl.value], 'Custom scan'));
+    browsePathBtn.addEventListener('click', () => chooseFolder(pathEl, 'Select a folder to scan'));
+    browseScheduleBtn.addEventListener('click', () => chooseFolder(schedPath, 'Select a folder for the scheduled scan'));
+    if (typeof ctx.pickFolder !== 'function') {
+        browsePathBtn.disabled = true;
+        browseScheduleBtn.disabled = true;
+        browsePathBtn.title = 'Requires a newer EthOS version';
+        browseScheduleBtn.title = 'Requires a newer EthOS version';
+    }
     pathEl.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') runScan([pathEl.value], 'Custom scan');
     });

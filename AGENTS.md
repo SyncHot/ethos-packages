@@ -23,6 +23,12 @@ repo.pub            publisher public key (private key never committed)
   `<package-id>/icon.svg` in this repository, and `"icon.svg"` must be listed in `files[]`. The
   emoji `icon` stays as the desktop-shortcut fallback. See
   `.github/skills/package-icon/SKILL.md`.
+- **Path selection uses the EthOS picker.** Native package UIs call `ctx.pickFolder(opts)` /
+  `ctx.pickFile(opts)` instead of shipping their own browser or forcing users to type absolute
+  paths. Pass `roots: ['/home', '/mnt', '/media']` (or the paths the service accepts) so the
+  picker cannot navigate outside what the backend will allow; `startPath` and `acceptLabel` are
+  optional. Keep a typed input as a fallback for older EthOS versions where `ctx.pickFolder` is
+  missing.
 - **Every package UI ships light _and_ dark themes.** EthOS persists one theme for the
   whole session: the `<html>` element always carries `light` or `dark`, and the topbar toggle
   switches it at runtime. Native modules must define both palettes and follow the class
