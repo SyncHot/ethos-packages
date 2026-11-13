@@ -4,11 +4,11 @@ Signed package repository for [EthOS NAS](https://github.com/SyncHot/ethos-nas).
 
 The catalog currently contains three packages:
 
-| Package | Version | Port | What it is |
+| Package | Version | UI | What it is |
 |---|---|---|---|
-| `ethos-welcome` 🌅 | 1.0.0 | 8090 | Static welcome page served by nginx |
-| `tic-tac-toe` ❌ | 1.0.0 | 8091 | Two-player tic-tac-toe with score tracking |
-| `ethos-antivirus` 🛡️ | 1.0.0 | 8092 | ClamAV on-demand scanner for `/home`, `/mnt`, `/media` |
+| `ethos-welcome` 🌅 | 1.0.0 | port 8090 | Static welcome page served by nginx |
+| `tic-tac-toe` ❌ | 2.0.0 | native | Two-player game inside an EthOS window; no container or port |
+| `ethos-antivirus` 🛡️ | 2.0.0 | native | ClamAV scanner for `/home`, `/mnt`, `/media`; API via authenticated proxy |
 
 ## Add this repository
 
@@ -26,12 +26,16 @@ A pinned source verifies `index.json.sig` before reading the catalog, and every
 manifest, compose file and package file is checked against its `sha256`.
 
 After adding the source, open **Available**, select a package, and click
-**Install**. Each web UI publishes its own port (8090, 8091 or 8092).
+**Install**. Packages with `ui.mode: "native"` render their module directly in an
+EthOS window and do not need an exposed port. The antivirus container binds its API
+to `127.0.0.1:8092`; EthOS reaches it through an authenticated proxy.
+
+Native UI packages require a **pinned, signed** source because their module runs
+with the EthOS session. Only install them from publishers you trust.
 
 The antivirus package runs ClamD as root **inside its container** so it can read
 shares with `0660` permissions. The host shares are mounted read-only and the
-container has no writable host bind. Its web panel has no separate login, so use
-it on a trusted LAN and do not expose port 8092 to the internet.
+container has no writable host bind.
 
 ## Repository layout
 

@@ -4,13 +4,13 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-12T16:26:08+00:00",
+  "generated_at": "2026-11-13T07:08:52+00:00",
   "packages": [
     {
       "id": "ethos-antivirus",
       "name": "EthOS AntiVirus",
-      "version": "1.0.1",
-      "description": "ClamAV-powered on-demand antivirus scanner for NAS shares. Read-only scans, signature updates, and a simple web panel. Independent EthOS package, not affiliated with Synology.",
+      "version": "2.0.0",
+      "description": "ClamAV-powered on-demand antivirus scanner with a native EthOS window. Read-only scans of /home, /mnt and /media; signatures update automatically.",
       "icon": "🛡️",
       "icon_url": null,
       "category": "security",
@@ -20,10 +20,10 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: clearer first-start status and a longer scan timeout for large shares. 1.0.0: initial ClamAV panel with clean/infected results and EICAR-ready verification.",
+      "changelog": "2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
-      "manifest_sha256": "e5cc48062fbdeda9ac63718db77253c55b17076092800335317525ee8e408d44",
-      "size_bytes": 20174
+      "manifest_sha256": "5a8b46cea63641197667a6c2e0e26a3d4734659f43d811ac26820d1f01414c72",
+      "size_bytes": 21530
     },
     {
       "id": "ethos-welcome",
@@ -47,8 +47,8 @@
     {
       "id": "tic-tac-toe",
       "name": "Tic-Tac-Toe",
-      "version": "1.0.0",
-      "description": "A tiny two-player tic-tac-toe game for your NAS, served by nginx on port 8091.",
+      "version": "2.0.0",
+      "description": "A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port.",
       "icon": "❌",
       "icon_url": null,
       "category": "games",
@@ -58,10 +58,10 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "Initial release: local two-player game with score tracking.",
+      "changelog": "2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/manifest.json",
-      "manifest_sha256": "3ec7328305a075a0db30f1ef6a9e694111a6b3b0d6a3fb0d077cf22f9b17eb52",
-      "size_bytes": 7611
+      "manifest_sha256": "d531e6473824f8d460141bfaecec00347b5ffac9a237ed56c71edfdb906b1d56",
+      "size_bytes": 6821
     }
   ]
 }

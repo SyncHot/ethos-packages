@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-antivirus",
   "name": "EthOS AntiVirus",
-  "version": "1.0.1",
-  "description": "ClamAV-powered on-demand antivirus scanner for NAS shares. Read-only scans, signature updates, and a simple web panel. Independent EthOS package, not affiliated with Synology.",
+  "version": "2.0.0",
+  "description": "ClamAV-powered on-demand antivirus scanner with a native EthOS window. Read-only scans of /home, /mnt and /media; signatures update automatically.",
   "icon": "🛡️",
   "category": "security",
   "author": "SyncHot",
@@ -11,43 +11,31 @@
   "license": "MIT",
   "channel": "stable",
   "ui": {
-    "scheme": "http",
-    "port": 8092,
-    "path": "/"
+    "mode": "native",
+    "entry": "frontend/app.js",
+    "port": 8092
   },
   "healthcheck": {
     "scheme": "http",
     "port": 8092,
     "path": "/api/health"
   },
-  "changelog": "1.0.1: clearer first-start status and a longer scan timeout for large shares. 1.0.0: initial ClamAV panel with clean/infected results and EICAR-ready verification.",
+  "changelog": "2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/docker-compose.yml",
-    "sha256": "9505360cdca0d5777c4e765d212bf549778ab2165edb6b9efc4b662d63e3d506"
+    "sha256": "ade077d5a0e4744601622cb6998338fc6eeeb2c52dee6a606c3881be16aa4c9c"
   },
   "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/frontend/app.js",
+      "sha256": "616f7cc97d0a795f645e5e536b810d3effe05fccec9482d576c4e7dbb2e3d0a6",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/server/app.py",
       "sha256": "582f78bc4bc513abd0f905f490fe12dd3d499c2d2472ba414fc44066d76f2600",
       "path": "server/app.py",
-      "mode": 420
-    },
-    {
-      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/server/static/index.html",
-      "sha256": "129d403fb5f5168720e2b5f8ccac23b17a3f3c060a27a8b0871a0c680a9b06c8",
-      "path": "server/static/index.html",
-      "mode": 420
-    },
-    {
-      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/server/static/style.css",
-      "sha256": "6bae132f6ea2a48670300f81ef9fc7dc31a6e6ad502e634ae82ae18ae9cefc80",
-      "path": "server/static/style.css",
-      "mode": 420
-    },
-    {
-      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/server/static/app.js",
-      "sha256": "2768938a5e4743b6b73056df70b745e3f02da65796649caa45de3854d72be8f7",
-      "path": "server/static/app.js",
       "mode": 420
     }
   ]
