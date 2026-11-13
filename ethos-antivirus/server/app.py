@@ -4,7 +4,7 @@
 The container talks to a sibling ``clamav`` container over the Compose network
 using the ClamD null-terminated protocol. It never modifies scanned files and
 only accepts paths under /home, /mnt and /media, which are mounted read-only
-into the scanner container at /scan/<root>.
+into the scanner and UI containers at /scan/<root>.
 
 Settings, scan logs, quarantine copies (optional) and scheduled scans persist
 in the package data volume (``AV_DATA_DIR``, /data by default).

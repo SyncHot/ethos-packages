@@ -8,7 +8,7 @@ The catalog currently contains three packages:
 |---|---|---|---|
 | `ethos-welcome` 🌅 | 1.0.2 | port 8090 | Static welcome page served by nginx |
 | `tic-tac-toe` ❌ | 2.1.0 | native | Two-player game inside an EthOS window; no container or port |
-| `ethos-antivirus` 🛡️ | 2.1.1 | native | ClamAV scanner with quarantine, logs, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
+| `ethos-antivirus` 🛡️ | 2.1.2 | native | ClamAV scanner with quarantine, logs, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
 
 Every package ships a Package Center icon (`<package-id>/icon.svg`) referenced by
 `icon_url` in its manifest.

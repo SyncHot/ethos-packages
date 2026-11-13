@@ -35,6 +35,11 @@ services:
       - ./server:/app:ro
       # Settings, scan logs, quarantine copies and schedules survive updates.
       - antivirus-data:/data
+      # The UI service walks the tree before handing files to clamd, so it
+      # needs the same read-only view of the shares as the scanner container.
+      - /home:/scan/home:ro
+      - /mnt:/scan/mnt:ro
+      - /media:/scan/media:ro
     environment:
       CLAMD_HOST: clamav
       CLAMD_PORT: "3310"
