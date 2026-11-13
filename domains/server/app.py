@@ -45,7 +45,7 @@ CADDY_ADMIN = os.environ.get("CADDY_ADMIN", "http://proxy:2019").rstrip("/")
 CADDY_LOG_FILE = Path(os.environ.get("CADDY_LOG_FILE", "/var/log/caddy/caddy.log"))
 GENERATED_DIR = Path(os.environ.get("GENERATED_DIR", "/etc/caddy/generated"))
 MAX_BODY = 64 * 1024
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 _APPLY_LOCK = threading.Lock()
 _LAST_APPLY = {"at": "", "error": "", "warnings": []}
@@ -346,6 +346,39 @@ def _apply(_payload: dict) -> dict:
     return _commit(lambda state: {"applied": True})
 
 
+def _import_routes(payload: dict) -> dict:
+    """Replace (or append) the whole route list in one atomic step.
+
+    Used to migrate an existing proxy configuration: every route is validated
+    first, then rendered, adapted and loaded as a single document. A single bad
+    route rejects the import and leaves the running config untouched.
+    """
+    raw_routes = payload.get("routes")
+    if not isinstance(raw_routes, list):
+        raise ApiError(400, "routes must be a list")
+    incoming = [config_gen.sanitize_route(item) for item in raw_routes]
+    replace = config_gen.normalize_bool(payload.get("replace"), True)
+    settings = payload.get("settings") or {}
+    settings_fields = {}
+    if isinstance(settings, dict) and settings:
+        settings_fields = {
+            "acme_email": config_gen.normalize_email(settings.get("acme_email")),
+            "staging": config_gen.normalize_bool(settings.get("staging")),
+        }
+
+    def mutate(state):
+        if replace:
+            state["routes"] = []
+        for route in incoming:
+            route.pop("id", None)  # fresh ids, so an import never collides
+            store.merge_route(state, route)
+        if settings_fields:
+            store.merge_settings(state, settings_fields)
+        return {"imported": len(incoming), "replace": replace}
+
+    return _commit(mutate)
+
+
 ROUTES = {
     ("GET", "/api/health"): _health,
     ("GET", "/api/state"): _state,
@@ -353,6 +386,7 @@ ROUTES = {
     ("GET", "/api/logs"): _logs,
     ("GET", "/api/dns"): _dns,
     ("POST", "/api/routes"): _save_route,
+    ("POST", "/api/routes/import"): _import_routes,
     ("POST", "/api/routes/delete"): _delete_route,
     ("POST", "/api/settings"): _save_settings,
     ("POST", "/api/apply"): _apply,

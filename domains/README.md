@@ -43,6 +43,12 @@ the route works.
 hostname the proxy container can resolve. Use an IP address for LAN devices;
 Docker's resolver does not see the host's `/etc/hosts`.
 
+A route can also be a **permanent redirect** (leave the target empty and fill in
+"Redirect instead") and can set **extra response headers** such as HSTS or CSP.
+
+`POST api/routes/import` with `{"routes": [...]}` replaces the whole route list
+atomically — used to migrate an existing proxy configuration.
+
 Wildcard domains (`*.example.com`) need the DNS-01 challenge and a Caddy build
 with the provider's DNS module — not part of 1.0.0.
 

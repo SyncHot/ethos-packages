@@ -25,6 +25,11 @@ EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}$")
 MAX_DOMAINS = 20
 STAGING_CA = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
+HEADER_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{0,62}$")
+MAX_HEADERS = 20
+REDIRECT_RE = re.compile(r'^https?://[A-Za-z0-9.-]+(?::[0-9]{1,5})?(?:/[^\s{}"]*)?$')
+MAX_REDIRECT = 300
+
 
 class ValidationError(ValueError):
     """User-facing input problem (400 in the API)."""
@@ -127,15 +132,61 @@ def normalize_bool(value, default: bool = False) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def normalize_headers(values) -> list[str]:
+    """Accept ``["Name: value", ...]`` (or a newline-separated string)."""
+    if values in (None, ""):
+        return []
+    if isinstance(values, str):
+        values = [line for line in values.splitlines() if line.strip()]
+    if not isinstance(values, (list, tuple)):
+        raise ValidationError("Headers must be a list of 'Name: value' strings")
+    cleaned: list[str] = []
+    for raw in values:
+        line = str(raw).strip()
+        if not line:
+            continue
+        name, sep, value = line.partition(":")
+        name = name.strip()
+        value = value.strip()
+        if not sep or not name:
+            raise ValidationError(f"Header must look like 'Name: value' — got {line!r}")
+        if not HEADER_NAME_RE.match(name):
+            raise ValidationError(f"Invalid header name: {name!r}")
+        if len(value) > 500 or any(ch in value for ch in "\r\n{}"):
+            raise ValidationError(f"Invalid value for header {name}")
+        entry = f"{name}: {value}"
+        if entry not in cleaned:
+            cleaned.append(entry)
+    if len(cleaned) > MAX_HEADERS:
+        raise ValidationError(f"At most {MAX_HEADERS} headers per route")
+    return cleaned
+
+
+def normalize_redirect(value) -> str:
+    """Empty when the route proxies; otherwise an absolute http(s) URL."""
+    url = str(value or "").strip()
+    if not url:
+        return ""
+    if len(url) > MAX_REDIRECT or not REDIRECT_RE.match(url):
+        raise ValidationError("Redirect target must be an absolute http(s) URL, for example https://example.com")
+    return url.rstrip("/")
+
+
 def sanitize_route(payload: dict) -> dict:
     """Turn an API payload into a stored route (no rendering here)."""
     if not isinstance(payload, dict):
         raise ValidationError("Invalid route payload")
     note = str(payload.get("note") or "").replace("\r", " ").replace("\n", " ").strip()[:120]
+    redirect = normalize_redirect(payload.get("redirect_to"))
+    raw_upstream = str(payload.get("upstream") or "").strip()
+    if not redirect and not raw_upstream:
+        raise ValidationError("Target must be host:port, for example 192.168.1.10:8080")
     return {
         "id": str(payload.get("id") or "").strip()[:32],
         "domains": normalize_domains(payload.get("domains")),
-        "upstream": normalize_upstream(payload.get("upstream")),
+        "upstream": "" if redirect else normalize_upstream(raw_upstream),
+        "redirect_to": redirect,
+        "headers": normalize_headers(payload.get("headers")),
         "preserve_host": normalize_bool(payload.get("preserve_host"), True),
         "stream": normalize_bool(payload.get("stream")),
         "enabled": normalize_bool(payload.get("enabled"), True),
@@ -172,17 +223,26 @@ def render_routes(routes) -> str:
         domains = [normalize_domain(name) for name in route.get("domains") or []]
         if not domains:
             continue
-        upstream = normalize_upstream(route.get("upstream"))
-        body = [
-            "\tencode zstd gzip",
-            f"\treverse_proxy {upstream} {{",
-            "\t\tstream_close_delay 5m",
-        ]
-        if normalize_bool(route.get("stream")):
-            body.append("\t\tflush_interval -1")
-        if not normalize_bool(route.get("preserve_host"), True):
-            body.append("\t\theader_up Host {upstream_hostport}")
-        body.append("\t}")
+        redirect = normalize_redirect(route.get("redirect_to"))
+        headers = normalize_headers(route.get("headers"))
+        if redirect:
+            body = [f"\tredir {redirect}{{uri}} permanent"]
+        else:
+            upstream = normalize_upstream(route.get("upstream"))
+            body = [
+                "\tencode zstd gzip",
+                f"\treverse_proxy {upstream} {{",
+                "\t\tstream_close_delay 5m",
+            ]
+            if normalize_bool(route.get("stream")):
+                body.append("\t\tflush_interval -1")
+            if not normalize_bool(route.get("preserve_host"), True):
+                body.append("\t\theader_up Host {upstream_hostport}")
+            body.append("\t}")
+        if headers:
+            body.append("\theader {")
+            body.extend(f"\t\t{header}" for header in headers)
+            body.append("\t}")
         blocks.append(" ".join(domains) + " {\n" + "\n".join(body) + "\n}")
     return "\n\n".join(blocks) + ("\n" if blocks else "")
 

@@ -99,6 +99,30 @@ check("document has global block", document.startswith("{\n\tadmin :2019\n"), do
 check("document has the route", "app.example.com www.example.com {" in document)
 check("global block closes before sites", "}\n\napp.example.com" in document, document)
 
+print("Headers and redirects")
+check("headers from a list", config_gen.normalize_headers(["X-Test: 1"]) == ["X-Test: 1"])
+check("headers from text", config_gen.normalize_headers("X-A: 1\nX-B: 2\n") == ["X-A: 1", "X-B: 2"])
+check("header without a value rejected", rejects(config_gen.normalize_headers, ["X-Test"]))
+check("header newline injection rejected", rejects(config_gen.normalize_headers, ["X-Test: a\n}"]))
+check("header name with a space rejected", rejects(config_gen.normalize_headers, ["X Test: 1"]))
+check("redirect normalises the trailing slash",
+      config_gen.normalize_redirect("https://example.com/") == "https://example.com")
+check("javascript redirect rejected", rejects(config_gen.normalize_redirect, "javascript:alert(1)"))
+check("redirect with braces rejected", rejects(config_gen.normalize_redirect, "https://x.test/ }"))
+redirect_route = config_gen.sanitize_route({
+    "domains": ["www.example.com"], "redirect_to": "https://example.com",
+    "headers": ["Strict-Transport-Security: max-age=1"],
+})
+check("redirect route needs no upstream",
+      redirect_route["upstream"] == "" and redirect_route["redirect_to"] == "https://example.com")
+rendered = config_gen.render_routes([redirect_route])
+check("redirect renders redir", "redir https://example.com{uri} permanent" in rendered, rendered)
+check("headers rendered on a redirect", "\t\tStrict-Transport-Security: max-age=1" in rendered, rendered)
+check("route without target rejected", rejects(config_gen.sanitize_route, {"domains": ["a.example.com"]}))
+with_headers = config_gen.render_routes([{**route, "headers": ["X-A: 1"]}])
+check("headers follow the proxy block",
+      "reverse_proxy 192.168.1.10:8080 {" in with_headers and "\theader {" in with_headers, with_headers)
+
 print("State")
 state = store.normalise({})
 check("empty state defaults", state["routes"] == [] and state["settings"]["staging"] is False)

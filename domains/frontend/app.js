@@ -149,9 +149,19 @@ export function render(container, ctx) {
                     <input class="dom-input" id="dom-f-upstream" name="upstream" placeholder="192.168.1.10:8080" autocomplete="off">
                     <span class="dom-hint">host:port · <button type="button" class="dom-btn link" id="dom-ethos">use this NAS</button></span>
                 </div>
+                <div class="dom-field">
+                    <label for="dom-f-redirect">Redirect instead (optional)</label>
+                    <input class="dom-input" id="dom-f-redirect" name="redirect_to" placeholder="https://example.com" autocomplete="off">
+                    <span class="dom-hint">Returns a permanent redirect instead of proxying; leave the target above empty.</span>
+                </div>
                 <div class="dom-field full">
                     <label for="dom-f-note">Label (optional)</label>
                     <input class="dom-input" id="dom-f-note" name="note" placeholder="Home Assistant" autocomplete="off">
+                </div>
+                <div class="dom-field full">
+                    <label for="dom-f-headers">Extra response headers (one per line)</label>
+                    <textarea class="dom-input" id="dom-f-headers" name="headers" rows="3" placeholder="Strict-Transport-Security: max-age=63072000; includeSubDomains"></textarea>
+                    <span class="dom-hint">Name: value pairs, applied to every response of this route.</span>
                 </div>
                 <div class="dom-field full">
                     <div class="dom-checks">
@@ -266,7 +276,7 @@ export function render(container, ctx) {
                         : `<span class="dom-pill ${(cert.days_left ?? 0) > 14 ? 'ok' : 'warn'}">${esc(daysLabel(cert.days_left))}</span>`;
                     return `<tr data-testid="dom-route-${esc(route.id)}">
                         <td><div class="dom-domain">${esc((route.domains || []).join(', '))}</div>${route.note ? `<div class="dom-hint">${esc(route.note)}</div>` : ''}</td>
-                        <td class="dom-mono">${esc(route.upstream)}</td>
+                        <td class="dom-mono">${route.redirect_to ? `↪ ${esc(route.redirect_to)}` : esc(route.upstream)}</td>
                         <td>${certCell}</td>
                         <td><input type="checkbox" class="dom-toggle" data-toggle="${esc(route.id)}"${route.enabled ? ' checked' : ''} aria-label="Enabled"></td>
                         <td><div class="dom-row-actions">
@@ -361,7 +371,9 @@ export function render(container, ctx) {
         form.hidden = false;
         formError.textContent = '';
         form.querySelector('[name="domains"]').value = route ? (route.domains || []).join(', ') : '';
-        form.querySelector('[name="upstream"]').value = route ? route.upstream : '';
+        form.querySelector('[name="upstream"]').value = route ? route.upstream || '' : '';
+        form.querySelector('[name="redirect_to"]').value = route ? route.redirect_to || '' : '';
+        form.querySelector('[name="headers"]').value = route ? (route.headers || []).join('\n') : '';
         form.querySelector('[name="note"]').value = route ? route.note || '' : '';
         form.querySelector('[name="preserve_host"]').checked = route ? route.preserve_host !== false : true;
         form.querySelector('[name="stream"]').checked = route ? !!route.stream : false;
@@ -438,6 +450,8 @@ export function render(container, ctx) {
         const values = {
             domains: form.querySelector('[name="domains"]').value,
             upstream: form.querySelector('[name="upstream"]').value,
+            redirect_to: form.querySelector('[name="redirect_to"]').value,
+            headers: form.querySelector('[name="headers"]').value,
             note: form.querySelector('[name="note"]').value,
             preserve_host: form.querySelector('[name="preserve_host"]').checked,
             stream: form.querySelector('[name="stream"]').checked,
@@ -445,7 +459,10 @@ export function render(container, ctx) {
         };
         if (state.editingId) values.id = state.editingId;
         if (!values.domains.trim()) { formError.textContent = 'Enter at least one domain.'; return; }
-        if (!values.upstream.trim()) { formError.textContent = 'Enter the target as host:port.'; return; }
+        if (!values.upstream.trim() && !values.redirect_to.trim()) {
+            formError.textContent = 'Enter a target (host:port) or a redirect URL.';
+            return;
+        }
         const wasEditing = !!state.editingId;
         await saveRoute(values, wasEditing ? 'Route updated' : 'Route added');
         if (!formError.textContent) closeForm();
