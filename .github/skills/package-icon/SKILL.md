@@ -15,7 +15,8 @@ argument-hint: "Which package needs an icon?"
   see a new icon.
 - `manifest.icon_url` and `index.icon_url` are passed through by `ethos-pack build`; it does not
   rewrite them, so they must already be absolute HTTPS URLs.
-- Desktop shortcuts use `/api/packages/desktop-icons`, which serializes only the emoji `icon`.
+- Desktop shortcuts and the App Drawer read `/api/packages/desktop-icons`, which exposes
+  `icon_url` for absolute HTTPS URLs and keeps the emoji `icon` as the fallback.
 
 ## Procedure
 

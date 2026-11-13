@@ -58,8 +58,8 @@ repo.pub            publisher public key (private key never committed)
   ```
 - `raw.githubusercontent.com` serves `.svg` as `image/svg+xml`; other hosts may serve
   `text/plain` and the `<img>` will stay blank. Verify with `curl -sI`.
-- Desktop icons still come from `/api/packages/desktop-icons`, which only serializes the emoji
-  `icon`; the SVG is a Package Center (catalog, installed, detail) feature.
+- Desktop icons and the App Drawer read `/api/packages/desktop-icons`, which exposes `icon_url`
+  (absolute HTTPS only) and the emoji `icon` as fallback, so the same artwork appears everywhere.
 
 ## Workflow
 
