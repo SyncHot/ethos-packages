@@ -29,13 +29,13 @@
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/frontend/app.js",
-      "sha256": "9309008228922d6ac158f13cad6c012bd19b6e9ac79b2478b73828da72c76f7e",
+      "sha256": "4fa04839963b25ebb1169a98685c5ec2ba079a01e28bbe396ac1a75c94837918",
       "path": "frontend/app.js",
       "mode": 420
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/server/app.py",
-      "sha256": "9af09b979232937232ef83c6ae288cbaf2f75a130b400cd7e4411d274ad78832",
+      "sha256": "ce22e6ff20757c0361674c35e0f67d7dfacdc96908e36825ff36a42c9ae9cc52",
       "path": "server/app.py",
       "mode": 420
     },
