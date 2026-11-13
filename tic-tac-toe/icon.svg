@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">Tic-Tac-Toe</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="28%" cy="14%" r="85%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <rect width="256" height="256" rx="56" fill="url(#sheen)"/>
+  <g stroke="#ffffff" stroke-opacity="0.38" stroke-width="12" stroke-linecap="round">
+    <path d="M100 44v168"/>
+    <path d="M156 44v168"/>
+    <path d="M44 100h168"/>
+    <path d="M44 156h168"/>
+  </g>
+  <g fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round">
+    <path d="M56 56l32 32"/>
+    <path d="M88 56L56 88"/>
+    <path d="M168 168l32 32"/>
+    <path d="M200 168l-32 32"/>
+  </g>
+  <circle cx="128" cy="128" r="20" fill="none" stroke="#fde68a" stroke-width="18"/>
+</svg>

@@ -6,9 +6,12 @@ The catalog currently contains three packages:
 
 | Package | Version | UI | What it is |
 |---|---|---|---|
-| `ethos-welcome` 🌅 | 1.0.0 | port 8090 | Static welcome page served by nginx |
-| `tic-tac-toe` ❌ | 2.0.0 | native | Two-player game inside an EthOS window; no container or port |
-| `ethos-antivirus` 🛡️ | 2.0.0 | native | ClamAV scanner for `/home`, `/mnt`, `/media`; API via authenticated proxy |
+| `ethos-welcome` 🌅 | 1.0.1 | port 8090 | Static welcome page served by nginx |
+| `tic-tac-toe` ❌ | 2.0.1 | native | Two-player game inside an EthOS window; no container or port |
+| `ethos-antivirus` 🛡️ | 2.0.1 | native | ClamAV scanner for `/home`, `/mnt`, `/media`; API via authenticated proxy |
+
+Every package ships a Package Center icon (`<package-id>/icon.svg`) referenced by
+`icon_url` in its manifest.
 
 ## Add this repository
 
@@ -49,11 +52,26 @@ index.json.sig      detached Ed25519 signature over index.json
 repo.pub            public key (the matching private key is never committed)
 ethos-welcome/
 ├── manifest.json
+├── icon.svg        Package Center icon (icon_url)
 ├── docker-compose.yml
 └── site/
     ├── index.html
     └── style.css
 ```
+
+## Package icons
+
+Package Center renders `icon_url` as an image in the catalog, installed list and
+detail header; the emoji `icon` stays as the desktop-shortcut fallback.
+
+- Icon file: `<package-id>/icon.svg` — 256×256 viewBox, rounded-square
+  background, no text, legible at 20 px.
+- Manifest: `"icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/<package-id>/icon.svg"`
+  and `"icon.svg"` in `files[]`.
+- Bump `version`, rebuild and sign, or installed clients keep the old icon.
+
+Details and a checklist: [`AGENTS.md`](AGENTS.md) and
+[`.github/skills/package-icon/SKILL.md`](.github/skills/package-icon/SKILL.md).
 
 ## Rebuilding and signing
 
@@ -78,7 +96,7 @@ cp ~/.ethos-pack/ethos-packages/repo.pub ~/ethos-packages/repo.pub
   --pub ~/.ethos-pack/ethos-packages/repo.pub
 ```
 
-Bump `version` in `ethos-welcome/manifest.json` before publishing a change so
+Bump `version` in the changed package's `manifest.json` before publishing so
 Package Center offers an update.
 
 ## License

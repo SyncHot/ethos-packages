@@ -2,9 +2,10 @@
   "schema": 2,
   "id": "ethos-antivirus",
   "name": "EthOS AntiVirus",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "ClamAV-powered on-demand antivirus scanner with a native EthOS window. Read-only scans of /home, /mnt and /media; signatures update automatically.",
   "icon": "🛡️",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
   "category": "security",
   "author": "SyncHot",
   "homepage": "https://github.com/SyncHot/ethos-packages",
@@ -20,7 +21,7 @@
     "port": 8092,
     "path": "/api/health"
   },
-  "changelog": "2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
+  "changelog": "2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/docker-compose.yml",
     "sha256": "ade077d5a0e4744601622cb6998338fc6eeeb2c52dee6a606c3881be16aa4c9c"
@@ -36,6 +37,12 @@
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/server/app.py",
       "sha256": "582f78bc4bc513abd0f905f490fe12dd3d499c2d2472ba414fc44066d76f2600",
       "path": "server/app.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
+      "sha256": "aea3f8b8209c9d6d29f957e4904c551f1c93288c3db3d1fbddcf16534ab3b646",
+      "path": "icon.svg",
       "mode": 420
     }
   ]

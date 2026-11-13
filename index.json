@@ -4,15 +4,15 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-13T07:08:52+00:00",
+  "generated_at": "2026-11-13T07:58:06+00:00",
   "packages": [
     {
       "id": "ethos-antivirus",
       "name": "EthOS AntiVirus",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "description": "ClamAV-powered on-demand antivirus scanner with a native EthOS window. Read-only scans of /home, /mnt and /media; signatures update automatically.",
       "icon": "🛡️",
-      "icon_url": null,
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
       "category": "security",
       "author": "SyncHot",
       "homepage": "https://github.com/SyncHot/ethos-packages",
@@ -20,18 +20,18 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
+      "changelog": "2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
-      "manifest_sha256": "5a8b46cea63641197667a6c2e0e26a3d4734659f43d811ac26820d1f01414c72",
-      "size_bytes": 21530
+      "manifest_sha256": "0f2326068720f5ce9aba89332c513bafefee64ff890cf0b6c3d696d2aedd961c",
+      "size_bytes": 21649
     },
     {
       "id": "ethos-welcome",
       "name": "EthOS Welcome",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "A tiny static welcome page for your NAS, served by nginx on port 8090.",
       "icon": "🌅",
-      "icon_url": null,
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/icon.svg",
       "category": "demo",
       "author": "SyncHot",
       "homepage": "https://github.com/SyncHot/ethos-packages",
@@ -39,18 +39,18 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "Initial release: static welcome page with a live clock.",
+      "changelog": "1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/manifest.json",
-      "manifest_sha256": "117123ad6cde1a87176983daa3b4c5a5cbc1bb2ab88a9c0575372a8dcc8cfe85",
-      "size_bytes": 3155
+      "manifest_sha256": "cda13c73b8e154582d2a134540d38dd956870a9978f9dd38858e4ff0c14435d3",
+      "size_bytes": 4422
     },
     {
       "id": "tic-tac-toe",
       "name": "Tic-Tac-Toe",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "description": "A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port.",
       "icon": "❌",
-      "icon_url": null,
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/icon.svg",
       "category": "games",
       "author": "SyncHot",
       "homepage": "https://github.com/SyncHot/ethos-packages",
@@ -58,10 +58,10 @@
       "channel": "stable",
       "requires": [],
       "screenshots": [],
-      "changelog": "2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
+      "changelog": "2.0.1: Package Center icon. 2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/manifest.json",
-      "manifest_sha256": "d531e6473824f8d460141bfaecec00347b5ffac9a237ed56c71edfdb906b1d56",
-      "size_bytes": 6821
+      "manifest_sha256": "e847ebbad8f2b4b3ded09b41cb6cda41992333e360349183f56e0397783bf698",
+      "size_bytes": 7996
     }
   ]
 }

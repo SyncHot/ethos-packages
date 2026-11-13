@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">EthOS Welcome</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="28%" cy="14%" r="85%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <rect width="256" height="256" rx="56" fill="url(#sheen)"/>
+  <circle cx="128" cy="102" r="42" fill="#fff7d6"/>
+  <g stroke="#fff7d6" stroke-width="11" stroke-linecap="round" opacity="0.75">
+    <path d="M128 40v14"/>
+    <path d="M128 150v14"/>
+    <path d="M66 102h14"/>
+    <path d="M176 102h14"/>
+    <path d="M84 58l10 10"/>
+    <path d="M162 136l10 10"/>
+    <path d="M172 58l-10 10"/>
+    <path d="M94 136l-10 10"/>
+  </g>
+  <g fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round">
+    <path d="M38 178q22-16 44 0t44 0t44 0t44 0" opacity="0.95"/>
+    <path d="M38 208q22-16 44 0t44 0t44 0t44 0" opacity="0.55"/>
+  </g>
+</svg>
