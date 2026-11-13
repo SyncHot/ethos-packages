@@ -21,7 +21,13 @@ from pathlib import Path
 
 logger = logging.getLogger("domains.certs")
 
-CERT_ROOT = Path(os.environ.get("CADDY_DATA_DIR", "/caddy-data")) / "certificates"
+CERT_ROOTS = (
+    # Caddy's default storage root (the data dir itself).
+    Path(os.environ.get("CADDY_DATA_DIR", "/caddy-data")) / "certificates",
+    # The official image sets XDG_DATA_HOME=/data, so storage lands in
+    # /data/caddy/certificates (this is the layout that actually ships).
+    Path(os.environ.get("CADDY_DATA_DIR", "/caddy-data")) / "caddy" / "certificates",
+)
 
 _decode = getattr(getattr(ssl, "_ssl", None), "_test_decode_cert", None)
 
@@ -57,9 +63,9 @@ def inventory() -> dict:
         logger.warning("ssl._ssl._test_decode_cert is unavailable; certificate expiry is hidden")
         return {"ok": False, "items": []}
     try:
-        files = sorted(CERT_ROOT.glob("*/*/*.crt"))
+        files = sorted(path for root in CERT_ROOTS if root.is_dir() for path in root.glob("*/*/*.crt"))
     except OSError as exc:
-        logger.warning("Cannot list %s: %s", CERT_ROOT, exc)
+        logger.warning("Cannot list certificate storage: %s", exc)
         return {"ok": False, "items": []}
 
     now = time.time()
