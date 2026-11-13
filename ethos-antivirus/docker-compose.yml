@@ -33,12 +33,16 @@ services:
       - "127.0.0.1:8092:8092"
     volumes:
       - ./server:/app:ro
+      # Settings, scan logs, quarantine copies and schedules survive updates.
+      - antivirus-data:/data
     environment:
       CLAMD_HOST: clamav
       CLAMD_PORT: "3310"
+      AV_DATA_DIR: /data
     depends_on:
       - clamav
     restart: unless-stopped
 
 volumes:
   clamav-db:
+  antivirus-data:

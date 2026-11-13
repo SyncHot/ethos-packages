@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-antivirus",
   "name": "EthOS AntiVirus",
-  "version": "2.0.1",
-  "description": "ClamAV-powered on-demand antivirus scanner with a native EthOS window. Read-only scans of /home, /mnt and /media; signatures update automatically.",
+  "version": "2.1.0",
+  "description": "ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only scans of /home, /mnt and /media; signatures update automatically.",
   "icon": "🛡️",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
   "category": "security",
@@ -21,21 +21,21 @@
     "port": 8092,
     "path": "/api/health"
   },
-  "changelog": "2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
+  "changelog": "2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/docker-compose.yml",
-    "sha256": "ade077d5a0e4744601622cb6998338fc6eeeb2c52dee6a606c3881be16aa4c9c"
+    "sha256": "aceaf98acb9927dfa7639bb6654f3b925d283ffb9575b2eb2aa505bb53f8eda3"
   },
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/frontend/app.js",
-      "sha256": "616f7cc97d0a795f645e5e536b810d3effe05fccec9482d576c4e7dbb2e3d0a6",
+      "sha256": "a6dc8e45b64df7fb2e37aa85f420c5dcac243687265caf921d14e90d2b89a8ff",
       "path": "frontend/app.js",
       "mode": 420
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/server/app.py",
-      "sha256": "582f78bc4bc513abd0f905f490fe12dd3d499c2d2472ba414fc44066d76f2600",
+      "sha256": "2708777b87f846182547ab046db499170010d9ff541b35945348b928b669b74d",
       "path": "server/app.py",
       "mode": 420
     },

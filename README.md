@@ -8,7 +8,7 @@ The catalog currently contains three packages:
 |---|---|---|---|
 | `ethos-welcome` 🌅 | 1.0.1 | port 8090 | Static welcome page served by nginx |
 | `tic-tac-toe` ❌ | 2.0.1 | native | Two-player game inside an EthOS window; no container or port |
-| `ethos-antivirus` 🛡️ | 2.0.1 | native | ClamAV scanner for `/home`, `/mnt`, `/media`; API via authenticated proxy |
+| `ethos-antivirus` 🛡️ | 2.1.0 | native | ClamAV scanner with quarantine, logs, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
 
 Every package ships a Package Center icon (`<package-id>/icon.svg`) referenced by
 `icon_url` in its manifest.
@@ -42,7 +42,9 @@ with the EthOS session. Only install them from publishers you trust.
 
 The antivirus package runs ClamD as root **inside its container** so it can read
 shares with `0660` permissions. The host shares are mounted read-only and the
-container has no writable host bind.
+container has no writable host bind. Settings, scan logs, quarantine copies and
+schedule definitions live in the `antivirus-data` volume, so they survive
+package updates.
 
 ## Repository layout
 
