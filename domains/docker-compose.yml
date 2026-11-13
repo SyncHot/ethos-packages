@@ -1,0 +1,67 @@
+services:
+  # Reverse proxy + ACME endpoint. Owns ports 80/443 and stays up on its own:
+  # EthOS restarts (or the Domains UI container) never interrupt routing.
+  proxy:
+    image: caddy:2.11.9-alpine
+    container_name: ethos-domains-proxy
+    # Seed the generated config so the first boot (and a reboot before the UI
+    # service has started) always has something valid to import.
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /etc/caddy/generated
+        [ -f /etc/caddy/generated/options.caddy ] || : > /etc/caddy/generated/options.caddy
+        [ -f /etc/caddy/generated/routes.caddy ] || : > /etc/caddy/generated/routes.caddy
+        exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      # Static Caddyfile only: the generated fragments live in the volume below,
+      # and a read-only bind of the whole /etc/caddy would stop Docker from
+      # creating their mountpoint.
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+      - caddy-generated:/etc/caddy/generated
+      - caddy-logs:/var/log/caddy
+    extra_hosts:
+      # Lets a route target EthOS itself or any host process, e.g.
+      # host.docker.internal:9000 (the EthOS API/UI).
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  # Control plane: reads/writes routes, renders the Caddy config and reloads
+  # Caddy over its admin API. Bound to loopback only - EthOS reaches it through
+  # the authenticated /api/packages/domains/proxy/ endpoint.
+  ui:
+    image: python:3.12-alpine
+    container_name: ethos-domains
+    command: ["python", "/app/app.py"]
+    ports:
+      - "127.0.0.1:8093:8093"
+    volumes:
+      - ./server:/app:ro
+      - domains-data:/data
+      - caddy-generated:/etc/caddy/generated
+      # Certificates are read (never written) to show issuer and expiry.
+      - caddy-data:/caddy-data:ro
+      - caddy-logs:/var/log/caddy:ro
+    environment:
+      DOMAINS_DATA_DIR: /data
+      DOMAINS_PORT: "8093"
+      CADDY_ADMIN: http://proxy:2019
+      CADDY_DATA_DIR: /caddy-data
+      CADDY_LOG_FILE: /var/log/caddy/caddy.log
+      GENERATED_DIR: /etc/caddy/generated
+    depends_on:
+      - proxy
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
+  caddy-generated:
+  caddy-logs:
+  domains-data:

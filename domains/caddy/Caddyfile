@@ -1,0 +1,17 @@
+# Static Caddyfile for the EthOS "Domains" package.
+#
+# The UI service owns the two generated fragments in /etc/caddy/generated:
+#   options.caddy  global options only (ACME email, staging CA, log output)
+#   routes.caddy   one site block per configured domain
+#
+# Both files always exist (the container entrypoint seeds empty ones), so this
+# config is valid on the very first boot and after a reboot, before the UI
+# service has had a chance to start.
+{
+	# Admin API on the compose network only: it is never published to the host.
+	# The UI container is the only client.
+	admin :2019
+	import /etc/caddy/generated/options.caddy
+}
+
+import /etc/caddy/generated/routes.caddy

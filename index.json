@@ -4,8 +4,27 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-13T09:09:07+00:00",
+  "generated_at": "2026-11-13T10:15:49+00:00",
   "packages": [
+    {
+      "id": "domains",
+      "name": "Domains",
+      "version": "1.0.0",
+      "description": "Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another device, a container, or EthOS itself - without touching nginx by hand. Caddy issues and renews Let's Encrypt certificates on its own, and the stack keeps routing even when EthOS is restarting.",
+      "icon": "🌐",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/icon.svg",
+      "category": "network",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "screenshots": [],
+      "changelog": "1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/manifest.json",
+      "manifest_sha256": "4d648825487e978e24e506506443154f6fa208c30b75a9a3b3a65f0a366aa522",
+      "size_bytes": 61462
+    },
     {
       "id": "ethos-antivirus",
       "name": "EthOS AntiVirus",

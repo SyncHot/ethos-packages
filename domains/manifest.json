@@ -1,0 +1,79 @@
+{
+  "schema": 2,
+  "id": "domains",
+  "name": "Domains",
+  "version": "1.0.0",
+  "description": "Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another device, a container, or EthOS itself - without touching nginx by hand. Caddy issues and renews Let's Encrypt certificates on its own, and the stack keeps routing even when EthOS is restarting.",
+  "icon": "🌐",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/icon.svg",
+  "category": "network",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js",
+    "port": 8093
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 8093,
+    "path": "/api/health"
+  },
+  "changelog": "1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/docker-compose.yml",
+    "sha256": "9bf8f36c8c564bf4f5cb1bc44936549c9dbc712239dc00ecf344f2092c6bc180"
+  },
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/frontend/app.js",
+      "sha256": "cc28391604fb68292dbf559b80cd278d3af0d1ec4738d87f9bdcdc9dff812472",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/server/app.py",
+      "sha256": "02430aa985ea084cca5ecd97ff796e121a7dcbc978f21fc8ede25fcfbe5c2cf1",
+      "path": "server/app.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/server/certs.py",
+      "sha256": "58d4ff0549cbfce0311cc7a502d3db34f49b7c3115deddb0814007719aa8a045",
+      "path": "server/certs.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/server/config_gen.py",
+      "sha256": "b12d6ed5a70ceb69e50a5406565c1096ff74fa7ea3bd07a8797a1a51f15c59a2",
+      "path": "server/config_gen.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/server/store.py",
+      "sha256": "01a42726e1b56ba9a72c467080ae1b3f027e398326fbf4d76e3437b6bc410636",
+      "path": "server/store.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/caddy/Caddyfile",
+      "sha256": "1075e40c2e0756474832bea235b688dc630a3cb03e6944c6fb72f7c34e9c8a3b",
+      "path": "caddy/Caddyfile",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/icon.svg",
+      "sha256": "2c30e11bf4943ae3eddf50d11765e81b562950493a631487af40a0c008ab3bd5",
+      "path": "icon.svg",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/README.md",
+      "sha256": "ab5cb2f58775bf11ac8e8685796e3f17aeecf563a99225fb5b8d8e923bf51342",
+      "path": "README.md",
+      "mode": 420
+    }
+  ]
+}
