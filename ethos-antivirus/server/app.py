@@ -114,15 +114,19 @@ def definitions_info() -> dict:
 
 
 def health() -> tuple[int, dict]:
+    mounts = mounts_status()
     try:
         pong = clamd("zPING", timeout=5).strip()
     except OSError as exc:
         return 503, {"status": "starting",
                       "detail": "ClamAV is starting; the first run downloads signatures",
+                      "mounts": mounts,
                       "error": str(exc)}
     if pong != "PONG":
-        return 503, {"status": "starting", "detail": f"unexpected PING reply: {pong!r}"}
-    return 200, {"status": "ready", "engine": engine_version(), "allowed_roots": list(ALLOWED_ROOTS)}
+        return 503, {"status": "starting", "detail": f"unexpected PING reply: {pong!r}",
+                     "mounts": mounts}
+    return 200, {"status": "ready", "engine": engine_version(),
+                 "allowed_roots": list(ALLOWED_ROOTS), "mounts": mounts}
 
 
 def safe_host_path(raw: str) -> str:
@@ -132,6 +136,11 @@ def safe_host_path(raw: str) -> str:
     if not any(path == root or path.startswith(root + "/") for root in ALLOWED_ROOTS):
         raise ValueError("Path must be under /home, /mnt or /media")
     return path
+
+
+def mounts_status() -> dict:
+    """Which allowed roots the UI container can actually see under /scan."""
+    return {root: os.path.isdir(SCAN_PREFIX + root) for root in ALLOWED_ROOTS}
 
 
 # ── Persistent state ───────────────────────────────────────────────────────
@@ -266,6 +275,7 @@ def status_payload() -> dict:
         "schedules": state["schedules"],
         "definitions": definitions_info(),
         "allowed_roots": list(ALLOWED_ROOTS),
+        "mounts": mounts_status(),
     }
 
 
@@ -285,7 +295,8 @@ def collect_files(host_path: str, settings: dict,
     container_root = SCAN_PREFIX + host_path
     target = Path(container_root)
     if not target.exists():
-        return [], 0, [f"{host_path}: not visible in the scanner container"]
+        return [], 0, [f"{host_path}: not visible in the scanner container "
+                       f"(share not mounted at {SCAN_PREFIX}{host_path})"]
     if not target.is_dir():
         if not target.is_file():
             return [], 0, [f"{host_path}: not a regular file or directory"]

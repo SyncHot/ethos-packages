@@ -274,6 +274,7 @@ export function render(container, ctx) {
                 <p class="av-page-sub" data-page-sub>Scan now, review results and keep an eye on definitions.</p>
                 <p class="av-status" role="status" aria-live="polite" data-status>Ready.</p>
                 <p class="av-startup" data-startup>First start downloads the ClamAV signature database. This can take a few minutes; the status retries automatically.</p>
+                <p class="av-startup" data-mount-warn hidden></p>
             </header>
 
             <section class="av-view" data-panel="overview">
@@ -505,6 +506,7 @@ export function render(container, ctx) {
     const healthEl = $('[data-health]');
     const statusEl = $('[data-status]');
     const startupEl = $('[data-startup]');
+    const mountWarnEl = $('[data-mount-warn]');
     const pageTitle = $('[data-page-title]');
     const pageSub = $('[data-page-sub]');
     const versionEl = $('[data-version]');
@@ -564,6 +566,7 @@ export function render(container, ctx) {
         allowedRoots: ['/home', '/mnt', '/media'],
         settings: null,
         defaults: null,
+        mounts: null,
         quarantine: [],
         logs: [],
         schedules: [],
@@ -600,6 +603,23 @@ export function render(container, ctx) {
         fullHint.textContent = state.allowedRoots.join(', ');
     }
 
+    function mountedRoots() {
+        return state.allowedRoots.filter((root) => state.mounts?.[root] !== false);
+    }
+
+    function updateMountWarning() {
+        const mounts = state.mounts;
+        if (!mounts) {
+            mountWarnEl.hidden = true;
+            return;
+        }
+        const missing = Object.keys(mounts).filter((root) => mounts[root] === false);
+        mountWarnEl.hidden = missing.length === 0;
+        if (missing.length) {
+            mountWarnEl.textContent = `Scanner cannot see ${missing.join(', ')}. The package must mount these shares at /scan — update or reinstall EthOS AntiVirus.`;
+        }
+    }
+
     function renderDefinitions(definitions) {
         const available = Boolean(definitions?.available);
         const released = available ? (definitions.released || definitions.raw || '—') : 'Unavailable';
@@ -623,6 +643,10 @@ export function render(container, ctx) {
             readyIcon.textContent = '✓';
             readyTitle.textContent = 'Ready to scan';
             if (!state.scanning) setStatus('Ready.');
+            if (data.mounts) {
+                state.mounts = data.mounts;
+                updateMountWarning();
+            }
         } catch (err) {
             state.ready = false;
             const starting = err?.status === 503;
@@ -650,6 +674,10 @@ export function render(container, ctx) {
             }
             quarantineCount.textContent = String(data.quarantine_count || 0);
             renderDefinitions(data.definitions || {});
+            if (data.mounts) {
+                state.mounts = data.mounts;
+                updateMountWarning();
+            }
         } catch {
             /* pollHealth already surfaces connectivity problems */
         }
@@ -1043,9 +1071,19 @@ export function render(container, ctx) {
 
     root.querySelectorAll('[data-scan]').forEach((button) => {
         button.addEventListener('click', () => {
-            if (button.dataset.scan === 'full') runScan(state.allowedRoots, 'Full scan', { sequential: true });
-            else if (button.dataset.scan === 'quick') {
+            if (button.dataset.scan === 'full') {
+                const roots = mountedRoots();
+                if (!roots.length) {
+                    setStatus('No shares are visible in the scanner container — update or reinstall the package.', 'warn');
+                    return;
+                }
+                runScan(roots, 'Full scan', { sequential: true });
+            } else if (button.dataset.scan === 'quick') {
                 const home = state.allowedRoots.includes('/home') ? '/home' : state.allowedRoots[0];
+                if (state.mounts?.[home] === false) {
+                    setStatus(`Cannot scan ${home}: the share is not mounted in the scanner container.`, 'warn');
+                    return;
+                }
                 runScan([home], 'Quick scan');
             } else {
                 pathEl.focus();
