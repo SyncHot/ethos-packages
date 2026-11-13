@@ -51,6 +51,8 @@ const STYLE = `
     --vmm-hover: rgba(148, 163, 184, 0.14);
 }
 .vmm-root * { box-sizing: border-box; }
+/* the hidden attribute must win over the panel/console display rules below */
+.vmm-root [hidden] { display: none !important; }
 .vmm-side {
     width: 208px; flex: 0 0 208px; padding: 16px 12px; border-right: 1px solid var(--vmm-border);
     background: var(--vmm-side); display: flex; flex-direction: column; gap: 14px;
@@ -71,7 +73,7 @@ const STYLE = `
 .vmm-nav button.is-active { background: var(--vmm-accent-soft); color: var(--vmm-accent); font-weight: 600; }
 .vmm-side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
 .vmm-note { font-size: 11px; color: var(--vmm-muted); line-height: 1.45; }
-.vmm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.vmm-main { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; overflow: hidden; }
 .vmm-header { padding: 16px 20px 10px; display: flex; align-items: flex-start; gap: 12px; }
 .vmm-header h1 { margin: 0; font-size: 17px; }
 .vmm-header p { margin: 4px 0 0; font-size: 12px; color: var(--vmm-muted); }

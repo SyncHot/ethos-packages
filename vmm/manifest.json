@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "vmm",
   "name": "EthOS VM Manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO, boot it, and use it from the browser console - no separate computer left running. Disks live on your own shares, VMs start again after a restart, and every VM is isolated in its own process.",
   "icon": "🖥️",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/icon.svg",
@@ -25,7 +25,7 @@
     "port": 8095,
     "path": "/api/health"
   },
-  "changelog": "1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
+  "changelog": "1.0.2: the console overlay no longer covers the window — it is hidden until you press Console, so the machine list and the create form are always visible. 1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/docker-compose.yml",
     "sha256": "0ae6de3b70cecd12ef246ab9158397431b518375035df6f02fe03072e00d4fd8"
@@ -81,7 +81,7 @@
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/frontend/app.js",
-      "sha256": "69251029d22e63fe51f46c1651dc45e0cd5988e7606bca58fbb453f5637761ef",
+      "sha256": "0d69f880c900899803c35f60bb8d2d00fa27df2f97b161d5b676e2fcb4032368",
       "path": "frontend/app.js",
       "mode": 420
     }
