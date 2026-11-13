@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Domains — UI preview</title>
+    <style>
+        html, body { margin: 0; height: 100%; background: #eef2f7; }
+        html.dark, html.dark body { background: #08111d; }
+        body { display: flex; flex-direction: column; }
+        #toolbar {
+            display: flex; gap: 8px; align-items: center; padding: 8px 12px; flex-wrap: wrap;
+            font: 12px ui-sans-serif, system-ui, sans-serif; background: rgba(0,0,0,.06);
+        }
+        html.dark #toolbar { background: rgba(255,255,255,.06); color: #e2e8f0; }
+        #toolbar button {
+            font: inherit; padding: 5px 10px; border-radius: 7px; cursor: pointer;
+            border: 1px solid rgba(0,0,0,.18); background: #fff;
+        }
+        html.dark #toolbar button { background: #131c2e; color: #e2e8f0; border-color: rgba(255,255,255,.2); }
+        #host { flex: 1; min-height: 0; }
+        #host > div { height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <strong>Domains UI preview</strong>
+        <button data-theme="light">Light</button>
+        <button data-theme="dark">Dark</button>
+        <button data-scenario="normal">Populated</button>
+        <button data-scenario="empty">Empty</button>
+        <button data-scenario="offline">Proxy offline</button>
+        <button data-scenario="error">Rejected config</button>
+        <span id="hint" style="opacity:.65">Served from domains/preview — not shipped with the package.</span>
+    </div>
+    <div id="host"></div>
+    <script type="module">
+        import { render } from '../frontend/app.js';
+
+        const target = document.getElementById('host');
+        const hint = document.getElementById('hint');
+
+        const route = (id, domains, upstream, extra = {}) => ({
+            id, domains, upstream, note: '', headers: [], preserve_host: true,
+            stream: false, enabled: true, redirect_to: '', ...extra,
+        });
+
+        const cert = (name, days, issuer = "Let's Encrypt") => ({
+            names: [name], issuer, days_left: days,
+            not_after: 'Feb 11 12:00:00 2027 GMT', expires_at: 0,
+            source: 'acme-v02.api.letsencrypt.org-directory',
+        });
+
+        const BASE_ROUTES = [
+            route('r_1', ['nas.myserver.pl'], '172.17.0.1:9000', { note: 'EthOS' }),
+            route('r_2', ['home.myserver.pl'], '192.168.50.215:8123', { note: 'Home Assistant' }),
+            route('r_3', ['wawalocal.pl'], '172.17.0.1:3000', {
+                headers: [
+                    'Strict-Transport-Security: max-age=63072000; includeSubDomains',
+                    'Content-Security-Policy: frame-ancestors \'self\'; base-uri \'self\'',
+                    'X-Frame-Options: SAMEORIGIN',
+                ],
+            }),
+            route('r_4', ['www.wawalocal.pl'], '', { redirect_to: 'https://wawalocal.pl' }),
+            route('r_5', ['radarr.myserver.pl'], '172.17.0.1:7878', { stream: true }),
+            route('r_6', ['video.myserver.pl'], '172.17.0.1:8096', { enabled: false, note: 'Jellyfin (stopped)' }),
+        ];
+
+        const CERTS = [
+            cert('nas.myserver.pl', 89),
+            cert('home.myserver.pl', 89),
+            cert('radarr.myserver.pl', 89),
+            cert('wawalocal.pl', 24),
+            cert('www.wawalocal.pl', -2),
+            cert('video.myserver.pl', 61),
+        ];
+
+        const LOG_LINES = [
+            JSON.stringify({ level: 'info', ts: 1794564895, msg: 'certificate obtained successfully', identifier: 'nas.myserver.pl' }),
+            JSON.stringify({ level: 'info', ts: 1794564896, msg: 'certificate renewed', identifier: 'home.myserver.pl' }),
+            JSON.stringify({ level: 'error', ts: 1794564897, msg: 'dial tcp 172.17.0.1:8096: connect: connection refused' }),
+            JSON.stringify({ level: 'warn', ts: 1794564898, msg: 'aborting with incomplete response' }),
+        ];
+
+        const scenarios = {
+            normal: {
+                state: {
+                    version: '1.2.0', settings: { acme_email: 'ops@example.com', staging: false },
+                    routes: BASE_ROUTES, certs: { ok: true, items: CERTS },
+                    caddy: { reachable: true }, apply: { at: '2026-11-13T10:31:02Z', error: '', warnings: [] },
+                },
+            },
+            empty: {
+                state: {
+                    version: '1.2.0', settings: { acme_email: '', staging: false },
+                    routes: [], certs: { ok: true, items: [] },
+                    caddy: { reachable: true }, apply: { at: '', error: '', warnings: [] },
+                },
+            },
+            offline: {
+                state: {
+                    version: '1.2.0', settings: { acme_email: '', staging: false },
+                    routes: BASE_ROUTES, certs: { ok: false, items: [] },
+                    caddy: { reachable: false }, apply: { at: '', error: '', warnings: [] },
+                },
+            },
+            error: {
+                state: {
+                    version: '1.2.0', settings: { acme_email: 'ops@example.com', staging: true },
+                    routes: BASE_ROUTES.slice(0, 3), certs: { ok: true, items: CERTS.slice(0, 3) },
+                    caddy: { reachable: true },
+                    apply: {
+                        at: '2026-11-13T10:40:11Z',
+                        error: 'Caddy rejected the configuration: adapting config using caddyfile: duplicate site address',
+                        warnings: [{ file: 'Caddyfile', line: 12, message: 'unused snippet' }],
+                    },
+                },
+            },
+        };
+
+        let current = 'normal';
+        let store = structuredClone(scenarios.normal.state);
+
+        const fakeCtx = {
+            pkg: { id: 'domains', name: 'Domains', version: '1.2.0' },
+            notify: (message, type) => { hint.textContent = `${type || 'info'}: ${message}`; },
+            proxy: async (path, options = {}) => {
+                const method = (options.method || 'GET').toUpperCase();
+                const body = options.body ? JSON.parse(options.body) : {};
+                if (path.startsWith('api/health')) return { status: 'ready', caddy: true };
+                if (path.startsWith('api/state')) return structuredClone(store);
+                if (path.startsWith('api/certs')) return structuredClone(store.certs);
+                if (path.startsWith('api/logs')) return { lines: LOG_LINES };
+                if (path.startsWith('api/dns')) {
+                    return { domain: decodeURIComponent(path.split('domain=')[1] || ''), addresses: ['83.24.11.7'], private: false, hint: '' };
+                }
+                if (path.startsWith('api/apply') && method === 'POST') return { ok: true, state: structuredClone(store) };
+                if (path.startsWith('api/settings') && method === 'POST') {
+                    store.settings = { acme_email: body.acme_email, staging: !!body.staging };
+                    return { ok: true, state: structuredClone(store) };
+                }
+                if (path.startsWith('api/routes/delete') && method === 'POST') {
+                    store.routes = store.routes.filter((item) => item.id !== body.id);
+                    return { ok: true, state: structuredClone(store) };
+                }
+                if (path === 'api/routes' && method === 'POST') {
+                    const normalised = {
+                        ...body,
+                        domains: Array.isArray(body.domains)
+                            ? body.domains
+                            : String(body.domains || '').split(/[,\s]+/).filter(Boolean),
+                        headers: Array.isArray(body.headers)
+                            ? body.headers
+                            : String(body.headers || '').split('\n').filter((line) => line.trim()),
+                    };
+                    const existing = store.routes.find((item) => item.id === body.id);
+                    if (existing) Object.assign(existing, normalised);
+                    else store.routes.push({ ...normalised, id: `r_${Math.random().toString(16).slice(2, 10)}` });
+                    return { ok: true, state: structuredClone(store) };
+                }
+                const error = new Error('Not found');
+                error.status = 404;
+                error.detail = `No preview handler for ${method} ${path}`;
+                throw error;
+            },
+        };
+
+        function mount() {
+            target.replaceChildren();
+            const host = document.createElement('div');
+            target.append(host);
+            render(host, fakeCtx);
+        }
+
+        document.querySelectorAll('[data-theme]').forEach((button) => {
+            button.addEventListener('click', () => {
+                document.documentElement.className = button.dataset.theme;
+            });
+        });
+        document.querySelectorAll('[data-scenario]').forEach((button) => {
+            button.addEventListener('click', () => {
+                current = button.dataset.scenario;
+                store = structuredClone(scenarios[current].state);
+                hint.textContent = `Scenario: ${current}`;
+                mount();
+            });
+        });
+
+        mount();
+    </script>
+</body>
+</html>

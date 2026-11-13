@@ -45,7 +45,7 @@ CADDY_ADMIN = os.environ.get("CADDY_ADMIN", "http://proxy:2019").rstrip("/")
 CADDY_LOG_FILE = Path(os.environ.get("CADDY_LOG_FILE", "/var/log/caddy/caddy.log"))
 GENERATED_DIR = Path(os.environ.get("GENERATED_DIR", "/etc/caddy/generated"))
 MAX_BODY = 64 * 1024
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 
 _APPLY_LOCK = threading.Lock()
 _LAST_APPLY = {"at": "", "error": "", "warnings": []}

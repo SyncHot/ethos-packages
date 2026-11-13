@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "domains",
   "name": "Domains",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another device, a container, or EthOS itself - without touching nginx by hand. Caddy issues and renews Let's Encrypt certificates on its own, and the stack keeps routing even when EthOS is restarting.",
   "icon": "🌐",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/icon.svg",
@@ -21,7 +21,7 @@
     "port": 8093,
     "path": "/api/health"
   },
-  "changelog": "1.1.1: read certificates from Caddy's actual storage root (/data/caddy/certificates), so the certificate list and expiry show up. per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
+  "changelog": "1.2.0: the window follows the AntiVirus layout — a left rail with Overview, Routes, Certificates, Settings and Diagnostics, status pills, stat tiles and action cards. Routes show their options as chips, the form keeps headers/Host/streaming under Advanced, and the ACME email field is no longer overwritten by the background refresh. 1.1.1: read certificates from Caddy's actual storage root (/data/caddy/certificates), so the certificate list and expiry show up. per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/docker-compose.yml",
     "sha256": "9bf8f36c8c564bf4f5cb1bc44936549c9dbc712239dc00ecf344f2092c6bc180"
