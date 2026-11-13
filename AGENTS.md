@@ -23,6 +23,11 @@ repo.pub            publisher public key (private key never committed)
   `<package-id>/icon.svg` in this repository, and `"icon.svg"` must be listed in `files[]`. The
   emoji `icon` stays as the desktop-shortcut fallback. See
   `.github/skills/package-icon/SKILL.md`.
+- **Manifest identity is the window identity.** EthOS renders the package window header and
+  taskbar entry from `manifest.name` and `manifest.icon_url`. `name` must be the human-readable
+  product name (not the package id, no `pkg-` prefix) and `icon_url` must be the same artwork as
+  the Package Center icon. Bump the version so installed clients refresh the identity. Native
+  modules must not set the window title themselves. See `.github/skills/package-icon/SKILL.md`.
 - **Path selection uses the EthOS picker.** Native package UIs call `ctx.pickFolder(opts)` /
   `ctx.pickFile(opts)` instead of shipping their own browser or forcing users to type absolute
   paths. Pass `roots: ['/home', '/mnt', '/media']` (or the paths the service accepts) so the

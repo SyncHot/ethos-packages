@@ -1,6 +1,6 @@
 ---
 name: package-icon
-description: "Add or fix a Package Center icon for an EthOS package. Use when a package shows only an emoji or 📦 placeholder, when creating a new package, or when icons are missing after publishing."
+description: "Add or fix a Package Center icon, or the icon/name shown in a package window header. Use when a package shows only an emoji or 📦 placeholder, when creating a new package, or when icons/names are wrong after publishing."
 argument-hint: "Which package needs an icon?"
 ---
 
@@ -17,6 +17,11 @@ argument-hint: "Which package needs an icon?"
   rewrite them, so they must already be absolute HTTPS URLs.
 - Desktop shortcuts and the App Drawer read `/api/packages/desktop-icons`, which exposes
   `icon_url` for absolute HTTPS URLs and keeps the emoji `icon` as the fallback.
+- **Window header and taskbar** use the same identity: EthOS renders `manifest.name` next to
+  `manifest.icon_url` when the package window opens and refreshes them after install/update.
+  A missing/invalid `icon_url` leaves the emoji or 📦 in the title bar; a machine name such as
+  `pkg-ethos-antivirus` means `manifest.name` is wrong. Native modules must never set the window
+  title themselves — the host owns it, including the `[2]` instance suffix.
 
 ## Procedure
 
@@ -71,7 +76,8 @@ curl -sI https://raw.githubusercontent.com/SyncHot/ethos-packages/main/<package-
 
 Expect `image/svg+xml`. Then in EthOS: Package Center → Sources → Refresh, and confirm the icon in
 **Available**, **Installed** and the package detail header. Existing installs need the version bump
-to be offered as an update.
+to be offered as an update. Finally open the package: the **window header and taskbar** must show
+the same artwork and the human-readable `manifest.name` in both light and dark themes.
 
 ## Common failures
 
@@ -81,4 +87,7 @@ to be offered as an update.
 | Blank square | Relative URL, non-HTTPS URL, or server returns `text/plain` |
 | Icon appears in Available but not Installed | No version bump — the install record still has the old manifest |
 | Icon file missing after install | `"icon.svg"` not listed in `files[]` |
+| Title bar shows 📦 or an emoji | `icon_url` missing/invalid — rebuild, sign and bump the version |
+| Title bar shows `pkg-<id>` | `manifest.name` missing or not human-readable |
+| Window title loses its `[2]` suffix | A native module overwrote the title; the host owns it |
 | Catalog refuses to refresh | Forgot `ethos-pack sign` after `build` |

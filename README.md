@@ -65,6 +65,9 @@ ethos-welcome/
 
 Package Center renders `icon_url` as an image in the catalog, installed list and
 detail header; the emoji `icon` stays as the desktop-shortcut fallback.
+The same `manifest.name` and `icon_url` are used by the package **window header
+and taskbar**, so `name` must be the human-readable product name (not the package
+id).
 
 - Icon file: `<package-id>/icon.svg` — 256×256 viewBox, rounded-square
   background, no text, legible at 20 px.
