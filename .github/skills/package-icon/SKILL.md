@@ -51,11 +51,11 @@ Add `"icon.svg"` as a string entry in `files[]` — `ethos-pack build` rewrites 
 
 ```bash
 cd ~/apps/compose/ethos-nas
-.venv/bin/python scripts/ethos-pack build  --repo ~/ethos-packages \
+.venv/bin/python scripts/ethos-pack build  --repo ~/apps/compose/ethos-packages \
   --base-url https://raw.githubusercontent.com/SyncHot/ethos-packages/main
-.venv/bin/python scripts/ethos-pack sign   --repo ~/ethos-packages \
+.venv/bin/python scripts/ethos-pack sign   --repo ~/apps/compose/ethos-packages \
   --key ~/.ethos-pack/ethos-packages/repo.key
-.venv/bin/python scripts/ethos-pack verify --repo ~/ethos-packages \
+.venv/bin/python scripts/ethos-pack verify --repo ~/apps/compose/ethos-packages \
   --pub ~/.ethos-pack/ethos-packages/repo.pub
 ```
 

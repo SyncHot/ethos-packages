@@ -82,17 +82,17 @@ cd ~/apps/compose/ethos-nas
 
 # One-time key generation (keep the private key outside this repo)
 .venv/bin/python scripts/ethos-pack keygen --out-dir ~/.ethos-pack/ethos-packages
-cp ~/.ethos-pack/ethos-packages/repo.pub ~/ethos-packages/repo.pub
+cp ~/.ethos-pack/ethos-packages/repo.pub ~/apps/compose/ethos-packages/repo.pub
 
 # After editing a package, regenerate the index and signature
 .venv/bin/python scripts/ethos-pack build \
-  --repo ~/ethos-packages \
+  --repo ~/apps/compose/ethos-packages \
   --base-url https://raw.githubusercontent.com/SyncHot/ethos-packages/main
 .venv/bin/python scripts/ethos-pack sign \
-  --repo ~/ethos-packages \
+  --repo ~/apps/compose/ethos-packages \
   --key ~/.ethos-pack/ethos-packages/repo.key
 .venv/bin/python scripts/ethos-pack verify \
-  --repo ~/ethos-packages \
+  --repo ~/apps/compose/ethos-packages \
   --pub ~/.ethos-pack/ethos-packages/repo.pub
 ```
 
