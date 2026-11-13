@@ -208,8 +208,10 @@ class ConsoleHandler(_Base):
             return self._console(query)
         if parsed.path.startswith("/novnc/"):
             return self._static(parsed.path[len("/novnc/"):])
-        if parsed.path in ("/", "/health"):
+        if parsed.path == "/health":
             return self.send_json(_health_payload(200, provisioning_step()))
+        if parsed.path == "/":
+            return self.send_text(_landing_page(len(ENGINE.list_vms())))
         self.send_json({"detail": "Not found"}, 404)
 
     def _console(self, query: dict) -> None:
@@ -255,6 +257,11 @@ class ConsoleHandler(_Base):
         key = self.headers.get("Sec-WebSocket-Key") or ""
         if self.headers.get("Upgrade", "").lower() != "websocket" or not key:
             return self.send_json({"detail": "WebSocket upgrade required"}, 400)
+        offered_protocols = [item.strip() for item in
+                             (self.headers.get("Sec-WebSocket-Protocol") or "").split(",")
+                             if item.strip()]
+        if offered_protocols and "binary" not in offered_protocols:
+            return self.send_json({"detail": "Only the binary subprotocol is supported"}, 400)
         if not verify_ticket(vm_id, ticket):
             return self.send_json({"detail": "Invalid or expired console ticket"}, 403)
         try:
@@ -268,6 +275,12 @@ class ConsoleHandler(_Base):
         self.send_header("Upgrade", "websocket")
         self.send_header("Connection", "Upgrade")
         self.send_header("Sec-WebSocket-Accept", console.accept_key(key))
+        # noVNC offers "binary"; a browser drops the connection when the server
+        # accepts the upgrade but selects no subprotocol.
+        offered = [item.strip() for item in
+                   (self.headers.get("Sec-WebSocket-Protocol") or "").split(",") if item.strip()]
+        if "binary" in offered:
+            self.send_header("Sec-WebSocket-Protocol", "binary")
         self.end_headers()
         self.wfile.flush()
         self.close_connection = True
@@ -348,6 +361,24 @@ def _console_page(name: str, vm_id: str, ticket: str) -> str:
 </script>
 </body>
 </html>"""
+
+
+def _landing_page(vm_count: int) -> str:
+    note = (f"{vm_count} machine{'' if vm_count == 1 else 's'} configured."
+            if vm_count else "No machines configured yet.")
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EthOS VM Manager</title>
+<style>body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1220;
+color:#dbe4f0;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;padding:24px}}
+.card{{max-width:460px}}h1{{font-size:18px;margin:0 0 10px}}p{{margin:0 0 6px;font-size:13px;
+line-height:1.6;opacity:.8}}code{{background:rgba(148,163,184,.16);padding:2px 6px;border-radius:5px;
+font-size:12px}}</style></head><body><div class="card">
+<h1>🖥️ EthOS VM Manager</h1>
+<p>This port serves virtual machine consoles only. {note}</p>
+<p>Open <strong>EthOS → VM Manager</strong> and press <em>Console</em> on a running machine;
+the console link is signed and expires after two minutes.</p>
+</div></body></html>"""
 
 
 def _error_page(title: str, hint: str) -> str:

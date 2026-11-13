@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-13T14:04:17+00:00",
+  "generated_at": "2026-11-13T14:12:10+00:00",
   "packages": [
     {
       "id": "domains",
@@ -97,7 +97,7 @@
     {
       "id": "vmm",
       "name": "EthOS VM Manager",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO, boot it, and use it from the browser console - no separate computer left running. Disks live on your own shares, VMs start again after a restart, and every VM is isolated in its own process.",
       "icon": "🖥️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/icon.svg",
@@ -112,10 +112,10 @@
         "kvm"
       ],
       "screenshots": [],
-      "changelog": "1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
+      "changelog": "1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/manifest.json",
-      "manifest_sha256": "d662d7831406724d8d332b702aa89f23fbdd2cf574884fa628f62f0565ac38f2",
-      "size_bytes": 81791
+      "manifest_sha256": "2a5176a0b2ee473f338f2eaaf43d5b10fea377842d50437545b9e47c77466bd5",
+      "size_bytes": 83039
     }
   ]
 }

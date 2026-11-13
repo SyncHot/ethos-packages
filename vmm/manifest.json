@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "vmm",
   "name": "EthOS VM Manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO, boot it, and use it from the browser console - no separate computer left running. Disks live on your own shares, VMs start again after a restart, and every VM is isolated in its own process.",
   "icon": "🖥️",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/icon.svg",
@@ -25,7 +25,7 @@
     "port": 8095,
     "path": "/api/health"
   },
-  "changelog": "1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
+  "changelog": "1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/docker-compose.yml",
     "sha256": "0ae6de3b70cecd12ef246ab9158397431b518375035df6f02fe03072e00d4fd8"
@@ -45,7 +45,7 @@
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/server/app.py",
-      "sha256": "bdf5450105d25c998b3d05bd7d72d7d92d810db45e550d2b24bf403da6d4c6b7",
+      "sha256": "a08f01c3207c4b6356bc9c1c270f061d4d34559e88b3e4fad77c01e1eca98e52",
       "path": "server/app.py",
       "mode": 420
     },
@@ -81,7 +81,7 @@
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/frontend/app.js",
-      "sha256": "fedcd6fd4c409e56589b62292e0e02ac1cce78b76c8b3a656b92266346257a2e",
+      "sha256": "69251029d22e63fe51f46c1651dc45e0cd5988e7606bca58fbb453f5637761ef",
       "path": "frontend/app.js",
       "mode": 420
     }

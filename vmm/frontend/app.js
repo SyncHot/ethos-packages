@@ -373,6 +373,12 @@ export function render(container, ctx) {
             state.health = health;
             state.host = host;
             state.vms = vms.items || [];
+            if (!state.defaultsApplied) {
+                state.defaultsApplied = true;
+                state.storagePath = (host.roots || [])[0] || '/vmhost/mnt';
+                const rootInput = $('#vmm-root');
+                if (rootInput && !rootInput.value) rootInput.value = state.storagePath;
+            }
             renderAll();
             if (!quiet) say('');
         } catch (err) {
@@ -482,16 +488,23 @@ export function render(container, ctx) {
                     loadStorage(path);
                 } else {
                     $('#vmm-iso').value = path;
-                    const option = document.createElement('option');
-                    option.value = path;
-                    option.textContent = path;
-                    option.selected = true;
-                    $('#vmm-iso').append(option);
                     $('[data-iso-hint]').textContent = `Selected: ${path}`;
                     say(`ISO selected: ${path}`);
                 }
             });
         });
+
+        // Make the ISO dropdown reflect the folder that is on screen, so the
+        // create form never needs a hand-typed path.
+        const select = $('#vmm-iso');
+        const isos = entries.filter((entry) => !entry.dir && /\.iso$/i.test(entry.name));
+        const current = select.value;
+        select.innerHTML = '<option value="">None (boot the disk)</option>'
+            + isos.map((entry) => `<option value="${esc(entry.path)}">${esc(entry.name)}</option>`).join('');
+        if (isos.some((entry) => entry.path === current)) select.value = current;
+        $('[data-iso-hint]').textContent = isos.length
+            ? `${isos.length} ISO file${isos.length === 1 ? '' : 's'} in this folder.`
+            : 'No .iso files here — copy an installer image to this folder first.';
     }
 
     function renderAll() {
