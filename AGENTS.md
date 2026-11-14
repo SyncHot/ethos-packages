@@ -104,6 +104,28 @@ contract, a copyable skeleton and the class inventory live in
   their layouts. New packages and redesigns must not copy that exception.
 - Never copy another package's *content*; copy its *layout and tokens*.
 
+## Logging (mandatory)
+
+EthOS has **one** log system (`docs/logs.md` in the EthOS repo). Packages feed it; they never ship a
+log viewer, a history list or a log file. A package-local log UI is a review blocker — the Logs app
+is the single place users read diagnostics.
+
+```js
+// native UI — stored as app="pkg:<id>", source="pkg-ui"
+ctx.log('info', 'Scan started', path);
+ctx.logger.warn('Cache empty');
+```
+
+- `ctx.log(level, message, detail)` / `ctx.logger.{debug,info,warn,error}`. Levels: `debug`, `info`,
+  `warning`, `error`. The server verifies `pkg.id`; never send another package's id.
+- **Backend/container logs**: write to stdout/stderr (plain or structured). EthOS shows them in the
+  Logs app under the package (containers are grouped by the compose project = package id). Do not
+  write your own log file or expose a `/api/logs` endpoint of your own.
+- Domain datasets (scan results, job history, certificate lists) are **not** logs and may stay local.
+- Never log credentials, tokens, API keys or full request bodies.
+- Port/iframe UIs run on another origin; use `ctx.log` (native) or stdout — the EthOS reporter cannot
+  see their console.
+
 ## Notifications (mandatory)
 
 EthOS has **one** Notification Center: a bell badge, a right-edge history sheet,
