@@ -40,6 +40,11 @@ repo.pub            publisher public key (private key never committed)
   (light is the default); port/iframe UIs receive `?theme=light|dark` and must also fall back to
   `prefers-color-scheme`. No dark-only palettes, no hard-coded surface/text colours outside the
   variable block. See `.github/skills/package-theme/SKILL.md`.
+- **Every native window uses the shared package shell.** A package with `ui.mode: "native"` must
+  follow `.github/skills/package-ui/SKILL.md` — the same layout and tokens as `backup-manager`,
+  `ethos-antivirus`, `domains` and `vmm` (218 px rail, text-only nav, panels, summary tiles,
+  tables, tags, status pill). A one-off layout is a review blocker. Only the documented legacy
+  exceptions (`ethos-welcome`, `tic-tac-toe`) may differ; do not extend the exception.
 - **Bump `version` and prepend `changelog`** for anything users can receive. Without a bump,
   Package Center never offers the update and installed rows keep the old manifest (including the
   old icon).
@@ -65,9 +70,11 @@ repo.pub            publisher public key (private key never committed)
 
 ## Native package UI shell (mandatory)
 
-Every native package window reuses the **EthOS AntiVirus shell** — do not invent a new visual
-language. Reference implementation: `ethos-antivirus/frontend/app.js` (STYLE + render shell);
-`domains` and `vmm` follow it too.
+Every native package window reuses the **shared EthOS package shell** — do not invent a new visual
+language. Reference implementations: **`backup-manager/frontend/app.js`** (newest) and
+**`ethos-antivirus/frontend/app.js`** (canonical); `domains` and `vmm` follow it too. The full
+contract, a copyable skeleton and the class inventory live in
+**`.github/skills/package-ui/SKILL.md`** — load it before building or restyling a package window.
 
 - **Root**: `display:flex; height:100%; overflow:hidden;` with the package palette scoped to the
   root element (light defaults + `:root.dark` overrides, see the `package-theme` skill). No teal or
@@ -88,7 +95,12 @@ language. Reference implementation: `ethos-antivirus/frontend/app.js` (STYLE + r
   collapse to one column.
 - **Both themes are part of the shell**, not an afterthought: screenshot the window in light and dark
   before publishing.
-- Never copy the AntiVirus *content*; copy its *layout and tokens*.
+- **Definition of done**: rail 218 px with a text-only nav, status pill in the foot, panels/summary/
+  tables/tags only, `ctx.progress` for long work, `ctx.modal` for confirms, responsive ≤780 px, light
+  **and** dark screenshots checked. The checklist in `package-ui/SKILL.md` is the review gate.
+- **Legacy exceptions**: `ethos-welcome` (static page) and `tic-tac-toe` (single-card game) keep
+  their layouts. New packages and redesigns must not copy that exception.
+- Never copy another package's *content*; copy its *layout and tokens*.
 
 ## Icons
 

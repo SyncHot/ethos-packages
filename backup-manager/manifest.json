@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "backup-manager",
   "name": "EthOS Backup Manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Versioned backups for folders and Docker Compose projects. Dated hardlink snapshots, GFS retention, quick/deep verify, a restore wizard and optional rclone offsite replication — in a native EthOS window.",
   "icon": "🔄",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/backup-manager/icon.svg",
@@ -15,12 +15,12 @@
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.0.1: the window now uses the shared AntiVirus/Domains shell — 218 px rail, text-only nav, panels, summary tiles, tables, tag pills and the same light/dark tokens. 1.0.0: first release — dated rsync hardlink snapshots, 7/4/6 GFS retention, completion manifest, quick and deep verify, cancel and queued runs, restore in place or to another folder, Docker Compose project discovery with volume/image snapshots, and rclone mirror with 30-day remote history.",
+  "changelog": "1.0.2: legacy generations show their real size and file count after indexing; unknown sizes render as — instead of 0 B. 1.0.1: the window now uses the shared AntiVirus/Domains shell — 218 px rail, text-only nav, panels, summary tiles, tables, tag pills and the same light/dark tokens. 1.0.0: first release — dated rsync hardlink snapshots, 7/4/6 GFS retention, completion manifest, quick and deep verify, cancel and queued runs, restore in place or to another folder, Docker Compose project discovery with volume/image snapshots, and rclone mirror with 30-day remote history.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/backup-manager/frontend/app.js",
-      "sha256": "eb7e5c6a35c8939b562975f51149938f3dd5a30b8b5a6c413959193271b649cb",
+      "sha256": "8329f44399a324a4d6bba94b91bba3b550dd9d28d4c51a4362431b70366e48f5",
       "path": "frontend/app.js",
       "mode": 420
     },

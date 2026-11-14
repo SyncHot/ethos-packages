@@ -785,7 +785,7 @@ export async function render(container, ctx) {
         const rows = generations.length ? generations.map((generation) => `<tr data-gen-row="${esc(generation.generation)}">
                 <td>${esc(fmtTime(generation.created_at || generation.generation))}<div class="bm-muted">${esc(generation.generation)}</div></td>
                 <td>${badge(generation.status)}${generation.legacy ? ' <span class="bm-tag is-info">legacy</span>' : ''}</td>
-                <td class="num">${fmtBytes(generation.size_bytes)}<div class="bm-muted">${generation.files_total || 0} file(s)</div></td>
+                <td class="num">${generation.size_bytes == null ? '—' : fmtBytes(generation.size_bytes)}<div class="bm-muted">${generation.files_total ? `${generation.files_total} file(s)` : 'not indexed'}</div></td>
                 <td>${generation.verified?.status ? `<span class="bm-tag ${generation.verified.status === 'ok' ? 'is-ok' : 'is-warn'}">${esc(generation.verified.status)}</span>` : '—'}${generation.remote?.status ? `<div class="bm-muted">remote: ${esc(generation.remote.status)}</div>` : ''}</td>
                 <td class="actions"><div class="bm-row" style="justify-content:flex-end">
                     <button class="bm-btn small" type="button" data-action="verify" data-id="${esc(state.restoreScheduleId)}" data-gen="${esc(generation.generation)}">Verify</button>
