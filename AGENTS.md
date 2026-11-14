@@ -67,6 +67,8 @@ repo.pub            publisher public key (private key never committed)
   declarative `files[]` instead.
 - Package ids: `^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$`; reserved ids (`packages`, `trash`,
   `snapshots`, …) are rejected.
+- **Never ship a package-local notification UI.** Use `ctx.notifications.{toast,emit,open}` — one
+  global Notification Center, see “Notifications (mandatory)” below.
 
 ## Native package UI shell (mandatory)
 
@@ -101,6 +103,40 @@ contract, a copyable skeleton and the class inventory live in
 - **Legacy exceptions**: `ethos-welcome` (static page) and `tic-tac-toe` (single-card game) keep
   their layouts. New packages and redesigns must not copy that exception.
 - Never copy another package's *content*; copy its *layout and tokens*.
+
+## Notifications (mandatory)
+
+EthOS has **one** Notification Center: a bell badge, a right-edge history sheet,
+toasts, optional sound and desktop alerts. Packages plug into it — they never
+build their own toast, panel, badge or event list. A local notification UI is a
+review blocker: it double-renders the unread count and breaks the global bell.
+
+```js
+// inside render(container, ctx) — ui.mode: "native" only
+ctx.notifications.toast('Scan finished', 'success');          // transient toast
+ctx.notifications.emit({                                      // persisted in the sheet
+  kind: 'info', title: 'Scan finished', message: '0 threats found',
+  action: { label: 'Open', appId: 'pkg-antivirus' },
+});
+ctx.notifications.open('unread');                             // focus the sheet
+ctx.notify('Saved', 'success');                               // legacy toast-only alias
+```
+
+- `kind` is `success` | `error` | `warning` | `info`. `action` opens an EthOS app
+  (`appId`) or a same-origin path (`href`).
+- `emit()` is stored with `source="pkg:<package-id>"`, derived server-side from
+  the installed package. Do not pass a `source`, and never try to impersonate
+  another subsystem (`health`, `downloads`, `system`, …).
+- `ctx.notifications` exists for `ui.mode: "native"` modules only. Port/iframe UIs
+  run on their own origin and cannot reach the EthOS API — their events must come
+  from their backend, and they must not build an in-iframe notification panel.
+- Long-running work: `ctx.progress.startTask()` drives the shared progress panel,
+  then **one** `emit()` at the end — not one notification per file or scan item.
+- Style with EthOS CSS variables; no hardcoded colours or emoji icons in anything
+  notification-shaped (the shell owns the visuals entirely).
+
+Contract and rationale: `ethos-nas/docs/notifications.md`. EthOS enforces the
+same rule on its own apps (`tests/test_notification_ui.py`).
 
 ## Icons
 
