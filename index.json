@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-14T13:26:33+00:00",
+  "generated_at": "2026-11-14T15:08:04+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -53,7 +53,7 @@
     {
       "id": "download-manager",
       "name": "EthOS Download Manager",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "description": "HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window.",
       "icon": "⬇️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/icon.svg",
@@ -67,10 +67,10 @@
         "compose"
       ],
       "screenshots": [],
-      "changelog": "1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
+      "changelog": "1.0.2: matches the shared package shell — a persistent Download button in the window header, a ready/attention status card, numbered add form (source · destination · torrents), table-based categories/RSS/watch folders and a Package panel; the 2 s poll no longer clears the quick-add field. 1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/manifest.json",
-      "manifest_sha256": "a6b66d535cde2be0f2256aafc7105e35340a4f20c99e09c2387ddf0c62f75896",
-      "size_bytes": 60950
+      "manifest_sha256": "cc5ad3ce34d518233b02ab84afe3250316e836d7f04e850e0293f964d776b088",
+      "size_bytes": 69925
     },
     {
       "id": "ethos-antivirus",

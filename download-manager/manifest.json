@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "download-manager",
   "name": "EthOS Download Manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window.",
   "icon": "⬇️",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/icon.svg",
@@ -15,12 +15,12 @@
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
+  "changelog": "1.0.2: matches the shared package shell — a persistent Download button in the window header, a ready/attention status card, numbered add form (source · destination · torrents), table-based categories/RSS/watch folders and a Package panel; the 2 s poll no longer clears the quick-add field. 1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/frontend/app.js",
-      "sha256": "b73b01bb0ea33262b2cb2ba2fd15a1c60eb451c7e5f36775d845f11c32adca0c",
+      "sha256": "c7951c37b724bf28b9855ea6488c054ae7b31dfa24cd64532743b7ae248f3602",
       "path": "frontend/app.js",
       "mode": 420
     },

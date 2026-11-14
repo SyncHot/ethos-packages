@@ -89,6 +89,9 @@ const STYLE = `
 .dm-side-note { color: var(--dm-muted); font-size: 10px; line-height: 1.6; }
 .dm-main { flex: 1; min-width: 0; overflow-y: auto; padding: 24px 28px 32px; }
 .dm-main h1 { margin: 0; font-size: clamp(22px, 3.4vw, 30px); letter-spacing: -0.02em; }
+.dm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dm-head-left { min-width: 0; }
+.dm-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .dm-page-sub { margin: 4px 0 0; color: var(--dm-muted); font-size: 12px; line-height: 1.5; }
 .dm-status { min-height: 18px; margin: 12px 0 0; color: var(--dm-accent); font-size: 12px; font-weight: 600; }
 .dm-status.error { color: var(--dm-red); }
@@ -101,12 +104,21 @@ const STYLE = `
 .dm-panel { padding: 17px 18px; border: 1px solid var(--dm-border); border-radius: 15px; background: var(--dm-panel); }
 .dm-panel h2 { margin: 0 0 3px; font-size: 13px; }
 .dm-muted { margin: 0; color: var(--dm-muted); font-size: 11px; line-height: 1.55; }
+.dm-ready { display: flex; align-items: center; gap: 14px; }
+.dm-check { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--dm-green-soft); color: var(--dm-green); font-size: 17px; font-weight: 700; }
+.dm-check.waiting { background: var(--dm-amber-soft); color: var(--dm-amber); }
+.dm-startup { margin: 10px 0 0; padding: 9px 11px; border: 1px solid var(--dm-amber-border); border-radius: 9px; background: var(--dm-amber-soft); color: var(--dm-muted); font-size: 11px; line-height: 1.55; }
+.dm-startup.error { border-color: var(--dm-red-border); background: var(--dm-red-soft); }
+.dm-startup.info { border-color: var(--dm-accent-border); background: var(--dm-accent-soft); }
+.dm-label { display: block; margin-bottom: 7px; font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--dm-muted); }
 .dm-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
 .dm-summary div { padding: 11px; border: 1px solid var(--dm-border); border-radius: 10px; background: var(--dm-surface); }
 .dm-summary span { display: block; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dm-muted); margin-bottom: 4px; }
 .dm-summary strong { font-size: 20px; font-variant-numeric: tabular-nums; }
 .dm-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dm-toolbar > div { min-width: 0; }
 .dm-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.dm-row.end { justify-content: flex-end; }
 .dm-btn { padding: 8px 13px; border: 1px solid var(--dm-border); border-radius: 9px; background: var(--dm-surface); color: var(--dm-text); font-size: 11px; font-weight: 600; cursor: pointer; }
 .dm-btn:hover:not(:disabled) { border-color: var(--dm-accent); }
 .dm-btn:disabled { opacity: 0.5; cursor: wait; }
@@ -115,18 +127,21 @@ const STYLE = `
 .dm-btn.small { padding: 4px 9px; font-size: 10px; font-family: ui-monospace, monospace; }
 .dm-btn:focus-visible, .dm-input:focus-visible, .dm-root select:focus-visible { outline: 2px solid var(--dm-accent); outline-offset: 2px; }
 .dm-input { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--dm-border); border-radius: 9px; background: var(--dm-input-bg); color: var(--dm-text); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.dm-input.dm-search { flex: 0 0 200px; min-width: 150px; }
 .dm-root select { padding: 8px 10px; border: 1px solid var(--dm-border); border-radius: 9px; background: var(--dm-input-bg); color: var(--dm-text); font-size: 11px; }
-.dm-tabs { display: flex; gap: 2px; flex-wrap: wrap; }
-.dm-tab { padding: 6px 11px; border: 0; border-radius: 8px; background: transparent; color: var(--dm-muted); font-size: 11px; font-weight: 600; cursor: pointer; }
-.dm-tab.is-active { background: var(--dm-accent-soft); color: var(--dm-text); }
+.dm-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
+.dm-tab { padding: 5px 11px; border: 1px solid var(--dm-border); border-radius: 999px; background: var(--dm-surface); color: var(--dm-muted); font-size: 10px; font-weight: 600; cursor: pointer; }
+.dm-tab.is-active { border-color: var(--dm-accent-border); background: var(--dm-accent-soft); color: var(--dm-text); }
+.dm-scroll { overflow-x: auto; margin-top: 12px; }
 .dm-table { width: 100%; border-collapse: collapse; font-size: 11px; }
 .dm-table th, .dm-table td { text-align: left; padding: 8px 9px; border-bottom: 1px solid var(--dm-border); vertical-align: middle; }
 .dm-table th { color: var(--dm-muted); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
 .dm-table tbody tr:last-child td { border-bottom: 0; }
+.dm-table td.path { font-family: ui-monospace, monospace; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-table td.actions { text-align: right; white-space: nowrap; }
+.dm-table td.actions .dm-row { flex-wrap: nowrap; justify-content: flex-end; }
 .dm-table tr.is-drag-source { opacity: 0.45; }
 .dm-table tr.is-drop-target { box-shadow: inset 0 0 0 2px var(--dm-accent); }
-.dm-table td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.dm-table td.actions { text-align: right; white-space: nowrap; }
 .dm-handle { width: 22px; text-align: center; color: var(--dm-muted); cursor: grab; user-select: none; }
 .dm-handle:active { cursor: grabbing; }
 .dm-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: 600; color: var(--dm-text); word-break: break-word; }
@@ -139,6 +154,7 @@ const STYLE = `
 .dm-tag.is-ok { border-color: var(--dm-green-border); background: var(--dm-green-soft); color: var(--dm-green); }
 .dm-tag.is-bad { border-color: var(--dm-red-border); background: var(--dm-red-soft); color: var(--dm-red); }
 .dm-tag.is-warn { border-color: var(--dm-amber-border); background: var(--dm-amber-soft); color: var(--dm-amber); }
+.dm-tag.is-info { border-color: var(--dm-accent-border); background: var(--dm-accent-soft); color: var(--dm-accent); }
 .dm-empty { margin-top: 12px; padding: 24px; text-align: center; color: var(--dm-muted); font-size: 11px; border: 1px dashed var(--dm-border); border-radius: 11px; }
 .dm-empty strong { display: block; color: var(--dm-text); margin-bottom: 4px; }
 .dm-field { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
@@ -147,11 +163,11 @@ const STYLE = `
 .dm-field > label.dm-checkline { text-transform: none; letter-spacing: 0; color: var(--dm-text); font-size: 12px; font-weight: 400; display: flex; align-items: center; gap: 9px; }
 .dm-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .dm-fields .full { grid-column: 1 / -1; }
-.dm-checkline input { accent-color: var(--dm-accent); }
+.dm-checkline { display: flex; align-items: flex-start; gap: 9px; margin-top: 12px; font-size: 12px; cursor: pointer; }
+.dm-checkline input { margin: 2px 0 0; accent-color: var(--dm-accent); }
 .dm-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--dm-border); flex-wrap: wrap; }
-.dm-editor-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; margin-top: 8px; }
-.dm-editor-row.wide { grid-template-columns: auto 2fr 1fr 1fr 1fr 1fr 80px auto; }
 .dm-hint { margin: 8px 0 0; color: var(--dm-muted); font-size: 10px; line-height: 1.5; }
+.dm-danger { color: var(--dm-red); }
 .dm-root code { color: var(--dm-accent); font-family: ui-monospace, monospace; }
 .dm-def-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; margin-top: 12px; }
 .dm-def-grid div { padding: 11px; border: 1px solid var(--dm-border); border-radius: 10px; background: var(--dm-surface); }
@@ -159,15 +175,17 @@ const STYLE = `
 .dm-def-grid strong { font-size: 12px; font-weight: 600; word-break: break-word; }
 @media (max-width: 780px) {
     .dm-root { flex-direction: column; }
-    .dm-side { width: auto; flex-direction: row; align-items: center; gap: 8px; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--dm-border); overflow-x: auto; }
+    .dm-side { width: auto; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--dm-border); overflow-x: auto; }
     .dm-brand { padding: 0; }
-    .dm-brand small, .dm-side-foot { display: none; }
+    .dm-brand small, .dm-side-note { display: none; }
     .dm-nav { flex-direction: row; }
     .dm-nav-item { white-space: nowrap; }
+    .dm-side-foot { margin: 0 0 0 auto; padding: 0; }
     .dm-main { padding: 16px; }
     .dm-summary, .dm-fields { grid-template-columns: 1fr; }
-    .dm-editor-row, .dm-editor-row.wide { grid-template-columns: 1fr; }
+    .dm-input.dm-search { flex: 1 1 100%; }
 }
+@media (prefers-reduced-motion: reduce) { .dm-root * { transition: none !important; animation: none !important; } }
 `;
 
 const VIEWS = {
@@ -215,6 +233,7 @@ export async function render(container, ctx) {
     const state = {
         view: 'overview', tasks: [], config: null, filter: 'all', search: '',
         sort: 'newest', dragId: '', timer: null, fatal: '', busy: false, loaded: false,
+        quickUrl: '',
     };
 
     const style = document.createElement('style');
@@ -228,7 +247,7 @@ export async function render(container, ctx) {
                 <div><strong>Download Manager</strong><small data-version>EthOS package</small></div>
             </div>
             <nav class="dm-nav" aria-label="Download sections">
-                ${Object.entries(VIEWS).map(([id, v], i) => `<button class="dm-nav-item${i === 0 ? ' is-active' : ''}" type="button" data-view="${id}">${escHtml(v[0])}</button>`).join('')}
+                ${Object.entries(VIEWS).map(([id, v], i) => `<button class="dm-nav-item${i === 0 ? ' is-active' : ''}" type="button" data-view="${id}" data-testid="dm-nav-${id}">${escHtml(v[0])}</button>`).join('')}
             </nav>
             <div class="dm-side-foot">
                 <span class="dm-pill starting" id="dm-pill" role="status" aria-live="polite">Connecting…</span>
@@ -237,8 +256,15 @@ export async function render(container, ctx) {
         </aside>
         <main class="dm-main">
             <header>
-                <h1 id="dm-title">Overview</h1>
-                <p class="dm-page-sub" id="dm-sub"></p>
+                <div class="dm-head">
+                    <div class="dm-head-left">
+                        <h1 id="dm-title">Overview</h1>
+                        <p class="dm-page-sub" id="dm-sub"></p>
+                    </div>
+                    <div class="dm-head-actions">
+                        <button class="dm-btn primary" type="button" data-view="add" data-testid="dm-new-download">⬇ Download</button>
+                    </div>
+                </div>
                 <p class="dm-status" id="dm-status" role="status" aria-live="polite">Loading…</p>
             </header>
             <div class="dm-view" id="dm-view"></div>
@@ -331,9 +357,12 @@ export async function render(container, ctx) {
             if (!state.config) await loadConfig();
             state.fatal = '';
             setPill('ready', 'Ready');
-            // Do not rebuild the list while the user is typing in the search box.
-            const searching = document.activeElement?.dataset?.role === 'search';
-            if (!searching && (state.view === 'overview' || state.view === 'downloads')) renderView();
+            // Never rebuild a view while the user is typing in it or mid-drag:
+            // the 2 s poll would otherwise wipe the input and drop the click.
+            const active = document.activeElement;
+            const typing = Boolean(active && root.contains(active)
+                && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName));
+            if (!typing && !state.dragId && (state.view === 'overview' || state.view === 'downloads')) renderView();
             if (!quiet) await loadConfig();
         } catch (error) {
             state.fatal = error.message || 'Download engine unavailable';
@@ -368,7 +397,7 @@ export async function render(container, ctx) {
         </div>`;
     };
 
-    const taskRow = (task) => {
+    const taskRow = (task, compact = false) => {
         const [label, tone] = STATUS[task.status] || [task.status, ''];
         const percent = pct(task);
         const waiting = task.status === 'waiting';
@@ -376,25 +405,27 @@ export async function render(container, ctx) {
             ? fmtEta((task.size - task.downloaded) / task.speed) : '—';
         const canPause = ACTIVE.has(task.status);
         const canResume = task.status === 'paused' || task.status === 'error';
-        return `<tr data-task-id="${escAttr(task.id)}" data-status="${escAttr(task.status)}">
-            <td class="dm-handle">${waiting ? '<span draggable="true" data-drag-handle title="Drag to reorder">⣿</span>' : ''}</td>
+        const actions = compact ? '' : `<td class="actions"><div class="dm-row end">
+                ${canPause ? `<button class="dm-btn small" type="button" data-action="pause" data-id="${escAttr(task.id)}" data-testid="dm-pause-${escAttr(task.id)}">Pause</button>` : ''}
+                ${canResume ? `<button class="dm-btn small" type="button" data-action="resume" data-id="${escAttr(task.id)}" data-testid="dm-resume-${escAttr(task.id)}">Resume</button>` : ''}
+                <button class="dm-btn small" type="button" data-action="details" data-id="${escAttr(task.id)}" data-testid="dm-details-${escAttr(task.id)}">Details</button>
+                ${task.status === 'paused' ? `<button class="dm-btn small" type="button" data-action="reset" data-id="${escAttr(task.id)}" data-testid="dm-reset-${escAttr(task.id)}">Reset</button>` : ''}
+                <button class="dm-btn small danger" type="button" data-action="delete" data-id="${escAttr(task.id)}" data-testid="dm-delete-${escAttr(task.id)}">Delete</button>
+            </div></td>`;
+        return `<tr data-task-id="${escAttr(task.id)}" data-status="${escAttr(task.status)}" data-testid="dm-task-${escAttr(task.id)}">
+            <td class="dm-handle">${!compact && waiting ? '<span draggable="true" data-drag-handle title="Drag to reorder the queue">⣿</span>' : ''}</td>
             <td>
                 <div class="dm-name">${escHtml(task.name)}
                     <span class="dm-tag ${tone}">${escHtml(label)}</span>
-                    ${waiting && task.queue_position ? `<span class="dm-tag">#${task.queue_position}</span>` : ''}
+                    ${waiting && task.queue_position ? `<span class="dm-tag is-info">#${task.queue_position}</span>` : ''}
                     ${task.category ? `<span class="dm-tag">${escHtml(task.category)}</span>` : ''}
                 </div>
                 <div class="dm-bar ${task.status === 'completed' ? 'is-done' : task.status === 'error' ? 'is-error' : ''}"><i style="width:${percent}%"></i></div>
-                <div class="dm-meta">${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${task.error ? ` · <span style="color:var(--dm-red)">${escHtml(task.error)}</span>` : ''}</div>
+                <div class="dm-meta">${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${task.error ? ` · <span class="dm-danger">${escHtml(task.error)}</span>` : ''}</div>
             </td>
+            <td class="path" title="${escAttr(task.path || '')}">${escHtml(task.path || '—')}</td>
             <td class="num">${fmtTime(task.created_at)}</td>
-            <td class="actions">
-                ${canPause ? `<button class="dm-btn small" data-action="pause" data-id="${escAttr(task.id)}">Pause</button>` : ''}
-                ${canResume ? `<button class="dm-btn small" data-action="resume" data-id="${escAttr(task.id)}">Resume</button>` : ''}
-                <button class="dm-btn small" data-action="details" data-id="${escAttr(task.id)}">Details</button>
-                <button class="dm-btn small" data-action="reset" data-id="${escAttr(task.id)}">Reset</button>
-                <button class="dm-btn small danger" data-action="delete" data-id="${escAttr(task.id)}">Delete</button>
-            </td>
+            ${actions}
         </tr>`;
     };
 
@@ -405,103 +436,141 @@ export async function render(container, ctx) {
         const tabs = [['all', 'All'], ['active', 'Active'], ['completed', 'Completed'], ['paused', 'Paused'], ['errors', 'Errors']];
         return `<section class="dm-panel">
             <div class="dm-toolbar">
-                <div><h2>Tasks</h2><p class="dm-muted">Drag ⣿ on a waiting row to change the queue order.</p></div>
+                <div><h2>Downloads</h2><p class="dm-muted">Drag ⣿ on a waiting row to change the queue order.</p></div>
                 <div class="dm-row">
-                    <input class="dm-input" id="dm-search" data-role="search" placeholder="Search name, URL or category…" value="${escAttr(state.search)}" aria-label="Search downloads" style="width:220px">
-                    <select data-role="sort" aria-label="Sort downloads">
+                    <input class="dm-input dm-search" id="dm-search" data-role="search" placeholder="Search name, URL or category…" value="${escAttr(state.search)}" aria-label="Search downloads" data-testid="dm-search">
+                    <select data-role="sort" aria-label="Sort downloads" data-testid="dm-sort">
                         ${[['newest', 'Newest'], ['oldest', 'Oldest'], ['name', 'Name'], ['size', 'Size'], ['progress', 'Progress'], ['status', 'Status']]
                             .map(([v, l]) => `<option value="${v}"${state.sort === v ? ' selected' : ''}>${l}</option>`).join('')}
                     </select>
-                    <button class="dm-btn primary" data-action="refresh">Refresh</button>
+                    <button class="dm-btn" type="button" data-action="refresh" data-testid="dm-refresh">Refresh</button>
                 </div>
             </div>
-            <div class="dm-tabs" style="margin-top:10px">
-                ${tabs.map(([id, label]) => `<button class="dm-tab${state.filter === id ? ' is-active' : ''}" type="button" data-filter="${id}">${label} ${counts[id]}</button>`).join('')}
+            <div class="dm-tabs">
+                ${tabs.map(([id, label]) => `<button class="dm-tab${state.filter === id ? ' is-active' : ''}" type="button" data-filter="${id}" data-testid="dm-filter-${id}">${label} ${counts[id]}</button>`).join('')}
             </div>
-            ${tasks.length ? `<div style="overflow-x:auto;margin-top:10px"><table class="dm-table">
-                <thead><tr><th></th><th>Name</th><th style="text-align:right">Added</th><th style="text-align:right">Actions</th></tr></thead>
+            ${tasks.length ? `<div class="dm-scroll"><table class="dm-table">
+                <thead><tr><th></th><th>Download</th><th>Destination</th><th style="text-align:right">Added</th><th></th></tr></thead>
                 <tbody>${tasks.map(taskRow).join('')}</tbody>
-            </table></div>` : `<div class="dm-empty"><strong>Nothing here</strong>No downloads match this view.</div>`}
+            </table></div>` : `<div class="dm-empty"><strong>Nothing here</strong>No downloads match this view — start one with the Download button.</div>`}
         </section>`;
     };
 
     const overviewView = () => {
-        const recent = state.tasks.slice().sort((a, b) => b.created_at - a.created_at).slice(0, 6);
-        return `${summary()}
+        const active = state.tasks.filter((t) => t.status === 'downloading' || t.status === 'debrid_downloading');
+        const queued = queueOrder().length;
+        const failures = state.tasks.filter((t) => t.status === 'error').length;
+        const speed = state.tasks.reduce((sum, t) => sum + (ACTIVE.has(t.status) ? Number(t.speed || 0) : 0), 0);
+        const provider = state.config?.debrid?.provider || '';
+        const recent = state.tasks.slice().sort((a, b) => b.created_at - a.created_at).slice(0, 5);
+        const readyText = failures
+            ? `${failures} download(s) stopped with an error — open Downloads to read the message and retry.`
+            : active.length
+                ? `${active.length} transfer(s) running at ${fmtSpeed(speed)} · ${queued} waiting in the queue.`
+                : 'Nothing is downloading right now. Paste a link below, or press Download for the full form.';
+        return `<section class="dm-panel dm-ready">
+                <span class="dm-check ${failures ? 'waiting' : ''}" aria-hidden="true">${failures ? '!' : '✓'}</span>
+                <div><h2>${failures ? 'Attention needed' : 'Ready to download'}</h2><p class="dm-muted">${escHtml(readyText)}</p></div>
+            </section>
+            ${failures ? `<div class="dm-startup error">${failures} download(s) failed. Debrid keys, expired links and full disks are the usual causes.</div>` : ''}
+            ${provider ? '' : '<div class="dm-startup">No debrid provider configured — magnet links and .torrent files need one. Set it in <strong>Settings → Debrid</strong>.</div>'}
+            ${summary()}
             <section class="dm-panel">
-                <h2>Quick add</h2>
-                <p class="dm-muted">Paste an http(s) URL, a magnet link or a premium hoster link.</p>
-                <div class="dm-row" style="margin-top:10px">
-                    <input class="dm-input" id="dm-quick-url" placeholder="https://… or magnet:?xt=urn:btih:…" aria-label="Download URL">
-                    <button class="dm-btn primary" data-action="quick-add">Download</button>
+                <div class="dm-toolbar">
+                    <div><h2>New download</h2><p class="dm-muted">Paste an http(s) URL, a magnet link or a premium hoster link.</p></div>
+                    <div class="dm-row"><button class="dm-btn" type="button" data-view="add">More options</button></div>
+                </div>
+                <div class="dm-row" style="margin-top:12px">
+                    <input class="dm-input" id="dm-quick-url" placeholder="https://… or magnet:?xt=urn:btih:…" aria-label="Download URL" value="${escAttr(state.quickUrl)}" data-testid="dm-quick-url">
+                    <button class="dm-btn primary" type="button" data-action="quick-add" data-testid="dm-quick-add">⬇ Download</button>
                 </div>
             </section>
-            ${recent.length ? `<section class="dm-panel">
-                <h2>Recent activity</h2>
-                <div style="overflow-x:auto;margin-top:10px"><table class="dm-table">
-                    <thead><tr><th></th><th>Name</th><th style="text-align:right">Added</th><th></th></tr></thead>
-                    <tbody>${recent.map(taskRow).join('')}</tbody>
-                </table></div>
-            </section>` : ''}`;
+            <section class="dm-panel">
+                <div class="dm-toolbar">
+                    <div><h2>Recent activity</h2><p class="dm-muted">Newest tasks first.</p></div>
+                    <div class="dm-row"><button class="dm-btn" type="button" data-view="downloads">All downloads</button></div>
+                </div>
+                ${recent.length ? `<div class="dm-scroll"><table class="dm-table">
+                    <thead><tr><th></th><th>Download</th><th>Destination</th><th style="text-align:right">Added</th></tr></thead>
+                    <tbody>${recent.map((task) => taskRow(task, true)).join('')}</tbody>
+                </table></div>` : '<div class="dm-empty"><strong>No downloads yet</strong>Start one above and it will show up here.</div>'}
+            </section>
+            <section class="dm-panel">
+                <h2>How it works</h2>
+                <p class="dm-muted" style="margin-top:6px">HTTP links stream straight to the destination. Magnets and .torrent files are resolved by your debrid provider and pulled to the NAS over HTTPS. Waiting tasks start by priority, then oldest first — drag ⣿ to reorder. In-flight data stays in <code>&lt;name&gt;.part</code> and is renamed only when complete.</p>
+                <div class="dm-row" style="margin-top:12px"><button class="dm-btn primary" type="button" data-view="add">+ New download</button></div>
+            </section>`;
     };
 
     const addView = () => {
         const categories = state.config?.categories || [];
-        return `<section class="dm-panel">
-            <h2>Add a download</h2>
-            <p class="dm-muted">A category destination wins over the default folder; an explicit folder wins over both.</p>
-            <form data-form="add" autocomplete="off">
-                <div class="dm-field"><label for="dm-add-url">URL or magnet</label>
-                    <input class="dm-input" id="dm-add-url" name="url" placeholder="https://example.com/file.iso or magnet:?xt=urn:btih:…" required></div>
+        return `<form data-form="add" autocomplete="off">
+            <section class="dm-panel">
+                <h2>1 · Source</h2>
+                <p class="dm-muted">A single URL: HTTP(S), a magnet link or a premium hoster link.</p>
+                <div class="dm-field full"><label for="dm-add-url">URL or magnet</label>
+                    <input class="dm-input" id="dm-add-url" name="url" placeholder="https://example.com/file.iso or magnet:?xt=urn:btih:…" required data-testid="dm-add-url"></div>
                 <div class="dm-fields">
                     <div class="dm-field"><label for="dm-add-name">Display name (optional)</label>
                         <input class="dm-input" id="dm-add-name" name="name" maxlength="255"></div>
                     <div class="dm-field"><label for="dm-add-category">Category</label>
-                        <select id="dm-add-category" name="category"><option value="">— None —</option>
+                        <select class="dm-input" id="dm-add-category" name="category" data-testid="dm-add-category"><option value="">— None —</option>
                             ${categories.map((c) => `<option value="${escAttr(c.name)}">${escHtml(c.name)}${c.save_path ? ` — ${escHtml(c.save_path)}` : ''}</option>`).join('')}
                         </select></div>
-                    <div class="dm-field full"><label for="dm-add-folder">Folder (optional)</label>
-                        <div class="dm-row"><input class="dm-input" id="dm-add-folder" name="folder" placeholder="Leave blank for the default folder">
-                            <button type="button" class="dm-btn" data-action="pick-folder" data-target="dm-add-folder">Browse…</button></div></div>
                 </div>
-                <div class="dm-form-actions"><button class="dm-btn primary" type="submit">Start download</button></div>
-            </form>
-        </section>
-        <section class="dm-panel">
-            <h2>Torrent files</h2>
-            <p class="dm-muted">Upload one or more .torrent files; they are queued through the debrid provider.</p>
-            <div class="dm-row" style="margin-top:10px">
-                <input type="file" id="dm-add-torrents" accept=".torrent" multiple aria-label="Torrent files">
-                <button class="dm-btn primary" data-action="upload-torrents">Queue torrents</button>
+            </section>
+            <section class="dm-panel">
+                <h2>2 · Destination</h2>
+                <p class="dm-muted">A category destination wins over the default folder; an explicit folder wins over both.</p>
+                <div class="dm-field full"><label for="dm-add-folder">Folder (optional)</label>
+                    <div class="dm-row"><input class="dm-input" id="dm-add-folder" name="folder" placeholder="Leave blank for the default folder" data-testid="dm-add-folder">
+                        <button type="button" class="dm-btn" data-action="pick-folder" data-target="dm-add-folder">Browse…</button></div>
+                    <p class="dm-hint">Current default: <code>${escHtml(state.config?.download_dir || '—')}</code></p></div>
+            </section>
+            <section class="dm-panel">
+                <h2>3 · Torrent files</h2>
+                <p class="dm-muted">Upload one or more .torrent files; they are queued through the debrid provider with the same destination rules.</p>
+                <div class="dm-row" style="margin-top:12px">
+                    <input type="file" id="dm-add-torrents" accept=".torrent" multiple aria-label="Torrent files" data-testid="dm-add-torrents">
+                    <button class="dm-btn primary" type="button" data-action="upload-torrents" data-testid="dm-upload-torrents">Queue torrents</button>
+                </div>
+            </section>
+            <div class="dm-form-actions">
+                <button class="dm-btn" type="button" data-view="downloads">Cancel</button>
+                <button class="dm-btn primary" type="submit" data-testid="dm-add-submit">⬇ Start download</button>
             </div>
-        </section>`;
+        </form>`;
     };
 
-    const categoryRows = (categories) => categories.map((c, i) => `<div class="dm-editor-row" data-cat-row="${i}">
-        <input class="dm-input" data-cat-name value="${escAttr(c.name || '')}" placeholder="Name" aria-label="Category name">
-        <input class="dm-input" data-cat-path value="${escAttr(c.save_path || '')}" placeholder="Destination (blank = download dir/name)" aria-label="Category destination">
-        <button class="dm-btn small danger" type="button" data-action="remove-cat" data-index="${i}">Remove</button>
-    </div>`).join('');
+    const categoryRows = (categories) => categories.map((c, i) => `<tr data-cat-row="${i}">
+        <td><input class="dm-input" data-cat-name value="${escAttr(c.name || '')}" placeholder="Name" aria-label="Category name"></td>
+        <td><input class="dm-input" data-cat-path value="${escAttr(c.save_path || '')}" placeholder="Blank = download dir / name" aria-label="Category destination"></td>
+        <td class="actions"><button class="dm-btn small danger" type="button" data-action="remove-cat">Remove</button></td>
+    </tr>`).join('');
 
-    const rssRows = (feeds) => feeds.map((f, i) => `<div class="dm-editor-row wide" data-rss-row="${i}" data-feed-id="${escAttr(f.id || '')}">
-        <input type="checkbox" ${f.enabled ? 'checked' : ''} aria-label="Feed enabled">
-        <input class="dm-input" data-rss-url value="${escAttr(f.url || '')}" placeholder="https://indexer/rss" aria-label="Feed URL">
-        <input class="dm-input" data-rss-pattern value="${escAttr(f.pattern || '')}" placeholder="Include regex" aria-label="Include pattern">
-        <input class="dm-input" data-rss-exclude value="${escAttr(f.exclude || '')}" placeholder="Exclude regex" aria-label="Exclude pattern">
-        <input class="dm-input" data-rss-category value="${escAttr(f.category || '')}" placeholder="Category" aria-label="Feed category">
-        <input class="dm-input" data-rss-dest value="${escAttr(f.destination || '')}" placeholder="Destination" aria-label="Feed destination">
-        <input class="dm-input" data-rss-interval type="number" min="5" max="1440" value="${Number(f.interval_minutes || 15)}" title="Check interval (minutes)" aria-label="Check interval in minutes" style="max-width:80px">
-        <div class="dm-row"><button class="dm-btn small" type="button" data-action="run-rss" data-id="${escAttr(f.id || '')}">Run</button>
-            <button class="dm-btn small danger" type="button" data-action="remove-rss">×</button></div>
-    </div>`).join('');
+    const rssRows = (feeds) => feeds.map((f, i) => `<tr data-rss-row="${i}" data-feed-id="${escAttr(f.id || '')}">
+        <td><input type="checkbox" ${f.enabled ? 'checked' : ''} aria-label="Feed enabled"></td>
+        <td><input class="dm-input" data-rss-url value="${escAttr(f.url || '')}" placeholder="https://indexer/rss" aria-label="Feed URL"></td>
+        <td><input class="dm-input" data-rss-pattern value="${escAttr(f.pattern || '')}" placeholder="Include regex" aria-label="Include pattern"></td>
+        <td><input class="dm-input" data-rss-exclude value="${escAttr(f.exclude || '')}" placeholder="Exclude regex" aria-label="Exclude pattern"></td>
+        <td><input class="dm-input" data-rss-category value="${escAttr(f.category || '')}" placeholder="Category" aria-label="Feed category"></td>
+        <td><input class="dm-input" data-rss-dest value="${escAttr(f.destination || '')}" placeholder="Destination" aria-label="Feed destination"></td>
+        <td><input class="dm-input" data-rss-interval type="number" min="5" max="1440" value="${Number(f.interval_minutes || 15)}" title="Check interval (minutes)" aria-label="Check interval in minutes"></td>
+        <td class="actions"><div class="dm-row end">
+            <button class="dm-btn small" type="button" data-action="run-rss" data-id="${escAttr(f.id || '')}">Run</button>
+            <button class="dm-btn small danger" type="button" data-action="remove-rss" aria-label="Remove feed">×</button>
+        </div></td>
+    </tr>`).join('');
 
-    const watchRows = (folders) => folders.map((e, i) => `<div class="dm-editor-row" data-watch-row="${i}" style="grid-template-columns:1fr 1fr 1fr auto;align-items:center">
-        <input class="dm-input" data-watch-name value="${escAttr(e.name || '')}" placeholder="Name" aria-label="Watch folder name">
-        <input class="dm-input" id="watch-${i}" data-watch-folder value="${escAttr(e.folder || '')}" placeholder="/path/to/torrents" aria-label="Watched folder">
-        <input class="dm-input" data-watch-dest value="${escAttr(e.destination || '')}" placeholder="Destination (blank = same folder)" aria-label="Watch destination">
-        <div class="dm-row"><button class="dm-btn small" type="button" data-action="pick-folder" data-target="watch-${i}">Browse…</button>
-            <button class="dm-btn small danger" type="button" data-action="remove-watch">×</button></div>
-    </div>`).join('');
+    const watchRows = (folders) => folders.map((e, i) => `<tr data-watch-row="${i}">
+        <td><input class="dm-input" data-watch-name value="${escAttr(e.name || '')}" placeholder="Name" aria-label="Watch folder name"></td>
+        <td><input class="dm-input" id="watch-${i}" data-watch-folder value="${escAttr(e.folder || '')}" placeholder="/path/to/torrents" aria-label="Watched folder"></td>
+        <td><input class="dm-input" data-watch-dest value="${escAttr(e.destination || '')}" placeholder="Blank = same folder" aria-label="Watch destination"></td>
+        <td class="actions"><div class="dm-row end">
+            <button class="dm-btn small" type="button" data-action="pick-folder" data-target="watch-${i}">Browse…</button>
+            <button class="dm-btn small danger" type="button" data-action="remove-watch" aria-label="Remove folder">×</button>
+        </div></td>
+    </tr>`).join('');
 
     const settingsView = () => {
         const cfg = state.config || {};
@@ -513,10 +582,12 @@ export async function render(container, ctx) {
         const apiKey = keyField ? (db[keyField] || '') : '';
         const canSeeKey = typeof cfg.qb_api_key === 'string' && cfg.qb_api_key.startsWith('ethos_');
         return `<section class="dm-panel">
-            <h2>General</h2>
+            <div class="dm-toolbar">
+                <div><h2>General</h2><p class="dm-muted">Destination, concurrency, daily window and bandwidth limits.</p></div>
+            </div>
             <form data-form="settings">
                 <div class="dm-field"><label for="dm-set-dir">Download folder</label>
-                    <div class="dm-row"><input class="dm-input" id="dm-set-dir" value="${escAttr(cfg.download_dir || '')}">
+                    <div class="dm-row"><input class="dm-input" id="dm-set-dir" value="${escAttr(cfg.download_dir || '')}" data-testid="dm-set-dir">
                         <button class="dm-btn" type="button" data-action="pick-folder" data-target="dm-set-dir">Browse…</button></div></div>
                 <div class="dm-fields">
                     <div class="dm-field"><label for="dm-set-concurrent">Max concurrent</label>
@@ -527,29 +598,32 @@ export async function render(container, ctx) {
                     <div class="dm-field"><label for="dm-set-global">Global speed limit (KB/s, 0 = ∞)</label><input class="dm-input" id="dm-set-global" type="number" min="0" value="${Math.round(Number(limits.global_bps || 0) / 1024)}"></div>
                     <div class="dm-field"><label for="dm-set-task">Per-task limit (KB/s)</label><input class="dm-input" id="dm-set-task" type="number" min="0" value="${Math.round(Number(limits.per_task_bps || 0) / 1024)}"></div>
                 </div>
-                <div class="dm-form-actions"><button class="dm-btn primary" type="submit">Save settings</button></div>
+                <div class="dm-form-actions"><button class="dm-btn primary" type="submit" data-testid="dm-save-settings">Save settings</button></div>
             </form>
         </section>
         <section class="dm-panel">
-            <h2>Debrid</h2>
+            <div class="dm-toolbar">
+                <div><h2>Debrid</h2><p class="dm-muted">Magnets and .torrent files are resolved by the provider and pulled to the NAS.</p></div>
+            </div>
             <form data-form="debrid">
                 <div class="dm-fields">
                     <div class="dm-field"><label for="dm-set-provider">Provider</label>
-                        <select id="dm-set-provider">${[['', '— None —'], ['realdebrid', 'Real-Debrid'], ['alldebrid', 'AllDebrid'], ['torbox', 'TorBox']]
+                        <select class="dm-input" id="dm-set-provider" data-testid="dm-set-provider">${[['', '— None —'], ['realdebrid', 'Real-Debrid'], ['alldebrid', 'AllDebrid'], ['torbox', 'TorBox']]
                             .map(([v, l]) => `<option value="${v}"${provider === v ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
                     <div class="dm-field"><label for="dm-set-key">API key</label>
-                        <input class="dm-input" id="dm-set-key" type="password" value="${escAttr(apiKey)}" placeholder="Paste the provider key">
+                        <input class="dm-input" id="dm-set-key" type="password" value="${escAttr(apiKey)}" placeholder="Paste the provider key" data-testid="dm-set-key">
                         <p class="dm-hint">${apiKey.includes('****') ? 'A key is saved — leave the masked value to test it, or paste a new one.' : 'Paste the private API token from the provider dashboard.'}</p></div>
                 </div>
                 <div class="dm-form-actions">
-                    <button class="dm-btn" type="button" data-action="verify-debrid">Verify</button>
-                    <button class="dm-btn primary" type="submit">Save debrid</button>
+                    <button class="dm-btn" type="button" data-action="verify-debrid" data-testid="dm-verify-debrid">Verify key</button>
+                    <button class="dm-btn primary" type="submit" data-testid="dm-save-debrid">Save debrid</button>
                 </div>
             </form>
         </section>
         <section class="dm-panel">
-            <h2>qBittorrent / Sonarr / Radarr</h2>
-            <p class="dm-muted">Point *arr at this NAS as a qBittorrent client: host gateway, port 9000, URL base /api/downloads/qb, password = the key below.</p>
+            <div class="dm-toolbar">
+                <div><h2>qBittorrent / Sonarr / Radarr</h2><p class="dm-muted">Point *arr at this NAS as a qBittorrent client: host gateway, port 9000, URL base <code>/api/downloads/qb</code>, password = the key below.</p></div>
+            </div>
             <div class="dm-def-grid">
                 <div><span>API key</span><strong>${canSeeKey ? `<code>${escHtml(cfg.qb_api_key)}</code>` : (cfg.qb_api_key_set ? '•••• admin only' : '—')}</strong></div>
                 <div><span>Key state</span><strong>${cfg.qb_api_key_set ? 'configured' : 'not generated'}</strong></div>
@@ -558,26 +632,45 @@ export async function render(container, ctx) {
                 <button class="dm-btn danger" type="button" data-action="rotate-key">Rotate key</button></div>` : ''}
         </section>
         <section class="dm-panel">
-            <h2>Categories</h2>
-            <p class="dm-muted">A category sets where its downloads land; blank path = &lt;download dir&gt;/&lt;name&gt;.</p>
-            <div id="dm-cat-list">${categoryRows(cfg.categories || [])}</div>
-            <div class="dm-form-actions"><button class="dm-btn" type="button" data-action="add-cat">+ Add category</button>
-                <button class="dm-btn primary" type="button" data-action="save-cats">Save categories</button></div>
+            <div class="dm-toolbar">
+                <div><h2>Categories</h2><p class="dm-muted">A category sets where its downloads land; a blank path means &lt;download dir&gt;/&lt;name&gt;.</p></div>
+                <div class="dm-row"><button class="dm-btn" type="button" data-action="add-cat">+ Add category</button>
+                    <button class="dm-btn primary" type="button" data-action="save-cats" data-testid="dm-save-cats">Save categories</button></div>
+            </div>
+            <div class="dm-scroll"><table class="dm-table">
+                <thead><tr><th>Name</th><th>Destination</th><th></th></tr></thead>
+                <tbody id="dm-cat-list">${categoryRows(cfg.categories || [])}</tbody></table></div>
         </section>
         <section class="dm-panel">
-            <h2>RSS rules</h2>
-            <p class="dm-muted">Items matching the include regex (and not the exclude regex) are queued automatically.</p>
-            <div id="dm-rss-list">${rssRows(cfg.rss_feeds || [])}</div>
-            <div class="dm-form-actions"><button class="dm-btn" type="button" data-action="add-rss">+ Add feed</button>
-                <button class="dm-btn primary" type="button" data-action="save-rss">Save RSS</button></div>
+            <div class="dm-toolbar">
+                <div><h2>RSS rules</h2><p class="dm-muted">Items matching the include regex (and not the exclude regex) are queued automatically.</p></div>
+                <div class="dm-row"><button class="dm-btn" type="button" data-action="add-rss">+ Add feed</button>
+                    <button class="dm-btn primary" type="button" data-action="save-rss" data-testid="dm-save-rss">Save RSS</button></div>
+            </div>
+            <div class="dm-scroll"><table class="dm-table">
+                <thead><tr><th>On</th><th>Feed URL</th><th>Include</th><th>Exclude</th><th>Category</th><th>Destination</th><th>Min</th><th></th></tr></thead>
+                <tbody id="dm-rss-list">${rssRows(cfg.rss_feeds || [])}</tbody></table></div>
         </section>
         <section class="dm-panel">
-            <h2>Watch folders</h2>
-            <p class="dm-muted">New .torrent files dropped here are queued and moved to .processed/.</p>
+            <div class="dm-toolbar">
+                <div><h2>Watch folders</h2><p class="dm-muted">New .torrent files dropped here are queued and moved to .processed/.</p></div>
+                <div class="dm-row"><button class="dm-btn" type="button" data-action="add-watch">+ Add folder</button>
+                    <button class="dm-btn primary" type="button" data-action="save-watch" data-testid="dm-save-watch">Save watch folders</button></div>
+            </div>
             <label class="dm-checkline"><input type="checkbox" id="dm-watch-enabled" ${cfg.watch_enabled ? 'checked' : ''}> Enable the watch folders</label>
-            <div id="dm-watch-list">${watchRows(cfg.watch_folders || [])}</div>
-            <div class="dm-form-actions"><button class="dm-btn" type="button" data-action="add-watch">+ Add folder</button>
-                <button class="dm-btn primary" type="button" data-action="save-watch">Save watch folders</button></div>
+            <div class="dm-scroll"><table class="dm-table">
+                <thead><tr><th>Name</th><th>Watched folder</th><th>Destination</th><th></th></tr></thead>
+                <tbody id="dm-watch-list">${watchRows(cfg.watch_folders || [])}</tbody></table></div>
+        </section>
+        <section class="dm-panel">
+            <h2>Package</h2>
+            <div class="dm-def-grid">
+                <div><span>Package</span><strong>${escHtml(ctx.pkg?.name || 'EthOS Download Manager')}</strong></div>
+                <div><span>Version</span><strong>v${escHtml(ctx.pkg?.version || '1.0.1')}</strong></div>
+                <div><span>Engine</span><strong>Download Station API</strong></div>
+                <div><span>Config store</span><strong>v5 · json_store</strong></div>
+            </div>
+            <p class="dm-hint">The engine, queue and provider clients live in EthOS core. Removing the package hides this window; running downloads continue.</p>
         </section>`;
     };
 
@@ -586,11 +679,13 @@ export async function render(container, ctx) {
         $('#dm-title').textContent = title;
         $('#dm-sub').textContent = sub;
         if (state.fatal) statusLine(state.fatal, 'error');
-        else statusLine('Ready.', '');
+        else statusLine('', '');
         const view = $('#dm-view');
         if (state.fatal && state.view !== 'settings') {
-            view.innerHTML = `<div class="dm-panel"><p class="dm-muted">${escHtml(state.fatal)}</p>
-                <div class="dm-form-actions"><button class="dm-btn primary" data-action="retry">Retry</button></div></div>`;
+            view.innerHTML = `<section class="dm-panel">
+                <div class="dm-startup error">${escHtml(state.fatal)}</div>
+                <div class="dm-form-actions"><button class="dm-btn primary" type="button" data-action="retry" data-testid="dm-retry">Retry</button></div>
+            </section>`;
             return;
         }
         if (state.view === 'overview') view.innerHTML = overviewView();
@@ -659,11 +754,12 @@ export async function render(container, ctx) {
 
     async function quickAdd() {
         const input = $('#dm-quick-url');
-        const url = input?.value.trim();
+        const url = (input?.value || state.quickUrl).trim();
         if (!url) return notify('Paste a URL or magnet link', 'error');
         try {
             await postJson('/tasks', { url });
-            input.value = '';
+            state.quickUrl = '';
+            if (input) input.value = '';
             notify('Download started', 'success');
             await refresh();
         } catch (error) { notify(error.message || 'Could not start the download', 'error'); }
@@ -930,6 +1026,7 @@ export async function render(container, ctx) {
     }
 
     function onInput(event) {
+        if (event.target.id === 'dm-quick-url') { state.quickUrl = event.target.value; return; }
         if (event.target.dataset.role !== 'search') return;
         state.search = event.target.value;
         const rows = root.querySelectorAll('tbody tr[data-task-id]');
