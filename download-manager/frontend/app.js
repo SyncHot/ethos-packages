@@ -184,6 +184,7 @@ const STATUS = {
 };
 const ACTIVE = new Set(['waiting', 'downloading', 'debrid_downloading']);
 const DEBRID_FIELD = { realdebrid: 'realdebrid_api_token', alldebrid: 'alldebrid_api_key', torbox: 'torbox_api_key' };
+const PROVIDER_LABEL = { realdebrid: 'Real-Debrid', alldebrid: 'AllDebrid', torbox: 'TorBox' };
 
 export async function render(container, ctx) {
     container.replaceChildren();
@@ -203,6 +204,11 @@ export async function render(container, ctx) {
             });
         }
         return Promise.resolve(window.confirm(`${title}\n\n${message}`));
+    };
+    // Settings/keys are admin-only on the backend; say so instead of "HTTP 403".
+    const saveError = (error, action = 'save') => {
+        if (error?.status === 403) notify(`Only an admin can ${action}`, 'error');
+        else notify(error?.message || `Could not ${action}`, 'error');
     };
     const $ = (selector) => root.querySelector(selector);
 
@@ -532,7 +538,8 @@ export async function render(container, ctx) {
                         <select id="dm-set-provider">${[['', '— None —'], ['realdebrid', 'Real-Debrid'], ['alldebrid', 'AllDebrid'], ['torbox', 'TorBox']]
                             .map(([v, l]) => `<option value="${v}"${provider === v ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
                     <div class="dm-field"><label for="dm-set-key">API key</label>
-                        <input class="dm-input" id="dm-set-key" type="password" value="${escAttr(apiKey)}" placeholder="Paste the provider key"></div>
+                        <input class="dm-input" id="dm-set-key" type="password" value="${escAttr(apiKey)}" placeholder="Paste the provider key">
+                        <p class="dm-hint">${apiKey.includes('****') ? 'A key is saved — leave the masked value to test it, or paste a new one.' : 'Paste the private API token from the provider dashboard.'}</p></div>
                 </div>
                 <div class="dm-form-actions">
                     <button class="dm-btn" type="button" data-action="verify-debrid">Verify</button>
@@ -725,7 +732,7 @@ export async function render(container, ctx) {
             notify('Settings saved', 'success');
             await loadConfig();
             renderView();
-        } catch (error) { notify(error.message || 'Could not save settings', 'error'); }
+        } catch (error) { saveError(error, 'change settings'); }
     }
 
     async function saveDebrid() {
@@ -739,18 +746,23 @@ export async function render(container, ctx) {
             notify('Debrid settings saved', 'success');
             await loadConfig();
             renderView();
-        } catch (error) { notify(error.message || 'Could not save debrid settings', 'error'); }
+        } catch (error) { saveError(error, 'change debrid settings'); }
     }
 
     async function verifyDebrid() {
         const provider = $('#dm-set-provider')?.value || '';
         const key = $('#dm-set-key')?.value.trim() || '';
         if (!provider) return notify('Choose a provider first', 'error');
-        if (!key || key.includes('****')) return notify('Re-enter the API key to verify it', 'error');
+        if (!key) return notify('Paste the API key first, then verify', 'error');
+        // A masked value is fine: the backend verifies the saved key with it.
+        const saved = key.includes('****');
         try {
             await postJson('/verify', { provider, key });
-            notify('Provider key verified', 'success');
-        } catch (error) { notify(error.message || 'Verification failed', 'error'); }
+            notify(`${PROVIDER_LABEL[provider] || provider} accepted the ${saved ? 'saved ' : ''}key`, 'success');
+        } catch (error) {
+            if (error.status === 403) notify('Only an admin can verify provider keys', 'error');
+            else notify(error.message || 'Verification failed', 'error');
+        }
     }
 
     async function saveCategories() {
@@ -764,7 +776,7 @@ export async function render(container, ctx) {
             notify('Categories saved', 'success');
             await loadConfig();
             renderView();
-        } catch (error) { notify(error.message || 'Could not save categories', 'error'); }
+        } catch (error) { saveError(error, 'change categories'); }
     }
 
     function readRssRows() {
@@ -787,7 +799,7 @@ export async function render(container, ctx) {
             notify('RSS rules saved', 'success');
             await loadConfig();
             renderView();
-        } catch (error) { notify(error.message || 'Could not save RSS rules', 'error'); }
+        } catch (error) { saveError(error, 'change RSS rules'); }
     }
 
     async function runRss(id) {
@@ -814,7 +826,7 @@ export async function render(container, ctx) {
             notify('Watch folders saved', 'success');
             await loadConfig();
             renderView();
-        } catch (error) { notify(error.message || 'Could not save watch folders', 'error'); }
+        } catch (error) { saveError(error, 'change watch folders'); }
     }
 
     async function copyKey() {
@@ -832,7 +844,7 @@ export async function render(container, ctx) {
             await loadConfig();
             notify('API key rotated — update Radarr/Sonarr', 'success');
             renderView();
-        } catch (error) { notify(error.message || 'Could not rotate the key', 'error'); }
+        } catch (error) { saveError(error, 'rotate the API key'); }
     }
 
     async function pickFolder(targetId) {

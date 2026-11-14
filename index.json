@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-14T13:09:49+00:00",
+  "generated_at": "2026-11-14T13:26:33+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -53,7 +53,7 @@
     {
       "id": "download-manager",
       "name": "EthOS Download Manager",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window.",
       "icon": "⬇️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/icon.svg",
@@ -67,10 +67,10 @@
         "compose"
       ],
       "screenshots": [],
-      "changelog": "1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
+      "changelog": "1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/manifest.json",
-      "manifest_sha256": "9eb66b3c9a5b4eb4a1c3e9cb9c854c952a080f83f97504894b5e1fa3e6bcc969",
-      "size_bytes": 60205
+      "manifest_sha256": "a6b66d535cde2be0f2256aafc7105e35340a4f20c99e09c2387ddf0c62f75896",
+      "size_bytes": 60950
     },
     {
       "id": "ethos-antivirus",
