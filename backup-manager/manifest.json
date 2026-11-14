@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "id": "backup-manager",
+  "name": "EthOS Backup Manager",
+  "version": "1.0.0",
+  "description": "Versioned backups for folders and Docker Compose projects. Dated hardlink snapshots, GFS retention, quick/deep verify, a restore wizard and optional rclone offsite replication — in a native EthOS window.",
+  "icon": "🔄",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/backup-manager/icon.svg",
+  "category": "backup",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js"
+  },
+  "changelog": "1.0.0: first release — dated rsync hardlink snapshots, 7/4/6 GFS retention, completion manifest, quick and deep verify, cancel and queued runs, restore in place or to another folder, Docker Compose project discovery with volume/image snapshots, and rclone mirror with 30-day remote history.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/backup-manager/frontend/app.js",
+      "sha256": "b645f34a6dd5920f6f9c12490ba637d6da1b68b5d979adcc8930917b1a89cc07",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/backup-manager/icon.svg",
+      "sha256": "1ab409550a67772dde71c6d20faf6223ffb0949da796116920fa471a030df953",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}
