@@ -63,6 +63,33 @@ repo.pub            publisher public key (private key never committed)
 - Package ids: `^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$`; reserved ids (`packages`, `trash`,
   `snapshots`, …) are rejected.
 
+## Native package UI shell (mandatory)
+
+Every native package window reuses the **EthOS AntiVirus shell** — do not invent a new visual
+language. Reference implementation: `ethos-antivirus/frontend/app.js` (STYLE + render shell);
+`domains` and `vmm` follow it too.
+
+- **Root**: `display:flex; height:100%; overflow:hidden;` with the package palette scoped to the
+  root element (light defaults + `:root.dark` overrides, see the `package-theme` skill). No teal or
+  purple gradients, no raw colours in component rules.
+- **Rail**: `flex:none; width:218px; padding:20px 14px; border-right; overflow-y:auto`. Brand =
+  26 px emoji + product name + `EthOS package`; nav items are **text-only**, 12 px/600, 9×11 px
+  padding, 9 px radius, active `.is-active` uses `--accent-soft`; the foot is pinned (`margin-top:auto`)
+  with a status pill (`ready` / `starting` / `offline`) and one short note.
+- **Main**: `flex:1; min-width:0; overflow-y:auto; padding:24px 28px 32px`. Header = `<h1>`
+  `clamp(22px, 3.4vw, 30px)`, a 12 px muted subtitle and one `role="status"` line. Views are
+  `display:flex; flex-direction:column; gap:14px; margin-top:16px`.
+- **Building blocks**: panel (17×18 px, 15 px radius), 4-tile summary (9 px uppercase labels,
+  20 px values), 11 px tables with 9 px uppercase headers, buttons (`primary` / `danger` / `small`),
+  monospace 12 px inputs, tag pills for states, dashed empty state, amber `.startup` callout.
+- **Progress & dialogs**: `ctx.progress.startTask` for long work and `ctx.modal` for confirms; never
+  hand-roll a progress bar or a second modal implementation.
+- **Responsive**: below 780 px the rail becomes a horizontal strip, the foot hides its note and grids
+  collapse to one column.
+- **Both themes are part of the shell**, not an afterthought: screenshot the window in light and dark
+  before publishing.
+- Never copy the AntiVirus *content*; copy its *layout and tokens*.
+
 ## Icons
 
 - File: `<package-id>/icon.svg`, 256×256 `viewBox`, rounded-square background (`rx="56"`), no text,
