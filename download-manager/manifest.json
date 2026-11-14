@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "id": "download-manager",
+  "name": "EthOS Download Manager",
+  "version": "1.0.0",
+  "description": "HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window.",
+  "icon": "⬇️",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/icon.svg",
+  "category": "tools",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js"
+  },
+  "changelog": "1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/frontend/app.js",
+      "sha256": "9efb31e1824618fc8f72752386829efffb62f51596a9544ab83d75118fcfaf66",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/icon.svg",
+      "sha256": "1c3bc1e4704256f531c34c9a760921cbbe15b307c0de56c52481c925039e4429",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}
