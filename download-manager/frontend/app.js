@@ -321,9 +321,18 @@ export async function render(container, ctx) {
         if (task.status === 'error') return 'errors';
         return 'all';
     };
+    // Waiting AND paused tasks are orderable: a paused task keeps its priority when resumed.
+    const ORDERABLE = new Set(['waiting', 'paused']);
+    const orderableOrder = () => state.tasks
+        .filter((t) => ORDERABLE.has(t.status))
+        .sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.created_at - b.created_at);
     const queueOrder = () => state.tasks
         .filter((t) => t.status === 'waiting')
         .sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.created_at - b.created_at);
+    // Waiting tasks first in real pump order, everything else newest-first.
+    const queueRank = (task) => (task.status === 'waiting'
+        ? (Number(task.queue_position) || 998)
+        : 1000 + ({ downloading: 0, debrid_downloading: 0, paused: 1, error: 2, completed: 3, canceled: 4 }[task.status] ?? 9));
     const visibleTasks = () => {
         let tasks = state.tasks.slice();
         if (state.filter !== 'all') tasks = tasks.filter((t) => groupOf(t) === state.filter);
@@ -339,6 +348,7 @@ export async function render(container, ctx) {
             size: (a, b) => (b.size || 0) - (a.size || 0),
             progress: (a, b) => (b.progress || 0) - (a.progress || 0),
             status: (a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9),
+            queue: (a, b) => (queueRank(a) - queueRank(b)) || (b.created_at - a.created_at),
         };
         return tasks.sort(cmp[state.sort] || cmp.newest);
     };
@@ -401,6 +411,7 @@ export async function render(container, ctx) {
         const [label, tone] = STATUS[task.status] || [task.status, ''];
         const percent = pct(task);
         const waiting = task.status === 'waiting';
+        const orderable = ORDERABLE.has(task.status);
         const eta = task.speed > 0 && task.size > task.downloaded
             ? fmtEta((task.size - task.downloaded) / task.speed) : '—';
         const canPause = ACTIVE.has(task.status);
@@ -408,12 +419,14 @@ export async function render(container, ctx) {
         const actions = compact ? '' : `<td class="actions"><div class="dm-row end">
                 ${canPause ? `<button class="dm-btn small" type="button" data-action="pause" data-id="${escAttr(task.id)}" data-testid="dm-pause-${escAttr(task.id)}">Pause</button>` : ''}
                 ${canResume ? `<button class="dm-btn small" type="button" data-action="resume" data-id="${escAttr(task.id)}" data-testid="dm-resume-${escAttr(task.id)}">Resume</button>` : ''}
+                ${orderable ? `<button class="dm-btn small" type="button" data-action="move-up" data-id="${escAttr(task.id)}" title="Start earlier" aria-label="Move ${escAttr(task.name)} earlier" data-testid="dm-up-${escAttr(task.id)}">↑</button>
+                    <button class="dm-btn small" type="button" data-action="move-down" data-id="${escAttr(task.id)}" title="Start later" aria-label="Move ${escAttr(task.name)} later" data-testid="dm-down-${escAttr(task.id)}">↓</button>` : ''}
                 <button class="dm-btn small" type="button" data-action="details" data-id="${escAttr(task.id)}" data-testid="dm-details-${escAttr(task.id)}">Details</button>
                 ${task.status === 'paused' ? `<button class="dm-btn small" type="button" data-action="reset" data-id="${escAttr(task.id)}" data-testid="dm-reset-${escAttr(task.id)}">Reset</button>` : ''}
                 <button class="dm-btn small danger" type="button" data-action="delete" data-id="${escAttr(task.id)}" data-testid="dm-delete-${escAttr(task.id)}">Delete</button>
             </div></td>`;
-        return `<tr data-task-id="${escAttr(task.id)}" data-status="${escAttr(task.status)}" data-testid="dm-task-${escAttr(task.id)}">
-            <td class="dm-handle">${!compact && waiting ? '<span draggable="true" data-drag-handle title="Drag to reorder the queue">⣿</span>' : ''}</td>
+        return `<tr data-task-id="${escAttr(task.id)}" data-status="${escAttr(task.status)}" data-testid="dm-task-${escAttr(task.id)}"${orderable && !compact ? ' draggable="true"' : ''}>
+            <td class="dm-handle">${!compact && orderable ? '<span data-drag-handle title="Drag this row to reorder the queue">⣿</span>' : ''}</td>
             <td>
                 <div class="dm-name">${escHtml(task.name)}
                     <span class="dm-tag ${tone}">${escHtml(label)}</span>
@@ -436,14 +449,17 @@ export async function render(container, ctx) {
         const tabs = [['all', 'All'], ['active', 'Active'], ['completed', 'Completed'], ['paused', 'Paused'], ['errors', 'Errors']];
         return `<section class="dm-panel">
             <div class="dm-toolbar">
-                <div><h2>Downloads</h2><p class="dm-muted">Drag ⣿ on a waiting row to change the queue order.</p></div>
+                <div><h2>Downloads</h2><p class="dm-muted">Drag a waiting row (or use ↑ ↓) to change the start order — switch the sort to <strong>Queue order</strong> to see it.</p></div>
                 <div class="dm-row">
                     <input class="dm-input dm-search" id="dm-search" data-role="search" placeholder="Search name, URL or category…" value="${escAttr(state.search)}" aria-label="Search downloads" data-testid="dm-search">
                     <select data-role="sort" aria-label="Sort downloads" data-testid="dm-sort">
-                        ${[['newest', 'Newest'], ['oldest', 'Oldest'], ['name', 'Name'], ['size', 'Size'], ['progress', 'Progress'], ['status', 'Status']]
+                        ${[['newest', 'Newest'], ['queue', 'Queue order'], ['oldest', 'Oldest'], ['name', 'Name'], ['size', 'Size'], ['progress', 'Progress'], ['status', 'Status']]
                             .map(([v, l]) => `<option value="${v}"${state.sort === v ? ' selected' : ''}>${l}</option>`).join('')}
                     </select>
                     <button class="dm-btn" type="button" data-action="refresh" data-testid="dm-refresh">Refresh</button>
+                    <button class="dm-btn" type="button" data-action="pause-all" data-testid="dm-pause-all">Pause all</button>
+                    <button class="dm-btn" type="button" data-action="resume-all" data-testid="dm-resume-all">Resume all</button>
+                    <button class="dm-btn" type="button" data-action="clear-completed" data-testid="dm-clear-completed">Clear completed</button>
                 </div>
             </div>
             <div class="dm-tabs">
@@ -451,7 +467,7 @@ export async function render(container, ctx) {
             </div>
             ${tasks.length ? `<div class="dm-scroll"><table class="dm-table">
                 <thead><tr><th></th><th>Download</th><th>Destination</th><th style="text-align:right">Added</th><th></th></tr></thead>
-                <tbody>${tasks.map(taskRow).join('')}</tbody>
+                <tbody>${tasks.map((task) => taskRow(task)).join('')}</tbody>
             </table></div>` : `<div class="dm-empty"><strong>Nothing here</strong>No downloads match this view — start one with the Download button.</div>`}
         </section>`;
     };
@@ -593,6 +609,7 @@ export async function render(container, ctx) {
                     <div class="dm-field"><label for="dm-set-concurrent">Max concurrent</label>
                         <input class="dm-input" id="dm-set-concurrent" type="number" min="1" max="16" value="${Number(cfg.max_concurrent || 3)}"></div>
                     <div class="dm-field"><label class="dm-checkline"><input type="checkbox" id="dm-set-schedule" ${sched.enabled ? 'checked' : ''}> Only start inside a daily window</label></div>
+                    <div class="dm-field"><label class="dm-checkline"><input type="checkbox" id="dm-set-auto-debrid" ${cfg.auto_download_debrid !== false ? 'checked' : ''}> Pull cached debrid files to the NAS automatically</label></div>
                     <div class="dm-field"><label for="dm-set-start">Window start</label><input class="dm-input" id="dm-set-start" type="time" value="${escAttr(sched.start || '01:00')}"></div>
                     <div class="dm-field"><label for="dm-set-end">Window end</label><input class="dm-input" id="dm-set-end" type="time" value="${escAttr(sched.end || '06:00')}"></div>
                     <div class="dm-field"><label for="dm-set-global">Global speed limit (KB/s, 0 = ∞)</label><input class="dm-input" id="dm-set-global" type="number" min="0" value="${Math.round(Number(limits.global_bps || 0) / 1024)}"></div>
@@ -817,6 +834,7 @@ export async function render(container, ctx) {
         return {
             download_dir: dir,
             max_concurrent: concurrent,
+            auto_download_debrid: Boolean($('#dm-set-auto-debrid')?.checked),
             schedule: { enabled: scheduled, start, end },
             speed_limit: { global_bps: globalKb * 1024, per_task_bps: taskKb * 1024 },
         };
@@ -958,16 +976,54 @@ export async function render(container, ctx) {
 
     async function reorderQueue(movingId, targetId) {
         if (!movingId || !targetId || movingId === targetId) return;
-        const order = queueOrder().map((t) => t.id);
+        const order = orderableOrder().map((t) => t.id);
         const from = order.indexOf(movingId);
         const to = order.indexOf(targetId);
         if (from < 0 || to < 0) return;
         order.splice(from, 1);
         order.splice(to, 0, movingId);
+        await sendOrder(order);
+    }
+
+    // Buttons are the fallback for browsers/touch where HTML5 drag does not start.
+    async function moveTask(id, delta) {
+        const order = orderableOrder().map((t) => t.id);
+        const from = order.indexOf(id);
+        const to = from + delta;
+        if (from < 0 || to < 0 || to >= order.length) return;
+        order.splice(to, 0, order.splice(from, 1)[0]);
+        await sendOrder(order);
+    }
+
+    async function sendOrder(order) {
+        if (state.busy) return;
+        state.busy = true;
         try {
             await postJson('/tasks/reorder', { order });
             await refresh(true);
-        } catch (error) { notify(error.message || 'Could not reorder the queue', 'error'); }
+        } catch (error) {
+            notify(error.message || 'Could not reorder the queue', 'error');
+        } finally {
+            state.busy = false;
+        }
+    }
+
+    async function bulkAction(path, label) {
+        try {
+            const out = await postJson(path);
+            const count = Object.values(out || {}).find((v) => typeof v === 'number');
+            notify(count ? `${label}: ${count}` : label, 'success');
+            await refresh();
+        } catch (error) { notify(error.message || 'Action failed', 'error'); }
+    }
+
+    async function clearCompleted() {
+        const done = state.tasks.filter((t) => t.status === 'completed').length;
+        if (!done) return notify('No completed downloads to clear', 'info');
+        const ok = await confirmDialog('Clear completed history?',
+            `${done} record(s) will be removed from the list. Files stay on disk.`, 'Clear');
+        if (!ok) return;
+        await bulkAction('/tasks/clear-completed', 'Removed');
     }
 
     // ── Events ─────────────────────────────────────────────────────────────
@@ -980,6 +1036,11 @@ export async function render(container, ctx) {
         if (action) {
             const { action: name, id, target, index } = action.dataset;
             if (name === 'refresh' || name === 'retry') { refresh(); return; }
+            if (name === 'pause-all') { bulkAction('/tasks/pause-all', 'Paused'); return; }
+            if (name === 'resume-all') { bulkAction('/tasks/resume-all', 'Resumed'); return; }
+            if (name === 'clear-completed') { clearCompleted(); return; }
+            if (name === 'move-up') { moveTask(id, -1); return; }
+            if (name === 'move-down') { moveTask(id, 1); return; }
             if (name === 'quick-add') { quickAdd(); return; }
             if (name === 'pause' || name === 'resume' || name === 'reset' || name === 'delete' || name === 'details') { taskAction(name, id); return; }
             if (name === 'pick-folder') { pickFolder(target || id); return; }
@@ -1048,10 +1109,8 @@ export async function render(container, ctx) {
     }
 
     function onDragStart(event) {
-        const handle = event.target.closest?.('[data-drag-handle]');
-        if (!handle) { event.preventDefault(); return; }
         const row = rowFromEvent(event);
-        if (!row) { event.preventDefault(); return; }
+        if (!row || !ORDERABLE.has(row.dataset.status)) { event.preventDefault(); return; }
         state.dragId = row.dataset.taskId;
         try { event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', state.dragId); } catch { /* ignore */ }
         row.classList.add('is-drag-source');
@@ -1060,7 +1119,7 @@ export async function render(container, ctx) {
     function onDragOver(event) {
         if (!state.dragId) return;
         const row = rowFromEvent(event);
-        if (!row || row.dataset.status !== 'waiting') return;
+        if (!row || !ORDERABLE.has(row.dataset.status)) return;
         event.preventDefault();
         for (const other of root.querySelectorAll('tbody tr[data-task-id]')) other.classList.remove('is-drop-target');
         row.classList.add('is-drop-target');
@@ -1069,7 +1128,7 @@ export async function render(container, ctx) {
     function onDrop(event) {
         if (!state.dragId) return;
         const row = rowFromEvent(event);
-        if (!row || row.dataset.status !== 'waiting') return;
+        if (!row || !ORDERABLE.has(row.dataset.status)) return;
         event.preventDefault();
         const moving = state.dragId;
         const target = row.dataset.taskId;
