@@ -150,7 +150,7 @@ const STYLE = `
 .dm-checkline input { accent-color: var(--dm-accent); }
 .dm-form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--dm-border); flex-wrap: wrap; }
 .dm-editor-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; margin-top: 8px; }
-.dm-editor-row.wide { grid-template-columns: auto 2fr 1fr 1fr 1fr 1fr auto; }
+.dm-editor-row.wide { grid-template-columns: auto 2fr 1fr 1fr 1fr 1fr 80px auto; }
 .dm-hint { margin: 8px 0 0; color: var(--dm-muted); font-size: 10px; line-height: 1.5; }
 .dm-root code { color: var(--dm-accent); font-family: ui-monospace, monospace; }
 .dm-def-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; margin-top: 12px; }
@@ -192,6 +192,17 @@ export async function render(container, ctx) {
     const notify = (message, kind = 'info') => {
         if (ctx.notifications?.toast) ctx.notifications.toast(message, kind);
         else if (ctx.notify) ctx.notify(message, kind);
+    };
+    // ctx.modal.confirm is callback-based and returns the dialog element, so it must
+    // be wrapped in a promise; ctx.modal.alert takes (title, message).
+    const confirmDialog = (title, message, okText = 'Confirm') => {
+        if (ctx.modal?.confirm) {
+            return new Promise((resolve) => {
+                ctx.modal.confirm({ title, message, okText,
+                    onConfirm: () => resolve(true), onCancel: () => resolve(false) });
+            });
+        }
+        return Promise.resolve(window.confirm(`${title}\n\n${message}`));
     };
     const $ = (selector) => root.querySelector(selector);
 
@@ -473,8 +484,9 @@ export async function render(container, ctx) {
         <input class="dm-input" data-rss-exclude value="${escAttr(f.exclude || '')}" placeholder="Exclude regex" aria-label="Exclude pattern">
         <input class="dm-input" data-rss-category value="${escAttr(f.category || '')}" placeholder="Category" aria-label="Feed category">
         <input class="dm-input" data-rss-dest value="${escAttr(f.destination || '')}" placeholder="Destination" aria-label="Feed destination">
+        <input class="dm-input" data-rss-interval type="number" min="5" max="1440" value="${Number(f.interval_minutes || 15)}" title="Check interval (minutes)" aria-label="Check interval in minutes" style="max-width:80px">
         <div class="dm-row"><button class="dm-btn small" type="button" data-action="run-rss" data-id="${escAttr(f.id || '')}">Run</button>
-            <button class="dm-btn small danger" type="button" data-action="remove-rss" data-index="${i}">×</button></div>
+            <button class="dm-btn small danger" type="button" data-action="remove-rss">×</button></div>
     </div>`).join('');
 
     const watchRows = (folders) => folders.map((e, i) => `<div class="dm-editor-row" data-watch-row="${i}" style="grid-template-columns:1fr 1fr 1fr auto;align-items:center">
@@ -606,20 +618,16 @@ export async function render(container, ctx) {
                 lines.push('', `Files (${task.files.filter((f) => f.downloaded_to_nas).length}/${task.files.length} on NAS):`);
                 for (const f of task.files.slice(0, 30)) lines.push(`  ${f.downloaded_to_nas ? '✓' : '·'} ${f.name} (${fmtBytes(f.size)})`);
             }
-            if (ctx.modal?.alert) await ctx.modal.alert({ title: task.name, message: lines.join('\n') });
+            if (ctx.modal?.alert) await ctx.modal.alert(task.name, lines.join('\n'));
             else notify(task.name, 'info');
             return;
         }
         if (action === 'delete') {
-            const ok = ctx.modal?.confirm
-                ? await ctx.modal.confirm({ title: 'Delete download?', message: `"${task.name}" and its downloaded files will be removed.`, okText: 'Delete' })
-                : window.confirm(`Delete "${task.name}" and its files?`);
+            const ok = await confirmDialog('Delete download?', `"${task.name}" and its downloaded files will be removed.`, 'Delete');
             if (!ok) return;
         }
         if (action === 'reset') {
-            const ok = ctx.modal?.confirm
-                ? await ctx.modal.confirm({ title: 'Reset download?', message: `Partial data for "${task.name}" is deleted and the download restarts.`, okText: 'Reset' })
-                : window.confirm(`Reset "${task.name}"?`);
+            const ok = await confirmDialog('Reset download?', `Partial data for "${task.name}" is deleted and the download restarts.`, 'Reset');
             if (!ok) return;
         }
         const job = (action === 'delete' || action === 'reset') && ctx.progress?.startTask
@@ -767,6 +775,7 @@ export async function render(container, ctx) {
             exclude: row.querySelector('[data-rss-exclude]').value.trim(),
             category: row.querySelector('[data-rss-category]').value.trim(),
             destination: row.querySelector('[data-rss-dest]').value.trim(),
+            interval_minutes: Number(row.querySelector('[data-rss-interval]')?.value || 15),
         }));
     }
 
@@ -815,9 +824,7 @@ export async function render(container, ctx) {
     }
 
     async function rotateKey() {
-        const ok = ctx.modal?.confirm
-            ? await ctx.modal.confirm({ title: 'Rotate API key?', message: 'Radarr/Sonarr will stop working until you update their download-client password.', okText: 'Rotate' })
-            : window.confirm('Rotate the qBittorrent API key?');
+        const ok = await confirmDialog('Rotate API key?', 'Radarr/Sonarr will stop working until you update their download-client password.', 'Rotate');
         if (!ok) return;
         try {
             await postJson('/config/qb-key/rotate');
