@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-14T13:06:10+00:00",
+  "generated_at": "2026-11-14T13:09:49+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -69,8 +69,8 @@
       "screenshots": [],
       "changelog": "1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/manifest.json",
-      "manifest_sha256": "ac62ad68509ac06337db145a39512b15392283ae058c835cbea1bf439940fe1c",
-      "size_bytes": 59811
+      "manifest_sha256": "9eb66b3c9a5b4eb4a1c3e9cb9c854c952a080f83f97504894b5e1fa3e6bcc969",
+      "size_bytes": 60205
     },
     {
       "id": "ethos-antivirus",

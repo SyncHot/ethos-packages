@@ -746,6 +746,7 @@ export async function render(container, ctx) {
         const provider = $('#dm-set-provider')?.value || '';
         const key = $('#dm-set-key')?.value.trim() || '';
         if (!provider) return notify('Choose a provider first', 'error');
+        if (!key || key.includes('****')) return notify('Re-enter the API key to verify it', 'error');
         try {
             await postJson('/verify', { provider, key });
             notify('Provider key verified', 'success');
@@ -908,7 +909,12 @@ export async function render(container, ctx) {
     }
 
     function onChange(event) {
-        if (event.target.dataset.role === 'sort') { state.sort = event.target.value; renderView(); }
+        if (event.target.dataset.role === 'sort') { state.sort = event.target.value; renderView(); return; }
+        // A masked key belongs to the previous provider; make the user paste the new one.
+        if (event.target.id === 'dm-set-provider') {
+            const keyInput = $('#dm-set-key');
+            if (keyInput && keyInput.value.includes('****')) keyInput.value = '';
+        }
     }
 
     function onInput(event) {

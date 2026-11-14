@@ -20,7 +20,7 @@
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/frontend/app.js",
-      "sha256": "a130bbfc9dac3d21fed67f8a7976494d760a7b510f661867c806a8309fdd7469",
+      "sha256": "900eceac78b739ed9bd5170d31c045df581ef41ba4f78fb4b5e2066cd73785e1",
       "path": "frontend/app.js",
       "mode": 420
     },
