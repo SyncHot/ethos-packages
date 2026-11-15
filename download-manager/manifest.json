@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "download-manager",
   "name": "EthOS Download Manager",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window.",
   "icon": "⬇️",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/icon.svg",
@@ -11,11 +11,12 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
+  "min_ethos_version": "2.0.0",
   "ui": {
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.0.3: queue ordering works everywhere — whole waiting/paused rows are draggable, ↑/↓ buttons reorder without dragging, a Queue order sort shows the real start order, and a bug that hid the action buttons on every row after the first is fixed; adds Pause all / Resume all / Clear completed and the auto-download-debrid toggle. 1.0.2: matches the shared package shell — a persistent Download button in the window header, a ready/attention status card, numbered add form (source · destination · torrents), table-based categories/RSS/watch folders and a Package panel; the 2 s poll no longer clears the quick-add field. 1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
+  "changelog": "1.0.4: Package Center icon redrawn on the 256 px grid; requires EthOS 2.0. 1.0.3: queue ordering works everywhere — whole waiting/paused rows are draggable, ↑/↓ buttons reorder without dragging, a Queue order sort shows the real start order, and a bug that hid the action buttons on every row after the first is fixed; adds Pause all / Resume all / Clear completed and the auto-download-debrid toggle. 1.0.2: matches the shared package shell — a persistent Download button in the window header, a ready/attention status card, numbered add form (source · destination · torrents), table-based categories/RSS/watch folders and a Package panel; the 2 s poll no longer clears the quick-add field. 1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
   "compose": null,
   "files": [
     {
@@ -26,7 +27,7 @@
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/icon.svg",
-      "sha256": "1c3bc1e4704256f531c34c9a760921cbbe15b307c0de56c52481c925039e4429",
+      "sha256": "3f49acce39ddb8f4dd2a732792fbb36b88c73b906aa6e4cde1b83800aa46b5f2",
       "path": "icon.svg",
       "mode": 420
     }
