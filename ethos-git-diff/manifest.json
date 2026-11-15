@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "id": "ethos-git-diff",
+  "name": "Git Diff",
+  "version": "1.0.0",
+  "description": "Side-by-side diff with partial (hunk and line) staging, commit box, pull/push and recent history for any Git repository on your shares. Opening a diff from the Code Editor's Source Control panel focuses this app. Repository access stays in EthOS, behind its path scope.",
+  "icon": "⎇",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git-diff/icon.svg",
+  "category": "tools",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js"
+  },
+  "changelog": "1.0.0: first release. The Git Diff desktop app moves out of the core install; the git endpoints stay in EthOS's editor API, so the Code Editor keeps handing diffs to it.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git-diff/frontend/app.js",
+      "sha256": "be17edf282d617dbd63eccfd6371201273699cba73f788beb11f54ece408f4d8",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git-diff/icon.svg",
+      "sha256": "4da09bd7cee35bf24c96e3c7b6046206e5c90dbf8e49e2a82dd2f9e453fd63ce",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}

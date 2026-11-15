@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "id": "ethos-editor",
+  "name": "Code Editor",
+  "version": "1.0.0",
+  "description": "A VS Code-style workbench in the browser: single files or whole folders, tabs and breadcrumbs, search, Source Control with inline git gutters, split terminals, Problems/Output panels and an AI chat tab. File access stays in EthOS behind its path scope, so this package ships the desktop app only.",
+  "icon": "⌨️",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-editor/icon.svg",
+  "category": "tools",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js"
+  },
+  "changelog": "1.0.0: first release. The Code Editor desktop app moves out of the core install; editing, git and terminal endpoints stay in EthOS, and File Station still opens files in it.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-editor/frontend/app.js",
+      "sha256": "6d9ef3f6195e03571ecb1b9e385e5418f1b908cc438aa925e736aef472d4b797",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-editor/icon.svg",
+      "sha256": "1edbbca92851ea77c01b49ce7b898ba74152d79a8268f63032f9700ba234419a",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}
