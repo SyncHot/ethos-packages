@@ -1,8 +1,10 @@
 // EthOS NAS — Music app (Spotify-style) — Package Center app
-// Visual 1:1 with the ethos-music Android app: dark #121212 theme, bottom nav
+// Visual 1:1 with the ethos-music Android app: bottom nav
 // (Start / Szukaj / Podcasty / Biblioteka / Ustawienia), mini-player bar and a
-// full-screen player. Library state (liked tracks, playlists, history, podcast
-// subscriptions) is synced server-side with the Android app via /api/music/state.
+// full-screen player. Light and dark palettes follow the EthOS theme toggle; the
+// full-screen player keeps a dark immersion surface. Library state (liked tracks,
+// playlists, history, podcast subscriptions) is synced server-side with the
+// Android app via /api/music/state.
 //
 // The /api/music/* API stays in the EthOS core (the Android app uses it); this
 // package owns the desktop UI. Search/stream/download need the separate
@@ -33,9 +35,12 @@ async function apiJsonFetch(path, options = {}) {
 }
 
 // ── Palette (ethos-music Theme.kt) ───────────────────────────────────
+// Theme-aware tokens: light is the default (matching EthOS), `:root.dark`
+// overrides them. The full-screen player keeps its own dark immersion palette.
 const C = {
-    black: '#121212', nav: '#181818', card: '#1F1F1F', elevated: '#2A2A2A',
-    green: '#1DB954', greenDark: '#169C46', secondary: '#A7A7A7', white: '#FFFFFF',
+    black: 'var(--em-bg)', nav: 'var(--em-nav)', card: 'var(--em-card)',
+    elevated: 'var(--em-elevated)', green: '#1DB954', greenDark: '#169C46',
+    secondary: 'var(--em-muted)', white: 'var(--em-text)',
 };
 
 // Search category tiles (SearchScreen.kt). Queries are Polish on purpose: the
@@ -94,16 +99,55 @@ function ensureStyles() {
     const st = document.createElement('style');
     st.id = 'em-music-styles';
     st.textContent = `
-.em-root{position:relative;display:flex;flex-direction:column;height:100%;background:${C.black};color:${C.white};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden;user-select:none;}
-.em-content{flex:1;overflow-y:auto;padding:24px 28px 16px;scrollbar-width:thin;scrollbar-color:#3e3e3e transparent;}
+.em-root, .em-menu {
+    --em-bg: #f6f6f6;
+    --em-nav: #ffffff;
+    --em-card: #ffffff;
+    --em-elevated: #ececec;
+    --em-elevated-hover: #e2e2e2;
+    --em-panel: #ffffff;
+    --em-text: #121212;
+    --em-muted: #5c5c5c;
+    --em-thumb: #e2e2e2;
+    --em-hover: rgba(0, 0, 0, 0.07);
+    --em-stroke: rgba(0, 0, 0, 0.09);
+    --em-track: rgba(0, 0, 0, 0.16);
+    --em-chip-active-bg: #121212;
+    --em-chip-active-fg: #ffffff;
+    --em-play-bg: #121212;
+    --em-play-fg: #ffffff;
+    --em-shadow: 0 14px 44px rgba(15, 23, 42, 0.18);
+}
+:root.dark .em-root, :root.dark .em-menu {
+    --em-bg: #121212;
+    --em-nav: #181818;
+    --em-card: #1F1F1F;
+    --em-elevated: #2A2A2A;
+    --em-elevated-hover: #333333;
+    --em-panel: #1a1a1a;
+    --em-text: #ffffff;
+    --em-muted: #A7A7A7;
+    --em-thumb: #3a3a3a;
+    --em-hover: rgba(255, 255, 255, 0.1);
+    --em-stroke: rgba(255, 255, 255, 0.08);
+    --em-track: rgba(255, 255, 255, 0.2);
+    --em-chip-active-bg: #ffffff;
+    --em-chip-active-fg: #121212;
+    --em-play-bg: #ffffff;
+    --em-play-fg: #000000;
+    --em-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+}
+.em-root{position:relative;display:flex;flex-direction:column;height:100%;background:var(--em-bg);color:var(--em-text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden;user-select:none;color-scheme:light;}
+:root.dark .em-root{color-scheme:dark;}
+.em-content{flex:1;overflow-y:auto;padding:24px 28px 16px;scrollbar-width:thin;scrollbar-color:var(--em-thumb) transparent;}
 .em-content::-webkit-scrollbar{width:9px}
-.em-content::-webkit-scrollbar-thumb{background:#3e3e3e;border-radius:5px}
+.em-content::-webkit-scrollbar-thumb{background:var(--em-thumb);border-radius:5px}
 .em-h1{font-size:28px;font-weight:700;margin-bottom:20px;letter-spacing:-.3px}
 .em-section-title{font-size:16px;font-weight:600;color:${C.white};margin:22px 0 12px}
 .em-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px}
 .em-card{background:${C.card};border-radius:10px;padding:12px;cursor:pointer;transition:background .15s;min-width:0}
 .em-card:hover{background:${C.elevated}}
-.em-card-cover{width:100%;aspect-ratio:1/1;border-radius:8px;object-fit:cover;display:block;background:#3a3a3a;margin-bottom:10px}
+.em-card-cover{width:100%;aspect-ratio:1/1;border-radius:8px;object-fit:cover;display:block;background:var(--em-thumb);margin-bottom:10px}
 .em-card-label{font-size:13.5px;font-weight:600;color:${C.white};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-card-sub{font-size:12px;color:${C.secondary};margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-tile{border-radius:12px;height:96px;display:flex;align-items:flex-end;padding:14px;font-weight:700;font-size:15px;color:#fff;cursor:pointer;position:relative;overflow:hidden}
@@ -112,71 +156,71 @@ function ensureStyles() {
 .em-searchfield::placeholder{color:${C.secondary}}
 .em-chips{display:flex;gap:8px;flex-wrap:wrap;padding:10px 0 4px}
 .em-chip{background:${C.elevated};border:none;color:${C.white};border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap}
-.em-chip:hover{background:#333}
-.em-chip.active{background:${C.white};color:#121212}
+.em-chip:hover{background:var(--em-elevated-hover)}
+.em-chip.active{background:var(--em-chip-active-bg);color:var(--em-chip-active-fg)}
 .em-suggest{margin:2px 0 6px;display:flex;flex-direction:column;gap:2px}
-.em-suggest-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;background:rgba(255,255,255,.04)}
-.em-suggest-item:hover{background:rgba(255,255,255,.1)}
+.em-suggest-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;cursor:pointer;background:var(--em-hover)}
+.em-suggest-item:hover{background:var(--em-elevated-hover)}
 .em-suggest-kind{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:${C.secondary};width:66px;flex:none}
-.em-suggest-thumb{width:30px;height:30px;border-radius:5px;object-fit:cover;background:#3a3a3a;flex:none;display:block}
+.em-suggest-thumb{width:30px;height:30px;border-radius:5px;object-fit:cover;background:var(--em-thumb);flex:none;display:block}
 .em-suggest-main{min-width:0;flex:1}
 .em-suggest-title{font-size:13.5px;font-weight:600;color:${C.white};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-suggest-sub{font-size:11.5px;color:${C.secondary};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-more{display:block;width:100%;margin:14px 0 4px;background:${C.elevated};border:none;color:${C.white};padding:11px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
-.em-more:hover{background:#333}
-.em-row-logo{width:48px;height:48px;border-radius:6px;object-fit:contain;background:#3a3a3a;flex:none;padding:5px;box-sizing:border-box}
+.em-more:hover{background:var(--em-elevated-hover)}
+.em-row-logo{width:48px;height:48px;border-radius:6px;object-fit:contain;background:var(--em-thumb);flex:none;padding:5px;box-sizing:border-box}
 .em-row{display:flex;align-items:center;gap:14px;padding:7px 10px;border-radius:8px;cursor:pointer;min-width:0}
-.em-row:hover{background:rgba(255,255,255,.09)}
+.em-row:hover{background:var(--em-hover)}
 .em-row-idx{width:18px;text-align:center;font-size:13px;color:${C.secondary};flex:none;font-variant-numeric:tabular-nums}
-.em-row-thumb{width:48px;height:48px;border-radius:6px;object-fit:cover;background:#3a3a3a;flex:none;display:block}
+.em-row-thumb{width:48px;height:48px;border-radius:6px;object-fit:cover;background:var(--em-thumb);flex:none;display:block}
 .em-row-main{flex:1;min-width:0}
 .em-row-title{font-size:14.5px;font-weight:600;color:${C.white};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-row-sub{font-size:12.5px;color:${C.secondary};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-row-dur{font-size:12.5px;color:${C.secondary};flex:none;font-variant-numeric:tabular-nums;padding-right:4px}
 .em-iconbtn{background:none;border:none;color:${C.white};cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:6px;border-radius:999px;opacity:.85;flex:none}
-.em-iconbtn:hover{background:rgba(255,255,255,.14);opacity:1}
+.em-iconbtn:hover{background:var(--em-hover);opacity:1}
 .em-iconbtn.hidden-idx{visibility:hidden}
 .em-row:hover .hidden-idx{visibility:visible}
 .em-mini{margin:0 10px 6px;background:${C.elevated};border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;cursor:pointer;flex:none}
-.em-mini:hover{background:#333}
+.em-mini:hover{background:var(--em-elevated-hover)}
 .em-mini-progress{position:absolute;top:0;left:0;height:2.5px;background:${C.green};width:0%}
-.em-mini-thumb{width:42px;height:42px;border-radius:6px;object-fit:cover;background:#3a3a3a;flex:none;display:block}
+.em-mini-thumb{width:42px;height:42px;border-radius:6px;object-fit:cover;background:var(--em-thumb);flex:none;display:block}
 .em-mini-main{flex:1;min-width:0}
 .em-mini-title{font-size:13.5px;font-weight:600;color:${C.white};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-mini-sub{font-size:12px;color:${C.secondary};margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-nav{display:flex;background:${C.nav};padding:6px 14px 8px;gap:0;flex:none}
 .em-navitem{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;color:${C.secondary};cursor:pointer;padding:4px 0;font-size:11px;font-weight:600;font-family:inherit}
 .em-navitem.active{color:${C.white}}
-.em-full{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;background:${C.black};overflow:hidden}
+.em-full{position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;background:#121212;color:#fff;overflow:hidden;--em-text:#fff;--em-muted:#A7A7A7;--em-elevated:rgba(255,255,255,.12);--em-elevated-hover:rgba(255,255,255,.18);--em-thumb:#3a3a3a;--em-panel:#1a1a1a;--em-hover:rgba(255,255,255,.12);--em-track:rgba(255,255,255,.2);--em-play-bg:#fff;--em-play-fg:#000;}
 .em-full-bg{position:absolute;inset:-60px;background-size:cover;background-position:center;filter:blur(52px) brightness(.5);transform:scale(1.3)}
 .em-full-inner{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;padding:14px 28px 26px}
 .em-full-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px}
 .em-full-label{font-size:11.5px;font-weight:700;color:${C.secondary};letter-spacing:.8px;text-transform:uppercase}
 .em-art-wrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:6px 0}
-.em-art{width:min(320px,58%);aspect-ratio:1/1;border-radius:14px;object-fit:cover;background:#3a3a3a;box-shadow:0 18px 60px rgba(0,0,0,.6)}
+.em-art{width:min(320px,58%);aspect-ratio:1/1;border-radius:14px;object-fit:cover;background:var(--em-thumb);box-shadow:0 18px 60px rgba(0,0,0,.6)}
 .em-trackline{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 4px}
 .em-track-title{font-size:19px;font-weight:700;color:${C.white};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-track-sub{font-size:13.5px;color:${C.secondary};margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .em-sliderrow{display:flex;align-items:center;gap:10px;padding:2px 4px}
 .em-time{font-size:11.5px;color:${C.secondary};width:40px;font-variant-numeric:tabular-nums}
 .em-time.right{text-align:right}
-input[type=range].em-range{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:2px;background:#ffffff33;outline:none;cursor:pointer}
-input[type=range].em-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:${C.white};border:none;box-shadow:0 1px 4px rgba(0,0,0,.5)}
-input[type=range].em-range::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:${C.white};border:none}
+input[type=range].em-range{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:2px;background:var(--em-track);outline:none;cursor:pointer}
+input[type=range].em-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:var(--em-text);border:none;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+input[type=range].em-range::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--em-text);border:none}
 .em-controls{display:flex;align-items:center;justify-content:center;gap:26px;padding-top:14px}
 .em-ctl{background:none;border:none;color:${C.secondary};cursor:pointer;display:inline-flex;padding:6px;border-radius:999px}
 .em-ctl:hover{color:${C.white}}
 .em-ctl.on{color:${C.green}}
-.em-playbig{width:62px;height:62px;border-radius:50%;background:${C.white};border:none;color:#000;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.em-playbig{width:62px;height:62px;border-radius:50%;background:var(--em-play-bg);border:none;color:var(--em-play-fg);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .em-playbig:hover{transform:scale(1.04)}
-.em-queuepanel{position:absolute;top:0;right:0;bottom:0;width:min(360px,85%);background:#1a1a1a;z-index:2;display:flex;flex-direction:column;border-left:1px solid #ffffff14}
+.em-queuepanel{position:absolute;top:0;right:0;bottom:0;width:min(360px,85%);background:var(--em-panel);z-index:2;display:flex;flex-direction:column;border-left:1px solid var(--em-stroke)}
 .em-queuehead{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;font-weight:700;font-size:15px}
 .em-queuelist{flex:1;overflow-y:auto;padding:0 10px 20px}
-.em-menu{position:fixed;z-index:9000;background:#2f2f2f;border-radius:10px;padding:6px 0;min-width:210px;box-shadow:0 14px 44px rgba(0,0,0,.55)}
-.em-menuitem{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;color:${C.white};font-size:13.5px;padding:9px 16px;cursor:pointer;text-align:left;font-family:inherit}
-.em-menuitem:hover{background:rgba(255,255,255,.1)}
+.em-menu{position:fixed;z-index:9000;background:var(--em-panel);border-radius:10px;padding:6px 0;min-width:210px;box-shadow:var(--em-shadow);border:1px solid var(--em-stroke)}
+.em-menuitem{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;color:var(--em-text);font-size:13.5px;padding:9px 16px;cursor:pointer;text-align:left;font-family:inherit}
+.em-menuitem:hover{background:var(--em-hover)}
 .em-dialog-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.7);z-index:60;display:flex;align-items:center;justify-content:center}
-.em-dialog{background:#2a2a2a;border-radius:14px;width:min(380px,90%);max-height:80%;display:flex;flex-direction:column;padding:20px}
+.em-dialog{background:var(--em-panel);border:1px solid var(--em-stroke);border-radius:14px;width:min(380px,90%);max-height:80%;display:flex;flex-direction:column;padding:20px}
 .em-dialog h3{margin:0 0 14px;font-size:16.5px}
 .em-dialog input[type=text]{width:100%;box-sizing:border-box;background:${C.card};border:none;border-radius:8px;padding:11px 14px;color:${C.white};font-size:13.5px;outline:none;margin-bottom:12px}
 .em-dialog-list{overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin-bottom:14px}
@@ -185,19 +229,18 @@ input[type=range].em-range::-moz-range-thumb{width:12px;height:12px;border-radiu
 .em-btn:hover{background:${C.greenDark}}
 .em-btn.ghost{background:transparent;color:${C.white}}
 .em-btn.ghost:hover{text-decoration:underline;background:transparent}
-.em-toast{position:absolute;left:50%;bottom:86px;transform:translateX(-50%);background:#fff;color:#121212;font-size:13px;font-weight:600;padding:11px 20px;border-radius:999px;z-index:80;box-shadow:0 8px 30px rgba(0,0,0,.5);white-space:nowrap}
 .em-detail-head{display:flex;align-items:flex-end;gap:20px;margin-bottom:18px}
-.em-detail-cover{width:164px;height:164px;border-radius:10px;object-fit:cover;background:#3a3a3a;flex:none;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.em-detail-cover{width:164px;height:164px;border-radius:10px;object-fit:cover;background:var(--em-thumb);flex:none;box-shadow:0 12px 40px rgba(0,0,0,.5)}
 .em-detail-label{font-size:11.5px;font-weight:700;color:${C.secondary};letter-spacing:.8px;text-transform:uppercase}
 .em-detail-title{font-size:34px;font-weight:800;margin:6px 0 8px;letter-spacing:-.5px;line-height:1.05}
 .em-detail-meta{font-size:13px;color:${C.secondary}}
 .em-detail-actions{display:flex;align-items:center;gap:14px;margin-bottom:20px}
 .em-playcircle{width:48px;height:48px;border-radius:50%;background:${C.green};border:none;color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .em-playcircle:hover{background:${C.greenDark};transform:scale(1.03)}
-.em-smcircle{width:36px;height:36px;border-radius:50%;background:${C.elevated};border:none;color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
-.em-smcircle:hover{background:#3a3a3a}
+.em-smcircle{width:36px;height:36px;border-radius:50%;background:var(--em-elevated);border:none;color:var(--em-text);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.em-smcircle:hover{background:var(--em-elevated-hover)}
 .em-empty{color:${C.secondary};font-size:14px;padding:30px 6px;text-align:center;line-height:1.7}
-.em-spin{width:26px;height:26px;border:3px solid #ffffff2b;border-top-color:${C.green};border-radius:50%;animation:emrot .8s linear infinite;margin:0 auto}
+.em-spin{width:26px;height:26px;border:3px solid var(--em-track);border-top-color:${C.green};border-radius:50%;animation:emrot .8s linear infinite;margin:0 auto}
 @keyframes emrot{to{transform:rotate(360deg)}}
 .em-settings-card{background:${C.card};border-radius:12px;padding:18px 20px;max-width:560px;margin-bottom:14px}
 .em-settings-card h4{margin:0 0 4px;font-size:14.5px}
@@ -781,14 +824,10 @@ export function renderMusicPage(body) {
     // localStorage is only the offline cache. Pull once per window.
     radioStore.syncFromServer().then(() => { if (!app.detail && app.tab === 3) renderApp(); });
 
-    let toastTimer = null;
-    function toast(msg) {
-        const old = root.querySelector('.em-toast');
-        if (old) old.remove();
-        const t = el('div', { class: 'em-toast' }, msg);
-        root.appendChild(t);
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => t.remove(), 2600);
+    // Feedback goes through the global Notification Center (docs/notifications.md);
+    // the package must not render its own toast stack.
+    function toast(msg, kind = 'info') {
+        try { _ctx.notifications.toast(String(msg), kind); } catch (_) { /* window closing */ }
     }
 
     // ── View rendering ───────────────────────────────────────────────
@@ -1253,10 +1292,18 @@ export function renderMusicPage(body) {
             : { label: 'Polub', act: () => store.toggleLike(t, toast).then(renderApp) });
         items.push({ label: 'Dodaj do playlisty…', act: (e) => openAddToPlaylistDialog(e, t) });        // Pobierz na NAS (m4a) — jak w aplikacji Android (SearchScreen.downloadTrack).
         items.push({ label: 'Pobierz na NAS', act: () => {
-            toast(`Pobieranie „${t.title}” na NAS…`);
+            const task = _ctx.progress?.startTask
+                ? _ctx.progress.startTask({ appId: 'pkg-ethos-music', title: t.title, detail: 'Pobieranie na NAS…', testIdPrefix: 'music-download' })
+                : null;
             apiJsonFetch('/api/music/download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ video_id: t.id }) })
-                .then(() => toast('Utwór zapisany na NAS'))
-                .catch(() => toast('Błąd pobierania na NAS'));
+                .then(() => {
+                    task?.finish('done', { percent: 100, detail: 'Zapisano na NAS' });
+                    toast('Utwór zapisany na NAS', 'success');
+                })
+                .catch(() => {
+                    task?.finish('failed', { detail: 'Nie udało się pobrać utworu' });
+                    toast('Błąd pobierania na NAS', 'error');
+                });
         }});
         return items;
     }
@@ -1270,8 +1317,16 @@ export function renderMusicPage(body) {
         const ids = pl.tracks
             .map(t => t.id)
             .filter(id => id && !String(id).startsWith('radio-'));
-        if (!ids.length) { toast('Brak utworów do pobrania na NAS'); return; }
-        toast(`Zlecam pobieranie ${ids.length} utworów na NAS…`);
+        if (!ids.length) { toast('Brak utworów do pobrania na NAS', 'warning'); return; }
+        const task = _ctx.progress?.startTask
+            ? _ctx.progress.startTask({
+                appId: 'pkg-ethos-music',
+                title: `Pobieranie „${pl.name}”`,
+                total: ids.length,
+                detail: 'Zlecanie…',
+                testIdPrefix: 'music-download',
+            })
+            : null;
         try {
             await apiJsonFetch('/api/music/download-batch', {
                 method: 'POST',
@@ -1279,7 +1334,8 @@ export function renderMusicPage(body) {
                 body: JSON.stringify({ video_ids: ids }),
             });
         } catch (e) {
-            toast('Nie udało się zlecić pobierania na NAS');
+            task?.finish('failed', { detail: 'Nie udało się zlecić pobierania' });
+            toast('Nie udało się zlecić pobierania na NAS', 'error');
             return;
         }
         const deadline = Date.now() + 30 * 60 * 1000;
@@ -1289,11 +1345,21 @@ export function renderMusicPage(body) {
             try { p = await apiJsonFetch('/api/music/downloads/progress'); } catch (e) { continue; }
             if (!p.running) {
                 const failed = Number(p.failed || 0);
-                toast(failed ? `Pobrano na NAS — ${failed} nie udało się` : 'Playlista pobrana na NAS');
+                task?.finish(failed ? 'failed' : 'done', {
+                    percent: 100,
+                    detail: failed ? `${failed} nie udało się` : `${ids.length} utworów zapisane`,
+                });
+                toast(failed ? `Pobrano na NAS — ${failed} nie udało się` : 'Playlista pobrana na NAS', failed ? 'warning' : 'success');
                 return;
             }
-            toast(`Pobieranie na NAS… ${p.done}/${p.total}`);
+            const total = Number(p.total || ids.length) || ids.length;
+            task?.update({
+                index: Number(p.done || 0),
+                percent: total ? Math.round((Number(p.done || 0) / total) * 100) : null,
+                detail: `${p.done || 0}/${total}`,
+            });
         }
+        task?.finish('failed', { detail: 'Przekroczono limit czasu' });
     }
 
     // ── Context menu popup ───────────────────────────────────────────
@@ -1331,9 +1397,9 @@ export function renderMusicPage(body) {
         const list = el('div', { class: 'em-dialog-list' });
         function fillList() {
             list.innerHTML = '';
-            if (!store.playlists.length) { list.appendChild(el('div', { style: 'color:#A7A7A7;font-size:13px;padding:6px 2px' }, 'Brak playlist — utwórz nową powyżej.')); return; }
+            if (!store.playlists.length) { list.appendChild(el('div', { style: 'color:var(--em-muted);font-size:13px;padding:6px 2px' }, 'Brak playlist — utwórz nową powyżej.')); return; }
             store.playlists.forEach(pl => {
-                const b = el('button', { class: 'em-menuitem' }, pl.name, el('span', { style: 'margin-left:auto;color:#A7A7A7;font-size:12px' }, `${pl.tracks.length}`));
+                const b = el('button', { class: 'em-menuitem' }, pl.name, el('span', { style: 'margin-left:auto;color:var(--em-muted);font-size:12px' }, `${pl.tracks.length}`));
                 b.addEventListener('click', async () => { await store.addToPlaylist(pl.id, t, toast); backdrop.remove(); renderApp(); });
                 list.appendChild(b);
             });
@@ -1427,7 +1493,7 @@ export function renderMusicPage(body) {
             const grid = el('div', { class: 'em-grid' });
             filtered.slice(0, podcastVisible).forEach(p => grid.appendChild(podcastCard(p)));
             gridBox.appendChild(grid);
-            gridBox.appendChild(el('div', { style: 'color:#A7A7A7;font-size:12.5px;padding:10px 2px' },
+            gridBox.appendChild(el('div', { style: 'color:var(--em-muted);font-size:12.5px;padding:10px 2px' },
                 `${Math.min(filtered.length, podcastVisible)} z ${filtered.length}`));
             if (filtered.length > podcastVisible) {
                 const more = el('button', { class: 'em-more' }, 'Pokaż więcej');
@@ -1543,7 +1609,7 @@ export function renderMusicPage(body) {
 
     function viewRadio(parent) {
         parent.appendChild(el('h1', { class: 'em-h1' }, 'Radio'));
-        parent.appendChild(el('div', { style: 'color:#A7A7A7;font-size:13px;margin:-12px 0 10px' },
+        parent.appendChild(el('div', { style: 'color:var(--em-muted);font-size:13px;margin:-12px 0 10px' },
             'Polskie stacje na żywo — dotknij, aby słuchać.'));
         const field = el('input', {
             class: 'em-searchfield', type: 'text', placeholder: 'Szukaj stacji…', value: radioQuery,
@@ -1606,7 +1672,7 @@ export function renderMusicPage(body) {
             if (!filtered.length) list.appendChild(el('div', { class: 'em-empty' }, 'Brak stacji dla tych filtrów.'));
             filtered.forEach(s => list.appendChild(stationRow(s)));
             body.appendChild(list);
-            body.appendChild(el('div', { style: 'color:#A7A7A7;font-size:12.5px;padding:10px 2px' },
+            body.appendChild(el('div', { style: 'color:var(--em-muted);font-size:12.5px;padding:10px 2px' },
                 `${filtered.length} z ${stations.length} stacji`));
         }
 
@@ -1633,7 +1699,7 @@ export function renderMusicPage(body) {
         store.playlists.forEach(pl => grid.appendChild(playlistCard(pl)));
         parent.appendChild(grid);
         if (!store.playlists.length) {
-            parent.appendChild(el('div', { style: 'color:#A7A7A7;font-size:13.5px;padding:18px 4px' },
+            parent.appendChild(el('div', { style: 'color:var(--em-muted);font-size:13.5px;padding:18px 4px' },
                 'Jeszcze nie masz playlist. Stwórz pierwszą przyciskiem „+ Nowa playlista”.'));
         }
     }
@@ -1945,7 +2011,7 @@ export function renderMusicPage(body) {
 
     function paintRange(range) {
         const v = range.value / 1000 * 100;
-        range.style.background = `linear-gradient(to right, ${C.green} ${v}%, #ffffff33 ${v}%)`;
+        range.style.background = `linear-gradient(to right, ${C.green} ${v}%, var(--em-track) ${v}%)`;
     }
 
     // ── Queue panel (FullPlayerScreen.kt) ────────────────────────────
@@ -1956,7 +2022,7 @@ export function renderMusicPage(body) {
         panel.appendChild(el('div', { class: 'em-queuehead' }, 'Kolejka',
             (() => { const b = el('button', { class: 'em-iconbtn', title: 'Zamknij' }, icon('close', 20)); b.addEventListener('click', () => panel.remove()); return b; })()));
         const list = el('div', { class: 'em-queuelist' });
-        if (!engine.queue.length) list.appendChild(el('div', { style: 'color:#A7A7A7;font-size:13px;padding:8px 6px' }, 'Kolejka jest pusta.'));
+        if (!engine.queue.length) list.appendChild(el('div', { style: 'color:var(--em-muted);font-size:13px;padding:8px 6px' }, 'Kolejka jest pusta.'));
         engine.queue.forEach((t, i) => {
             const row = el('div', { class: 'em-row', style: i === engine.index ? `background:${C.elevated}` : '' });
             row.append(el('span', { class: 'em-row-idx' }, String(i + 1)), t.thumb ? el('img', { class: 'em-row-thumb', src: t.thumb, alt: '' }) : defaultRowThumb());
