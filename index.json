@@ -4,12 +4,12 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-15T09:07:25+00:00",
+  "generated_at": "2026-11-15T09:50:56+00:00",
   "packages": [
     {
       "id": "backup-manager",
       "name": "EthOS Backup Manager",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "description": "Versioned backups for folders and Docker Compose projects. Dated hardlink snapshots, GFS retention, quick/deep verify, a restore wizard and optional rclone offsite replication — in a native EthOS window.",
       "icon": "🔄",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/backup-manager/icon.svg",
@@ -23,15 +23,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.2: legacy generations show their real size and file count after indexing; unknown sizes render as — instead of 0 B. 1.0.1: the window now uses the shared AntiVirus/Domains shell — 218 px rail, text-only nav, panels, summary tiles, tables, tag pills and the same light/dark tokens. 1.0.0: first release — dated rsync hardlink snapshots, 7/4/6 GFS retention, completion manifest, quick and deep verify, cancel and queued runs, restore in place or to another folder, Docker Compose project discovery with volume/image snapshots, and rclone mirror with 30-day remote history.",
+      "changelog": "1.0.3: requires EthOS 2.0. 1.0.2: legacy generations show their real size and file count after indexing; unknown sizes render as — instead of 0 B. 1.0.1: the window now uses the shared AntiVirus/Domains shell — 218 px rail, text-only nav, panels, summary tiles, tables, tag pills and the same light/dark tokens. 1.0.0: first release — dated rsync hardlink snapshots, 7/4/6 GFS retention, completion manifest, quick and deep verify, cancel and queued runs, restore in place or to another folder, Docker Compose project discovery with volume/image snapshots, and rclone mirror with 30-day remote history.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/backup-manager/manifest.json",
-      "manifest_sha256": "605b2b1845584bd59f93dc7c5373eb770130cb7e1f098a86f8f5b1bcb7dc4047",
+      "manifest_sha256": "521f31f71c7bc9f77a681b17dd2ad65781ad6e2b3e1eca794694d3d96e1a7b1f",
       "size_bytes": 70201
     },
     {
       "id": "domains",
       "name": "Domains",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "description": "Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another device, a container, or EthOS itself - without touching nginx by hand. Caddy issues and renews Let's Encrypt certificates on its own, and the stack keeps routing even when EthOS is restarting.",
       "icon": "🌐",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/icon.svg",
@@ -47,15 +47,15 @@
       ],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.2.0: the window follows the AntiVirus layout — a left rail with Overview, Routes, Certificates, Settings and Diagnostics, status pills, stat tiles and action cards. Routes show their options as chips, the form keeps headers/Host/streaming under Advanced, and the ACME email field is no longer overwritten by the background refresh. 1.1.1: read certificates from Caddy's actual storage root (/data/caddy/certificates), so the certificate list and expiry show up. per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
+      "changelog": "1.2.1: requires EthOS 2.0. 1.2.0: the window follows the AntiVirus layout — a left rail with Overview, Routes, Certificates, Settings and Diagnostics, status pills, stat tiles and action cards. Routes show their options as chips, the form keeps headers/Host/streaming under Advanced, and the ACME email field is no longer overwritten by the background refresh. 1.1.1: read certificates from Caddy's actual storage root (/data/caddy/certificates), so the certificate list and expiry show up. per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/manifest.json",
-      "manifest_sha256": "2e1d34d3b16c818a9cd7b3c3cbacdcda1b5b8cfc2dd5cd290fcd52ea201c116a",
+      "manifest_sha256": "d7879d4ed316dcf9940beb47c7861f45cb6d2e2bf7c0aae640db2ae4e23c36e5",
       "size_bytes": 94175
     },
     {
       "id": "download-manager",
       "name": "EthOS Download Manager",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "description": "HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window.",
       "icon": "⬇️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/icon.svg",
@@ -69,15 +69,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.3: queue ordering works everywhere — whole waiting/paused rows are draggable, ↑/↓ buttons reorder without dragging, a Queue order sort shows the real start order, and a bug that hid the action buttons on every row after the first is fixed; adds Pause all / Resume all / Clear completed and the auto-download-debrid toggle. 1.0.2: matches the shared package shell — a persistent Download button in the window header, a ready/attention status card, numbered add form (source · destination · torrents), table-based categories/RSS/watch folders and a Package panel; the 2 s poll no longer clears the quick-add field. 1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
+      "changelog": "1.0.4: Package Center icon redrawn on the 256 px grid; requires EthOS 2.0. 1.0.3: queue ordering works everywhere — whole waiting/paused rows are draggable, ↑/↓ buttons reorder without dragging, a Queue order sort shows the real start order, and a bug that hid the action buttons on every row after the first is fixed; adds Pause all / Resume all / Clear completed and the auto-download-debrid toggle. 1.0.2: matches the shared package shell — a persistent Download button in the window header, a ready/attention status card, numbered add form (source · destination · torrents), table-based categories/RSS/watch folders and a Package panel; the 2 s poll no longer clears the quick-add field. 1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/manifest.json",
-      "manifest_sha256": "8e0c30e610dcf2abd4da766513d30ffcee2d292ae0776b0177467d877f0f1f74",
-      "size_bytes": 73851
+      "manifest_sha256": "edf3e5f3db711a3b85dba943fbdacc94f2b89a8a6984153805da04d0fd77b2d4",
+      "size_bytes": 73952
     },
     {
       "id": "ethos-antivirus",
       "name": "EthOS AntiVirus",
-      "version": "2.1.4",
+      "version": "2.1.5",
       "description": "ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only scans of /home, /mnt and /media; signatures update automatically.",
       "icon": "🛡️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
@@ -93,15 +93,15 @@
       ],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "2.1.4: Browse… in the scan target and schedule forms uses the EthOS folder picker, restricted to /home, /mnt and /media. 2.1.3: health/status report which shares are visible in the scanner container and the UI warns instead of failing scans silently. 2.1.2: fix scans failing with 'not visible in the scanner container' — the UI container now mounts /home, /mnt and /media read-only at /scan. 2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
+      "changelog": "2.1.5: scans report progress in the shared task panel instead of only the status line; requires EthOS 2.0. 2.1.4: Browse… in the scan target and schedule forms uses the EthOS folder picker, restricted to /home, /mnt and /media. 2.1.3: health/status report which shares are visible in the scanner container and the UI warns instead of failing scans silently. 2.1.2: fix scans failing with 'not visible in the scanner container' — the UI container now mounts /home, /mnt and /media read-only at /scan. 2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
-      "manifest_sha256": "a981badb93fbdac80f6299167230ecdd51fab7308f2ee6a6b700913a2c894c5c",
-      "size_bytes": 91550
+      "manifest_sha256": "898852890b1f564df966f27fd13c173b9fdd6a07d428d665c8d0fa6b950fef76",
+      "size_bytes": 92567
     },
     {
       "id": "ethos-cleaner",
       "name": "Disk Cleaner",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Find what is eating your disk: scans caches, thumbnails, logs, trash and old downloads, shows the biggest space users and lets you delete them safely. The scan and delete operations stay in EthOS, where they run through the file service's path scope, so this package ships the desktop app only.",
       "icon": "🧹",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-cleaner/icon.svg",
@@ -115,15 +115,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. The Disk Cleaner desktop app moves out of the core install; every delete still goes through EthOS's scoped file service.",
+      "changelog": "1.0.1: light theme was white-on-white and is fixed; Browse… uses the EthOS folder picker; scans, deletes and journal vacuum report progress in the shared task panel; the Biggest files view parses again. 1.0.0: first release. The Disk Cleaner desktop app moves out of the core install; every delete still goes through EthOS's scoped file service.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-cleaner/manifest.json",
-      "manifest_sha256": "7c73c00ad6d744f5ca5c8f5e522d6ddbeced77869ab1346a15d032ce5b25812e",
-      "size_bytes": 27087
+      "manifest_sha256": "ff7ae936d748d22c2c0cac57d44af0655e685410b735aa2e2b7b64273e967e16",
+      "size_bytes": 29335
     },
     {
       "id": "ethos-docker",
       "name": "Docker Manager",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Engine status, containers, images, volumes and Compose projects in one place: start, stop, restart, inspect logs, prune and install Docker Engine on the NAS. The engine helper and the /api/docker endpoints stay in EthOS because the package runtime depends on them; this package is the desktop app.",
       "icon": "🐳",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/icon.svg",
@@ -137,15 +137,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. The Docker Manager desktop app moves out of the core install; the Docker Engine helper, the compose runtime and the /api/docker endpoints stay in EthOS because every container package depends on them.",
+      "changelog": "1.0.1: Package Center icon redrawn on the 256 px grid; requires EthOS 2.0. 1.0.0: first release. The Docker Manager desktop app moves out of the core install; the Docker Engine helper, the compose runtime and the /api/docker endpoints stay in EthOS because every container package depends on them.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/manifest.json",
-      "manifest_sha256": "7b8a5cb2dc4e3f8ddd2b349d3eb24c5f9beb014e764008e8cec7baca9a181599",
-      "size_bytes": 56980
+      "manifest_sha256": "b5c02eeeb5f5ae0ab4d8b8a8afd81dd9aaa3dea42663a339242a7acdb769efd1",
+      "size_bytes": 57100
     },
     {
       "id": "ethos-editor",
       "name": "Code Editor",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "A VS Code-style workbench in the browser: single files or whole folders, tabs and breadcrumbs, search, Source Control with inline git gutters, split terminals, Problems/Output panels and an AI chat tab. File access stays in EthOS behind its path scope, so this package ships the desktop app only.",
       "icon": "⌨️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-editor/icon.svg",
@@ -159,15 +159,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. The Code Editor desktop app moves out of the core install; editing, git and terminal endpoints stay in EthOS, and File Station still opens files in it.",
+      "changelog": "1.0.1: light code theme (VS Code Light+ tokens and chrome), the terminal follows the appearance toggle, and unsaved changes show in the status bar instead of overriding the window title; requires EthOS 2.0. 1.0.0: first release. The Code Editor desktop app moves out of the core install; editing, git and terminal endpoints stay in EthOS, and File Station still opens files in it.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-editor/manifest.json",
-      "manifest_sha256": "c4bdd24be4797053386386901be25b8f3d1f6708149d8ee209830fcb8e1630d4",
-      "size_bytes": 204973
+      "manifest_sha256": "914aedaaba0fca8f22e89702b81071b85599d0cebef7358da11c6f622dd40d34",
+      "size_bytes": 206496
     },
     {
       "id": "ethos-git-diff",
       "name": "Git Diff",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Side-by-side diff with partial (hunk and line) staging, commit box, pull/push and recent history for any Git repository on your shares. Opening a diff from the Code Editor's Source Control panel focuses this app. Repository access stays in EthOS, behind its path scope.",
       "icon": "⎇",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git-diff/icon.svg",
@@ -181,15 +181,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. The Git Diff desktop app moves out of the core install; the git endpoints stay in EthOS's editor API, so the Code Editor keeps handing diffs to it.",
+      "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. The Git Diff desktop app moves out of the core install; the git endpoints stay in EthOS's editor API, so the Code Editor keeps handing diffs to it.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git-diff/manifest.json",
-      "manifest_sha256": "58f7574dde652aebf0518b689b5a34362c017e45bbf2f6cde5c0a33f11ec4fb5",
+      "manifest_sha256": "abfea4c235a05ae5d71e7fff0ba7330b54f4dec212b424cb6fcbf27d85dcefe6",
       "size_bytes": 32315
     },
     {
       "id": "ethos-kanban",
       "name": "Kanban Board",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Package Center app: the board lives in the package's own service and keeps working for every signed-in account. Boards from the built-in version are imported automatically on first start.",
       "icon": "🗂️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/icon.svg",
@@ -203,15 +203,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
+      "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/manifest.json",
-      "manifest_sha256": "9ea99c376342c7813a11bc55a1b7284fd1fc3dc86c5b18eea6c90050761199a8",
-      "size_bytes": 56745
+      "manifest_sha256": "c23370e5d3a641bba53117aafbce0383c7bc8c65815ef9f04674a437dfdbec37",
+      "size_bytes": 52828
     },
     {
       "id": "ethos-media-enhance",
       "name": "Media Enhancements",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Face-aware video thumbnails for File Station: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a private environment that only this package installs. Without this package thumbnails still work — EthOS falls back to the first valid frame.",
       "icon": "🎯",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-media-enhance/icon.svg",
@@ -225,15 +225,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. Face detection for movie thumbnails moves out of the EthOS core into this package (OpenCV ~130 MB stays out of the core venv). File Station calls it locally and falls back to the first valid frame when it is not installed.",
+      "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. Face detection for movie thumbnails moves out of the EthOS core into this package (OpenCV ~130 MB stays out of the core venv). File Station calls it locally and falls back to the first valid frame when it is not installed.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-media-enhance/manifest.json",
-      "manifest_sha256": "b2da81626df0ce1b6c19c38b42198a8652f7acd2d308255c95065733b147f725",
+      "manifest_sha256": "04a422b1ad5448b64a66063c3f55ea4ff321064ca447eeffb0bc25e401359c24",
       "size_bytes": 5240
     },
     {
       "id": "ethos-music",
       "name": "Music",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared with the EthOS Music Android app. The music API stays in EthOS so the phone keeps working; this package ships the desktop app. Install “Music Engine” for search, streaming and downloads.",
       "icon": "🎵",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/icon.svg",
@@ -249,15 +249,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. The Music desktop app moves out of the core install; it requires the Music Engine package, which Package Center installs automatically. Your library, likes, playlists and podcast subscriptions stay in EthOS and remain shared with the Android app.",
+      "changelog": "1.0.1: light and dark themes follow the EthOS toggle; feedback now goes to the global Notification Center instead of a package toast; downloads report progress in the shared task panel. 1.0.0: first release. The Music desktop app moves out of the core install; it requires the Music Engine package, which Package Center installs automatically. Your library, likes, playlists and podcast subscriptions stay in EthOS and remain shared with the Android app.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/manifest.json",
-      "manifest_sha256": "d3ed496669604dc60f410ec327072d6b74aebb40c76c9ce9ccbc64a14c91c0e6",
-      "size_bytes": 108851
+      "manifest_sha256": "027fb03092cc8617a590d27e895029f75da430ae197d53442c53bedaf0c2080e",
+      "size_bytes": 112055
     },
     {
       "id": "ethos-music-engine",
       "name": "Music Engine",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "YouTube search, streaming and downloads for the Music app and the EthOS Music Android app. yt-dlp runs in a private environment that only this package installs, offline from a pinned wheelhouse; EthOS talks to it locally and the core install stays lean. Install it once and Music works exactly as before.",
       "icon": "🎵",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music-engine/icon.svg",
@@ -271,15 +271,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. yt-dlp moves out of the EthOS core into this package, so Music keeps working while the core install no longer carries the extractor. Updates ship through Package Center.",
+      "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. yt-dlp moves out of the EthOS core into this package, so Music keeps working while the core install no longer carries the extractor. Updates ship through Package Center.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music-engine/manifest.json",
-      "manifest_sha256": "22fe19358dbd56348c39b51a6c3b53a7bdfad35f9611de424cc7b29c629091ec",
+      "manifest_sha256": "4c6017c645abf278bfac16f2cafe39c952b2b275c9a9610e6b2b636418fbcae9",
       "size_bytes": 9436
     },
     {
       "id": "ethos-photos",
       "name": "Photos",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "PhotoStation for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer. The gallery index stays in EthOS (the Android Moments app reads it too); this package ships the desktop app, so it can update on its own.",
       "icon": "📷",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/icon.svg",
@@ -293,15 +293,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
+      "changelog": "1.0.1: Add folder uses the EthOS folder picker, and moving items to trash reports progress in the shared task panel. 1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/manifest.json",
-      "manifest_sha256": "f90b4de7c4b5f208465bf29fa142d0e1b0b1f11155df132c47a416394f79675c",
-      "size_bytes": 181533
+      "manifest_sha256": "5a8702feb2fa10f56f525ae8899d4238f5e1bb8015387d80bbdeb47033516f0c",
+      "size_bytes": 182823
     },
     {
       "id": "ethos-shares",
       "name": "Samba Shares",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "description": "Create and manage SMB shares for Windows, macOS and Linux clients: pick a folder, set who may read or write, and see the Samba service state. Declares the Samba host package, so EthOS installs it with this package and removes it again when nothing else needs it. Share definitions are written by EthOS itself (the only process with the narrow sudoers rule for smb.conf), so this package ships the desktop app only.",
       "icon": "📁",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/icon.svg",
@@ -317,15 +317,15 @@
         "samba"
       ],
       "screenshots": [],
-      "changelog": "1.2.0: Samba is now installed automatically with this package (root helper ethos-system-deps) and removed on uninstall when no other package declares it.\n1.1.0: declares the Samba host requirement; the app shows a banner with the exact install command and disables \"+ Add Share\" when Samba is missing.\n1.0.0: first release. The Samba Shares desktop app moves out of the core install.",
+      "changelog": "1.2.1: the window is readable in the light theme (no more white-on-white title and rows), Refresh works in a package window, and Browse… uses the EthOS folder picker. 1.2.0: Samba is now installed automatically with this package (root helper ethos-system-deps) and removed on uninstall when no other package declares it.\n1.1.0: declares the Samba host requirement; the app shows a banner with the exact install command and disables \"+ Add Share\" when Samba is missing.\n1.0.0: first release. The Samba Shares desktop app moves out of the core install.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/manifest.json",
-      "manifest_sha256": "3cb424988960f9d14139ed87e17ff4334ff0aa8d7da622c966441eee8eaab7e7",
-      "size_bytes": 25027
+      "manifest_sha256": "28231474252d80cabbdb4ce8fa46474ffafb46b7c644e836e1d94d468854bfa6",
+      "size_bytes": 25878
     },
     {
       "id": "ethos-surveillance",
       "name": "Surveillance Station",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Watch your IP cameras from EthOS: MJPEG live grid, per-camera motion detection with event thumbnails, snapshots and MP4 recordings. The camera service stays in EthOS (ffmpeg, motion threads, path-scoped recordings) so recordings keep running headless; this package ships the desktop app.",
       "icon": "📹",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/icon.svg",
@@ -339,15 +339,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. The Surveillance desktop app moves out of the core install; cameras, motion detection and recordings stay in EthOS, so recording continues even without this package.",
+      "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. The Surveillance desktop app moves out of the core install; cameras, motion detection and recordings stay in EthOS, so recording continues even without this package.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/manifest.json",
-      "manifest_sha256": "022a07342d7546cbd311c42db46120f9f7f0237c48654579205f167a89a07a9a",
-      "size_bytes": 32267
+      "manifest_sha256": "65d09befac52b9ce57a1a3286323ab939412b0ed276fba96b97b2688f7a7fbc9",
+      "size_bytes": 32297
     },
     {
       "id": "ethos-video",
       "name": "Video Station",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Browse and watch the videos on your NAS: live folder browsing, ffmpeg thumbnails, resume positions, subtitles and TMDB metadata. The video API stays in EthOS so the Android Video app keeps working; this package ships the desktop app. Needs ffmpeg on the NAS for thumbnails and transcoding.",
       "icon": "🎬",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/icon.svg",
@@ -361,15 +361,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. The Video Station desktop app moves out of the core install; the video library API, thumbnails and streaming stay in EthOS, shared with the Android app.",
+      "changelog": "1.0.1: light theme for the shell, rows and empty states (the hero and player stay cinematic), and adding a folder uses the EthOS folder picker. 1.0.0: first release. The Video Station desktop app moves out of the core install; the video library API, thumbnails and streaming stay in EthOS, shared with the Android app.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/manifest.json",
-      "manifest_sha256": "1bc52b7bf079c36b0fe388e3f5e7b85e21b13a44d7c116b022d845822eac72f9",
-      "size_bytes": 132617
+      "manifest_sha256": "90a2ba430fef2c70cdf6fd51a93b4d562cc8d25fbae3d06d9ca5a28e00937fc1",
+      "size_bytes": 134987
     },
     {
       "id": "ethos-welcome",
       "name": "EthOS Welcome",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "description": "A tiny static welcome page for your NAS, served by nginx on port 8090.",
       "icon": "🌅",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/icon.svg",
@@ -385,15 +385,15 @@
       ],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.2: light and dark themes, honours the ?theme= passed by EthOS and falls back to prefers-color-scheme. 1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
+      "changelog": "1.0.3: Package Center now offers Open UI for the page on port 8090; requires EthOS 2.0. 1.0.2: light and dark themes, honours the ?theme= passed by EthOS and falls back to prefers-color-scheme. 1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/manifest.json",
-      "manifest_sha256": "76a802f5c58086f4fa88ec215535f889e14d39fbbc56555d50836739a508daee",
+      "manifest_sha256": "bc8e92f53ca5f8b073526a2b6ad4dc6722a094b2fd3a3847a5438d53f1c17898",
       "size_bytes": 5408
     },
     {
       "id": "tic-tac-toe",
       "name": "Tic-Tac-Toe",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "description": "A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port.",
       "icon": "❌",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/icon.svg",
@@ -407,15 +407,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "2.1.0: light and dark themes follow the EthOS appearance toggle. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
+      "changelog": "2.1.1: requires EthOS 2.0. 2.1.0: light and dark themes follow the EthOS appearance toggle. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/manifest.json",
-      "manifest_sha256": "68d557db89260a1dcd3a7568e4e9bc5f34ace57fb3758f86548fdb8d42f13a2d",
+      "manifest_sha256": "a6deefbf273d031d739322418864a24069b6d7ce1665e0e193b1a10905cebc6e",
       "size_bytes": 8848
     },
     {
       "id": "vmm",
       "name": "EthOS VM Manager",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "description": "Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO, boot it, and use it from the browser console - no separate computer left running. Disks live on your own shares, VMs start again after a restart, and every VM is isolated in its own process.",
       "icon": "🖥️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/icon.svg",
@@ -432,10 +432,10 @@
       ],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.2: the console overlay no longer covers the window — it is hidden until you press Console, so the machine list and the create form are always visible. 1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
+      "changelog": "1.0.3: requires EthOS 2.0. 1.0.2: the console overlay no longer covers the window — it is hidden until you press Console, so the machine list and the create form are always visible. 1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/manifest.json",
-      "manifest_sha256": "9323f9c8d512311620ee6cf01268fa6726177fc7ac0808bebda398b32078977a",
-      "size_bytes": 83187
+      "manifest_sha256": "7a4013107ab4347dfc600327f46c22b6db19488189ff79ba6419bf9b6ee1768f",
+      "size_bytes": 83903
     }
   ]
 }

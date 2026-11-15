@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-music-engine",
   "name": "Music Engine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "YouTube search, streaming and downloads for the Music app and the EthOS Music Android app. yt-dlp runs in a private environment that only this package installs, offline from a pinned wheelhouse; EthOS talks to it locally and the core install stays lean. Install it once and Music works exactly as before.",
   "icon": "🎵",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music-engine/icon.svg",
@@ -11,13 +11,14 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
+  "min_ethos_version": "2.0.0",
   "runtime": "venv",
   "healthcheck": {
     "scheme": "http",
     "port": 8096,
     "path": "/health"
   },
-  "changelog": "1.0.0: first release. yt-dlp moves out of the EthOS core into this package, so Music keeps working while the core install no longer carries the extractor. Updates ship through Package Center.",
+  "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. yt-dlp moves out of the EthOS core into this package, so Music keeps working while the core install no longer carries the extractor. Updates ship through Package Center.",
   "compose": null,
   "files": [
     {

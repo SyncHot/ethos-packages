@@ -2,20 +2,32 @@
 
 Signed package repository for [EthOS NAS](https://github.com/SyncHot/ethos-nas).
 
-The catalog currently contains seven packages:
+The catalog currently contains nineteen packages:
 
 | Package | Version | UI | What it is |
 |---|---|---|---|
-| `ethos-welcome` 🌅 | 1.0.2 | port 8090 | Static welcome page served by nginx |
-| `tic-tac-toe` ❌ | 2.1.0 | native | Two-player game inside an EthOS window; no container or port |
-| `ethos-antivirus` 🛡️ | 2.1.4 | native | ClamAV scanner with quarantine, logs, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
-| `domains` 🌐 | 1.2.0 | native | Caddy reverse proxy with automatic Let's Encrypt certificates for your own domains |
-| `vmm` 🖥️ | 1.0.2 | native | EthOS VM Manager — KVM virtual machines with a browser console, qcow2 disks on your shares and autostart; needs `/dev/kvm` (`capabilities: ["kvm"]`) |
-| `backup-manager` 🔄 | 1.0.2 | native | Versioned backups for folders and Docker Compose projects: hardlink snapshots, 7/4/6 retention, verify, restore wizard and optional rclone offsite copies |
-| `download-manager` ⬇️ | 1.0.0 | native | HTTP, magnet and debrid downloads with a priority queue (drag-and-drop), categories, a daily start window, bandwidth limits, RSS rules and watch folders; uses the core Download Station API |
+| `backup-manager` 🔄 | 1.0.3 | native | Versioned backups for folders and Docker Compose projects: hardlink snapshots, 7/4/6 retention, verify, restore wizard and optional rclone offsite copies |
+| `domains` 🌐 | 1.2.1 | native | Caddy reverse proxy with automatic Let's Encrypt certificates for your own domains |
+| `download-manager` ⬇️ | 1.0.4 | native | HTTP, magnet and debrid downloads with a priority queue (drag-and-drop), categories, a daily start window, bandwidth limits, RSS rules and watch folders; uses the core Download Station API |
+| `ethos-antivirus` 🛡️ | 2.1.5 | native | ClamAV scanner with quarantine, scan history, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
+| `ethos-cleaner` 🧹 | 1.0.1 | native | Disk space analyzer, biggest files and safe cleanup suggestions (trash, temp, caches, journal) through the core disk-clean API |
+| `ethos-docker` 🐳 | 1.0.1 | native | Containers, images, volumes and Compose projects; the Docker engine itself stays host software installed through the privileged helper |
+| `ethos-editor` ⌨️ | 1.0.1 | native | VS Code-style workbench: files and folders, tabs, find/replace, Source Control with inline git gutters, terminals, Problems/Output and Markdown preview |
+| `ethos-git-diff` ⎇ | 1.0.1 | native | IntelliJ-style side-by-side diff with hunk staging/unstaging, backed by the core editor git API |
+| `ethos-kanban` 🗂️ | 1.0.1 | native | Kanban boards with drag & drop, labels and due dates; ships a small venv service (`user_access`) |
+| `ethos-media-enhance` 🎯 | 1.0.1 | engine | Face-aware video thumbnails for File Station (OpenCV in the package's private venv) |
+| `ethos-music` 🎵 | 1.0.1 | native | Spotify-style Music desktop app sharing playlists, likes and history with the Android app |
+| `ethos-music-engine` 🎵 | 1.0.1 | engine | yt-dlp search/stream/download for Music, installed offline from a pinned wheelhouse |
+| `ethos-photos` 📷 | 1.0.1 | native | Photo library: folders, grid/timeline, calendar, Moments, albums, favourites and the PIN-encrypted Private section |
+| `ethos-shares` 📁 | 1.2.1 | native | Samba share management; Samba is installed with the package through the host-dependency helper |
+| `ethos-surveillance` 📹 | 1.0.1 | native | Camera monitoring: live MJPEG grid, motion detection and an event timeline; recording stays in the core |
+| `ethos-video` 🎬 | 1.0.1 | native | Video Station: movies/series, search, My List, resume positions and an in-window player |
+| `ethos-welcome` 🌅 | 1.0.3 | window 8090 | Static welcome page served by nginx (the reference port UI; no EthOS login) |
+| `tic-tac-toe` ❌ | 2.1.1 | native | Two-player game inside an EthOS window; no container or port |
+| `vmm` 🖥️ | 1.0.3 | native | EthOS VM Manager — KVM virtual machines with a browser console, qcow2 disks on your shares and autostart; needs `/dev/kvm` (`capabilities: ["kvm"]`) |
 
-Every package ships a Package Center icon (`<package-id>/icon.svg`) referenced by
-`icon_url` in its manifest.
+All packages declare `min_ethos_version: "2.0.0"`. Every package ships a Package Center icon
+(`<package-id>/icon.svg`) referenced by `icon_url` in its manifest.
 
 ## Add this repository
 
