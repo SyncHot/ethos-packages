@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-photos",
   "name": "Photos",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PhotoStation for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer. The gallery index stays in EthOS (the Android Moments app reads it too); this package ships the desktop app, so it can update on its own.",
   "icon": "📷",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/icon.svg",
@@ -11,16 +11,17 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
+  "min_ethos_version": "2.0.0",
   "ui": {
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
+  "changelog": "1.0.1: Add folder uses the EthOS folder picker, and moving items to trash reports progress in the shared task panel. 1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/frontend/app.js",
-      "sha256": "96a18238af2e930e2a6a09de22461b776a9bbfcce05954b5f828c69f30b80161",
+      "sha256": "7ed879d209f78846a6f14755a75ee627d2fc8c10f66e4dacbe6331fcc87b3a6f",
       "path": "frontend/app.js",
       "mode": 420
     },

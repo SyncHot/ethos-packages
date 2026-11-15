@@ -1902,10 +1902,20 @@ function _updateActionBar() {
 async function _psDeleteSelected() {
     const paths = [..._selected];
     if (!paths.length) return;
-    if (window.showModalConfirm) {
-        const ok = await window.showModalConfirm('Move to trash', `Move ${paths.length} item${paths.length === 1 ? '' : 's'} to the trash?\nYou can restore them later from File Manager → Trash.`);
-        if (!ok) return;
-    }
+    const ok = await _ctx.modal.confirm(
+        'Move to trash',
+        `Move ${paths.length} item${paths.length === 1 ? '' : 's'} to the trash?\nYou can restore them later from File Manager → Trash.`,
+    );
+    if (!ok) return;
+    const task = _ctx.progress?.startTask
+        ? _ctx.progress.startTask({
+            appId: 'pkg-ethos-photos',
+            title: `Moving ${paths.length} item${paths.length === 1 ? '' : 's'} to trash`,
+            total: paths.length,
+            detail: 'Trash…',
+            testIdPrefix: 'ps-trash',
+        })
+        : null;
     let removedCount = 0, failedCount = 0, firstErr = '';
     for (let i = 0; i < paths.length; i += 500) {   // backend caps one call at 500 paths
         const chunk = paths.slice(i, i + 500);
@@ -1925,7 +1935,15 @@ async function _psDeleteSelected() {
             failedCount += chunk.length;
             if (!firstErr) firstErr = e.message;
         }
+        task?.update({
+            index: Math.min(paths.length, i + chunk.length),
+            percent: Math.round((Math.min(paths.length, i + chunk.length) / paths.length) * 100),
+        });
     }
+    task?.finish(failedCount ? 'failed' : 'done', {
+        percent: 100,
+        detail: failedCount ? `${removedCount} moved, ${failedCount} failed: ${firstErr}` : `${removedCount} moved to trash`,
+    });
     _selected.clear();
     _lastSelIdx = -1;
     if (_fmCollection) {   // keep the File Manager lightbox collection in sync
@@ -2175,8 +2193,20 @@ async function _psRescanNow() {
 // APP: PhotoStation — Folder picker (add to library)
 // ════════════════════════════════════════════
 
-function _psShowPicker() {
+async function _psShowPicker() {
     if (!_body) return;
+    // Prefer the shared EthOS picker; the in-window browser below stays as a
+    // fallback for older cores (it can still add several folders at once).
+    if (typeof _ctx.pickFolder === 'function') {
+        const picked = await _ctx.pickFolder({
+            title: 'Add photo folder',
+            startPath: '/home',
+            roots: ['/home', '/mnt', '/media'],
+            acceptLabel: 'Add folder',
+        });
+        if (picked) await _psAddFolders([picked]);
+        return;
+    }
     _pickerPath = '/home';
     _pickerDirs = [];
     _pickerSelected = new Set();
@@ -2315,6 +2345,10 @@ function _psUpdatePickerCount() {
 async function _psAddSelected() {
     const paths = [..._pickerSelected];
     if (!paths.length) return;
+    await _psAddFolders(paths);
+}
+
+async function _psAddFolders(paths) {
     const existing = new Set(_cfg.folders.map(f => f.path));
     const add = paths.filter(p => !existing.has(p)).map(p => ({ path: p }));
     if (!add.length) { _psHidePicker(); return; }
@@ -3156,7 +3190,7 @@ async function _initApp(openLightboxIndex) {
 }
 
 function renderGallery(winBody) {
-    _body = winBody || document.querySelector('[data-testid="window-gallery"] .window-body');
+    _body = winBody || document.querySelector('[data-testid="window-pkg-ethos-photos"] .window-body');
     if (!_body) return;
     // Invalidate any fetch from a previous window instance so its results can
     // never land in the freshly opened view.
