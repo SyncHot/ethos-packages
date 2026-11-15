@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-14T16:51:01+00:00",
+  "generated_at": "2026-11-15T07:09:36+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -19,9 +19,8 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
-      "capabilities": [
-        "compose"
-      ],
+      "runtime": "compose",
+      "capabilities": [],
       "screenshots": [],
       "changelog": "1.0.2: legacy generations show their real size and file count after indexing; unknown sizes render as — instead of 0 B. 1.0.1: the window now uses the shared AntiVirus/Domains shell — 218 px rail, text-only nav, panels, summary tiles, tables, tag pills and the same light/dark tokens. 1.0.0: first release — dated rsync hardlink snapshots, 7/4/6 GFS retention, completion manifest, quick and deep verify, cancel and queued runs, restore in place or to another folder, Docker Compose project discovery with volume/image snapshots, and rclone mirror with 30-day remote history.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/backup-manager/manifest.json",
@@ -41,6 +40,7 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
+      "runtime": "compose",
       "capabilities": [
         "compose"
       ],
@@ -63,9 +63,8 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
-      "capabilities": [
-        "compose"
-      ],
+      "runtime": "compose",
+      "capabilities": [],
       "screenshots": [],
       "changelog": "1.0.3: queue ordering works everywhere — whole waiting/paused rows are draggable, ↑/↓ buttons reorder without dragging, a Queue order sort shows the real start order, and a bug that hid the action buttons on every row after the first is fixed; adds Pause all / Resume all / Clear completed and the auto-download-debrid toggle. 1.0.2: matches the shared package shell — a persistent Download button in the window header, a ready/attention status card, numbered add form (source · destination · torrents), table-based categories/RSS/watch folders and a Package panel; the 2 s poll no longer clears the quick-add field. 1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/manifest.json",
@@ -85,6 +84,7 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
+      "runtime": "compose",
       "capabilities": [
         "compose"
       ],
@@ -93,6 +93,48 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
       "manifest_sha256": "a981badb93fbdac80f6299167230ecdd51fab7308f2ee6a6b700913a2c894c5c",
       "size_bytes": 91550
+    },
+    {
+      "id": "ethos-media-enhance",
+      "name": "Media Enhancements",
+      "version": "1.0.0",
+      "description": "Face-aware video thumbnails for File Station: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a private environment that only this package installs. Without this package thumbnails still work — EthOS falls back to the first valid frame.",
+      "icon": "🎯",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-media-enhance/icon.svg",
+      "category": "media",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "venv",
+      "capabilities": [],
+      "screenshots": [],
+      "changelog": "1.0.0: first release. Face detection for movie thumbnails moves out of the EthOS core into this package (OpenCV ~130 MB stays out of the core venv). File Station calls it locally and falls back to the first valid frame when it is not installed.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-media-enhance/manifest.json",
+      "manifest_sha256": "b2da81626df0ce1b6c19c38b42198a8652f7acd2d308255c95065733b147f725",
+      "size_bytes": 5240
+    },
+    {
+      "id": "ethos-music-engine",
+      "name": "Music Engine",
+      "version": "1.0.0",
+      "description": "YouTube search, streaming and downloads for the Music app and the EthOS Music Android app. yt-dlp runs in a private environment that only this package installs, offline from a pinned wheelhouse; EthOS talks to it locally and the core install stays lean. Install it once and Music works exactly as before.",
+      "icon": "🎵",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music-engine/icon.svg",
+      "category": "media",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "venv",
+      "capabilities": [],
+      "screenshots": [],
+      "changelog": "1.0.0: first release. yt-dlp moves out of the EthOS core into this package, so Music keeps working while the core install no longer carries the extractor. Updates ship through Package Center.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music-engine/manifest.json",
+      "manifest_sha256": "22fe19358dbd56348c39b51a6c3b53a7bdfad35f9611de424cc7b29c629091ec",
+      "size_bytes": 9436
     },
     {
       "id": "ethos-welcome",
@@ -107,6 +149,7 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
+      "runtime": "compose",
       "capabilities": [
         "compose"
       ],
@@ -129,9 +172,8 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
-      "capabilities": [
-        "compose"
-      ],
+      "runtime": "compose",
+      "capabilities": [],
       "screenshots": [],
       "changelog": "2.1.0: light and dark themes follow the EthOS appearance toggle. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; no nginx container and no port. 1.0.0: initial nginx version.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/tic-tac-toe/manifest.json",
@@ -151,6 +193,7 @@
       "license": "MIT",
       "channel": "stable",
       "requires": [],
+      "runtime": "compose",
       "capabilities": [
         "compose",
         "kvm"

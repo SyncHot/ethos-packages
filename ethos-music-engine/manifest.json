@@ -1,0 +1,52 @@
+{
+  "schema": 2,
+  "id": "ethos-music-engine",
+  "name": "Music Engine",
+  "version": "1.0.0",
+  "description": "YouTube search, streaming and downloads for the Music app and the EthOS Music Android app. yt-dlp runs in a private environment that only this package installs, offline from a pinned wheelhouse; EthOS talks to it locally and the core install stays lean. Install it once and Music works exactly as before.",
+  "icon": "🎵",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music-engine/icon.svg",
+  "category": "media",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "runtime": "venv",
+  "healthcheck": {
+    "scheme": "http",
+    "port": 8096,
+    "path": "/health"
+  },
+  "changelog": "1.0.0: first release. yt-dlp moves out of the EthOS core into this package, so Music keeps working while the core install no longer carries the extractor. Updates ship through Package Center.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music-engine/server/engine.py",
+      "sha256": "902a3becb76f8cbde980a1975c180c089b813136c2ffbf5fcf6ae80e49bac237",
+      "path": "server/engine.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music-engine/icon.svg",
+      "sha256": "b4f03edc5d7d77fefa0cb85c9e8c5b1060b28e9ca45ae0fb44f896ffca3fc5e1",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ],
+  "python": {
+    "entry": "server/engine.py",
+    "port": 8096,
+    "requirements": [
+      "yt-dlp==2026.10.26"
+    ],
+    "requires_python": "3.14",
+    "wheels": [
+      {
+        "url": "https://files.pythonhosted.org/packages/7f/3d/16ea7d5638cf585991f2c5705e8083688dde633d32d0871f2404e0f4d827/yt_dlp-2026.10.26-py3-none-any.whl",
+        "sha256": "a05c5b5d8562f7e8a62f5334348b406af4930d56d3a65f8021d14af0e22339ae",
+        "arch": "any",
+        "filename": "yt_dlp-2026.10.26-py3-none-any.whl"
+      }
+    ]
+  }
+}
