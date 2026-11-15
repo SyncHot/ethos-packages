@@ -21,7 +21,7 @@
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/frontend/app.js",
-      "sha256": "813083f0013b7c25d04c7be75516953ad5e2232a6fcfc15c3f895fef4b87914f",
+      "sha256": "c91844b8a406d7ee17ed16c12ba2a7ddf2935715239a0b954c4236552c41d5f8",
       "path": "frontend/app.js",
       "mode": 420
     },
