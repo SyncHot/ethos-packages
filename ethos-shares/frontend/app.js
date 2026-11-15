@@ -37,6 +37,38 @@ const showModalConfirm = (title, message, onConfirm, onCancel) =>
 
 let _sharesBody = null;
 
+// Samba is host software, not part of this package: when the NAS has no smbd /
+// testparm there is nothing the app can validate or apply, so say so instead of
+// leaving a dead "Add Share" button (see EthOS docs/packages.md).
+const _sambaMissingHtml = (status) => {
+    const missing = (status.missing_tools || []).join(', ');
+    const hint = status.install_hint
+        ? `<div style="margin-top:6px;">Run this on the NAS, then press Refresh: <code style="background:rgba(0,0,0,0.35);padding:1px 6px;border-radius:4px;">${escapeHtml(status.install_hint)}</code></div>`
+        : '';
+    return `<div data-testid="shares-samba-missing" style="margin-bottom:12px;padding:10px 12px;border:1px solid #f59e0b;border-radius:8px;background:rgba(245,158,11,0.1);font-size:12px;line-height:1.55;color:#fbbf24;flex-shrink:0;">
+        <strong>Samba is not installed on this NAS.</strong>
+        Shares cannot be validated or applied until it is.${missing ? `<div style="margin-top:6px;">Missing: <code style="background:rgba(0,0,0,0.35);padding:1px 6px;border-radius:4px;">${escapeHtml(missing)}</code></div>` : ''}${hint}
+    </div>`;
+};
+
+function _applySambaState(status) {
+    const wrap = document.getElementById('sharesTableWrap');
+    const existing = document.querySelector('[data-testid="shares-samba-missing"]');
+    const missing = status && status.samba_installed === false;
+    if (!missing) {
+        if (existing) existing.remove();
+    } else if (wrap && !existing) {
+        wrap.insertAdjacentHTML('beforebegin', _sambaMissingHtml(status));
+    }
+    const addBtn = document.querySelector('[data-testid="shares-add-btn"]');
+    if (addBtn) {
+        addBtn.disabled = !!missing;
+        addBtn.style.opacity = missing ? '0.45' : '';
+        addBtn.style.cursor = missing ? 'not-allowed' : 'pointer';
+        addBtn.title = missing ? 'Samba is not installed on this NAS' : '';
+    }
+}
+
 export async function renderSharesPage(body) {
     _sharesBody = body;
     body.innerHTML = `<div style="padding:20px;display:flex;flex-direction:column;height:100%;">
@@ -71,10 +103,14 @@ async function _loadShares() {
         const statusEl = document.getElementById('sharesStatus');
         if (statusResp.ok) {
             const s = await statusResp.json();
+            _applySambaState(s);
             if (statusEl) {
+                const installed = s.samba_installed !== false;
                 const active = s.active;
-                statusEl.textContent = active ? '● Active' : '○ Inactive';
-                statusEl.style.color = active ? '#22c55e' : '#ef4444';
+                statusEl.textContent = !installed
+                    ? '⚠ Samba not installed'
+                    : (active ? '● Active' : '○ Inactive');
+                statusEl.style.color = !installed ? '#f59e0b' : (active ? '#22c55e' : '#ef4444');
                 statusEl.setAttribute('data-testid', 'shares-status');
             }
         } else if (statusEl) {

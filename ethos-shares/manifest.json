@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-shares",
   "name": "Samba Shares",
-  "version": "1.0.0",
-  "description": "Create and manage SMB shares for Windows, macOS and Linux clients: pick a folder, set who may read or write, and see the Samba service state. Share definitions are written by EthOS itself (the only process with the narrow sudoers rule for smb.conf), so this package ships the desktop app only.",
+  "version": "1.1.0",
+  "description": "Create and manage SMB shares for Windows, macOS and Linux clients: pick a folder, set who may read or write, and see the Samba service state. Needs the Samba host package — EthOS probes for it and tells you the exact install command instead of showing a dead toggle. Share definitions are written by EthOS itself (the only process with the narrow sudoers rule for smb.conf), so this package ships the desktop app only.",
   "icon": "📁",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/icon.svg",
   "category": "storage",
@@ -15,12 +15,15 @@
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.0.0: first release. The Samba Shares desktop app moves out of the core install; share configuration and the Samba service keep living in EthOS.",
+  "changelog": "1.1.0: declares the Samba host requirement. If smbd/testparm are missing the app now shows a banner with the exact install command and disables \"+ Add Share\" instead of failing with a raw error.\n1.0.0: first release. The Samba Shares desktop app moves out of the core install; share configuration and the Samba service keep living in EthOS.",
+  "system_requires": [
+    "samba"
+  ],
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/frontend/app.js",
-      "sha256": "8d5fee77ede0cb40652303e679a7e6d9cff6d7c51b41be5530fab4d7a8efbc44",
+      "sha256": "b1e5d92cfc2f15e18972e58fd5eb5c9b6baa8c65f94d7582ee2c920ea9daa5c9",
       "path": "frontend/app.js",
       "mode": 420
     },
