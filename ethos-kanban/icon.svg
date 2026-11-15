@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">EthOS Kanban Board</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="28%" cy="14%" r="85%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e0e7ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#bg)"/>
+  <rect width="256" height="256" rx="56" fill="url(#sheen)"/>
+  <rect x="48" y="60" width="44" height="136" rx="12" fill="url(#card)" opacity="0.92"/>
+  <rect x="106" y="60" width="44" height="104" rx="12" fill="url(#card)" opacity="0.8"/>
+  <rect x="164" y="60" width="44" height="72" rx="12" fill="url(#card)" opacity="0.68"/>
+  <rect x="56" y="76" width="28" height="10" rx="5" fill="#4f46e5" opacity="0.55"/>
+  <rect x="56" y="94" width="28" height="10" rx="5" fill="#4f46e5" opacity="0.35"/>
+  <rect x="114" y="76" width="28" height="10" rx="5" fill="#4f46e5" opacity="0.55"/>
+</svg>

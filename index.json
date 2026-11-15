@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-15T07:09:36+00:00",
+  "generated_at": "2026-11-15T07:33:28+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -93,6 +93,27 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
       "manifest_sha256": "a981badb93fbdac80f6299167230ecdd51fab7308f2ee6a6b700913a2c894c5c",
       "size_bytes": 91550
+    },
+    {
+      "id": "ethos-kanban",
+      "name": "Kanban Board",
+      "version": "1.0.0",
+      "description": "Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Package Center app: the board lives in the package's own service and keeps working for every signed-in account. Boards from the built-in version are imported automatically on first start.",
+      "icon": "🗂️",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/icon.svg",
+      "category": "productivity",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "venv",
+      "capabilities": [],
+      "screenshots": [],
+      "changelog": "1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/manifest.json",
+      "manifest_sha256": "9ea99c376342c7813a11bc55a1b7284fd1fc3dc86c5b18eea6c90050761199a8",
+      "size_bytes": 56745
     },
     {
       "id": "ethos-media-enhance",

@@ -1,0 +1,55 @@
+{
+  "schema": 2,
+  "id": "ethos-kanban",
+  "name": "Kanban Board",
+  "version": "1.0.0",
+  "description": "Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Package Center app: the board lives in the package's own service and keeps working for every signed-in account. Boards from the built-in version are imported automatically on first start.",
+  "icon": "🗂️",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/icon.svg",
+  "category": "productivity",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "runtime": "venv",
+  "user_access": true,
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js",
+    "port": 8098
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 8098,
+    "path": "/health"
+  },
+  "changelog": "1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/server/main.py",
+      "sha256": "b6055d5eb454cc255f998880600ef9e29db2a0f29bc9c17bc49359dcbef8df8f",
+      "path": "server/main.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/frontend/app.js",
+      "sha256": "4b74ba3b9d60da37e336e107d83fbfa6a7dc0691d389a45d11ca0ea761c7431e",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/icon.svg",
+      "sha256": "512f875bb047662a57bd665cdeec90cbf8c4a96c880ec60c1dc1868567f551ec",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ],
+  "python": {
+    "entry": "server/main.py",
+    "port": 8098,
+    "requirements": [],
+    "requires_python": "3.14",
+    "wheels": []
+  }
+}
