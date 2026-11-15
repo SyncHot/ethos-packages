@@ -54,8 +54,8 @@ const STYLE = `
 /* the hidden attribute must win over the panel/console display rules below */
 .vmm-root [hidden] { display: none !important; }
 .vmm-side {
-    width: 208px; flex: 0 0 208px; padding: 16px 12px; border-right: 1px solid var(--vmm-border);
-    background: var(--vmm-side); display: flex; flex-direction: column; gap: 14px;
+    width: 218px; flex: 0 0 218px; padding: 20px 14px; border-right: 1px solid var(--vmm-border);
+    background: var(--vmm-side); display: flex; flex-direction: column; gap: 16px; overflow-y: auto;
 }
 .vmm-brand { display: flex; gap: 10px; align-items: center; padding: 0 4px; }
 .vmm-brand .glyph {
@@ -137,6 +137,22 @@ const STYLE = `
 .vmm-defs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .vmm-defs div span { display: block; font-size: 11px; color: var(--vmm-muted); }
 .vmm-defs div strong { font-size: 13px; }
+
+/* ≤780 px: the rail becomes a horizontal strip (shared package-shell rule). */
+@media (max-width: 780px) {
+    .vmm-root { flex-direction: column; }
+    .vmm-side {
+        width: auto; flex: none; flex-direction: row; align-items: center; gap: 10px;
+        padding: 10px 12px; overflow-x: auto; border-right: 0;
+        border-bottom: 1px solid var(--vmm-border);
+    }
+    .vmm-brand small, .vmm-note { display: none; }
+    .vmm-nav { flex-direction: row; gap: 6px; }
+    .vmm-side-foot { margin-top: 0; flex-direction: row; align-items: center; }
+    .vmm-two, .vmm-specs { grid-template-columns: 1fr; }
+    .vmm-body { padding: 0 12px 16px; }
+    .vmm-header { padding: 12px 12px 8px; }
+}
 `;
 
 const VIEWS = {
