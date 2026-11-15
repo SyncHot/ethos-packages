@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-cleaner",
   "name": "Disk Cleaner",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Find what is eating your disk: scans caches, thumbnails, logs, trash and old downloads, shows the biggest space users and lets you delete them safely. The scan and delete operations stay in EthOS, where they run through the file service's path scope, so this package ships the desktop app only.",
   "icon": "🧹",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-cleaner/icon.svg",
@@ -11,16 +11,17 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
+  "min_ethos_version": "2.0.0",
   "ui": {
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.0.0: first release. The Disk Cleaner desktop app moves out of the core install; every delete still goes through EthOS's scoped file service.",
+  "changelog": "1.0.1: light theme was white-on-white and is fixed; Browse… uses the EthOS folder picker; scans, deletes and journal vacuum report progress in the shared task panel; the Biggest files view parses again. 1.0.0: first release. The Disk Cleaner desktop app moves out of the core install; every delete still goes through EthOS's scoped file service.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-cleaner/frontend/app.js",
-      "sha256": "de3a306c07696a1b1f3fdf630f6074a33146c84e9b439247bdbb66389970b413",
+      "sha256": "039b6b0801c1b6d0b22304d31cf9f158b765c355fdf0a96a682ebe014006a872",
       "path": "frontend/app.js",
       "mode": 420
     },

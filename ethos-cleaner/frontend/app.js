@@ -14,6 +14,17 @@ function formatBytes(bytes) {
 
 function apiFetch(path, options) { return _ctx.apiFetch(path, options); }
 
+// Shared surfaces: one Notification Center, one modal system, one progress panel.
+function _toast(message, kind = 'info') {
+    try { _ctx.notifications.toast(String(message), kind); } catch (_) { /* window closing */ }
+}
+
+function _task(title, detail, testIdPrefix) {
+    return _ctx.progress?.startTask
+        ? _ctx.progress.startTask({ appId: 'pkg-ethos-cleaner', title, detail, testIdPrefix })
+        : null;
+}
+
 async function readErrorDetail(res, fallback = '') {
     let payload = null;
     try { payload = await res.clone().json(); } catch (_) { /* non-JSON body */ }
@@ -58,7 +69,7 @@ export async function renderCleanerPage(body) {
     body.innerHTML = `
         <div style="display:flex;flex-direction:column;height:100%;background:var(--surface-0);color: var(--text-1);font-family:system-ui,sans-serif;">
             <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface-0);" data-testid="cleaner-tabs">
-                <button class="cleaner-tab active" data-tab="analyzer" data-testid="cleaner-tab-analyzer" style="padding:12px 18px;background:none;border:none;color:white;font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--accent);">📊 Analyzer</button>
+                <button class="cleaner-tab active" data-tab="analyzer" data-testid="cleaner-tab-analyzer" style="padding:12px 18px;background:none;border:none;color:var(--text-1);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--accent);">📊 Analyzer</button>
                 <button class="cleaner-tab" data-tab="cleanup" data-testid="cleaner-tab-cleanup" style="padding:12px 18px;background:none;border:none;color: var(--text-2);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;">🧹 Cleanup</button>
                 <div id="cleanerFsBar" style="margin-left:auto;display:flex;gap:8px;align-items:center;padding-right:14px;"></div>
             </div>
@@ -73,7 +84,7 @@ export async function renderCleanerPage(body) {
                 t.style.color = 'var(--text-2)';
                 t.style.borderBottomColor = 'transparent';
             });
-            tab.style.color = 'white';
+            tab.style.color = 'var(--text-1)';
             tab.style.borderBottomColor = 'var(--accent)';
             _tab = tab.dataset.tab;
             renderTab();
@@ -122,6 +133,8 @@ function renderAnalyzer(content) {
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
             <input id="cleanerPath" data-testid="cleaner-path-input" aria-label="Folder to scan" value="${escapeAttr(_scanPath)}"
                 style="flex:1;min-width:200px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-1);font-size:13px;font-family:monospace;" />
+            <button id="cleanerBrowseBtn" data-testid="cleaner-browse-btn" class="btn-ghost" title="Browse folders"
+                style="padding:7px 12px;font-size:12px;white-space:nowrap;">📂 Browse…</button>
             <select aria-label="Scan depth" id="cleanerDepth" data-testid="cleaner-depth-select" style="padding:7px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-1);font-size:13px;">
                 ${[1, 2, 3, 4].map(d => `<option value="${d}" ${d === _depth ? 'selected' : ''}>Depth ${d}</option>`).join('')}
             </select>
@@ -134,6 +147,19 @@ function renderAnalyzer(content) {
         <div id="cleanerResults" style="display:flex;flex-direction:column;gap:8px;"></div>`;
 
     document.getElementById('cleanerScanBtn').onclick = () => doScan();
+    document.getElementById('cleanerBrowseBtn').onclick = async () => {
+        const picked = await _ctx.pickFolder({
+            title: 'Choose a folder to analyze',
+            startPath: _scanPath || '/home',
+            roots: ['/home', '/mnt', '/media'],
+            acceptLabel: 'Scan this folder',
+        });
+        if (picked) {
+            _scanPath = picked;
+            const input = document.getElementById('cleanerPath');
+            if (input) input.value = picked;
+        }
+    };
     document.getElementById('cleanerPath').addEventListener('keydown', e => { if (e.key === 'Enter') doScan(); });
     for (const id of ['cleanerViewFolders', 'cleanerViewFiles']) {
         const btn = document.getElementById(id);
@@ -159,13 +185,16 @@ async function loadFolderTree() {
     const box = document.getElementById('cleanerResults');
     if (!box) return;
     box.innerHTML = _loading(`Scanning ${_scanPath}`);
+    const task = _task(`Analyzing ${_scanPath}`, 'Walking the folder tree…', 'cleaner-scan');
     try {
         const resp = await apiFetch(`/api/disk-clean/scan?path=${encodeURIComponent(_scanPath)}&depth=${_depth}`);
         if (!resp.ok) throw new Error(await readErrorDetail(resp));
         const data = await resp.json();
         renderTree(box, data);
+        task?.finish('done', { percent: 100, detail: formatBytes(data.total_size || 0) });
     } catch (e) {
         box.innerHTML = `<div style="color:#ef4444;text-align:center;padding:20px;">❌ ${escapeHtml(e.message)}</div>`;
+        task?.finish('failed', { detail: e.message });
     }
 }
 
@@ -179,7 +208,7 @@ function renderTree(box, data) {
     const total = data.total_size || 0;
     let html = `
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-            <h3 style="margin:0;font-size:15px;color:white;font-weight:700;">📁 ${escapeHtml(data.path)}</h3>
+            <h3 style="margin:0;font-size:15px;color:var(--text-1);font-weight:700;">📁 ${escapeHtml(data.path)}</h3>
             <span style="font-size:12px;color: var(--text-3);">${formatBytes(total)}${data.truncated ? ' · partial (entry cap reached)' : ''}</span>
         </div>`;
 
@@ -197,11 +226,11 @@ function renderTree(box, data) {
         html += `<tr data-testid="cleaner-row-${escapeAttr(c.path)}">
             <td>
                 ${c.is_dir
-                    ? `<a href="#" class="cleaner-drill" data-path="${escapeAttr(c.path)}" style="color:white;font-weight:600;text-decoration:none;">${icon} ${escapeHtml(c.name)}</a>`
+                    ? `<a href="#" class="cleaner-drill" data-path="${escapeAttr(c.path)}" style="color:var(--text-1);font-weight:600;text-decoration:none;">${icon} ${escapeHtml(c.name)}</a>`
                     : `<span style="color: var(--text-2);">${icon} ${escapeHtml(c.name)}</span>`}
                 <div style="font-size:10px;color: var(--text-3);font-family:monospace;margin-top:1px;">${escapeHtml(c.path)}</div>
             </td>
-            <td style="text-align:right;font-family:monospace;color:white;font-weight:600;white-space:nowrap;">${formatBytes(c.size)}</td>
+            <td style="text-align:right;font-family:monospace;color:var(--text-1);font-weight:600;white-space:nowrap;">${formatBytes(c.size)}</td>
             <td>${_sizeBar(c.size, total)}</td>
             <td style="text-align:right;"><button class="cleaner-del btn-ghost" data-path="${escapeAttr(c.path)}" data-size="${c.size}" data-name="${escapeAttr(c.name)}" title="Delete ${escapeAttr(c.name)}">🗑️</button></td>
         </tr>`;
@@ -221,11 +250,12 @@ async function loadTopFiles() {
     const box = document.getElementById('cleanerResults');
     if (!box) return;
     box.innerHTML = _loading(`Finding biggest files in ${_scanPath}`);
+    const task = _task(`Finding biggest files in ${_scanPath}`, 'Scanning…', 'cleaner-scan');
     try {
         const resp = await apiFetch(`/api/disk-clean/top-files?path=${encodeURIComponent(_scanPath)}&limit=25`);
         if (!resp.ok) throw new Error(await readErrorDetail(resp));
         const data = await resp.json();
-        let html = `<h3 style="margin:0 0 8px;font-size:15px;color:white;font-weight:700;">📄 Biggest files in ${escapeHtml(data.path)}</h3>
+        let html = `<h3 style="margin:0 0 8px;font-size:15px;color:var(--text-1);font-weight:700;">📄 Biggest files in ${escapeHtml(data.path)}</h3>
             <table class="app-table" style="width:100%;"><thead><tr>
                 <th>#</th><th>Name</th><th>Path</th><th style="text-align:right;">Size</th><th style="width:70px;text-align:right;"></th>
             </tr></thead><tbody>`;
@@ -236,9 +266,9 @@ async function loadTopFiles() {
             const dir = f.path.substring(0, f.path.length - f.name.length);
             html += `<tr>
                 <td style="color: var(--text-3);">${i + 1}</td>
-                <td style="color:white;font-weight:600;">${escapeHtml(f.name)}</td>
+                <td style="color:var(--text-1);font-weight:600;">${escapeHtml(f.name)}</td>
                 <td style="font-family:monospace;font-size:11px;color: var(--text-2);">${escapeHtml(dir)}</td>
-                <td style="text-align:right;font-family:monospace;color:white;font-weight:600;white-space:nowrap;">${formatBytes(f.size)}</td>
+                <td style="text-align:right;font-family:monospace;color:var(--text-1);font-weight:600;white-space:nowrap;">${formatBytes(f.size)}</td>
                 <td style="text-align:right;"><button class="cleaner-del-file btn-ghost" data-path="${escapeAttr(f.path)}" data-size="${f.size}" data-name="${escapeAttr(f.name)}">🗑️</button></td>
             </tr>`;
         });
@@ -247,8 +277,10 @@ async function loadTopFiles() {
         box.querySelectorAll('.cleaner-del-file').forEach(btn => {
             btn.onclick = () => confirmDelete([btn.dataset.path], `${btn.dataset.name}`, 'files', parseInt(btn.dataset.size || '0', 10));
         });
+        task?.finish('done', { percent: 100, detail: `${data.files.length} file(s)` });
     } catch (e) {
         box.innerHTML = `<div style="color:#ef4444;text-align:center;padding:20px;">❌ ${escapeHtml(e.message)}</div>`;
+        task?.finish('failed', { detail: e.message });
     }
 }
 
@@ -259,7 +291,7 @@ async function renderCleanup() {
     if (!content) return;
     content.innerHTML = `
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-            <h3 style="margin:0;font-size:15px;color:white;font-weight:700;">🧹 Cleanup candidates</h3>
+            <h3 style="margin:0;font-size:15px;color:var(--text-1);font-weight:700;">🧹 Cleanup candidates</h3>
             <span id="cleanerSugTotal" style="font-size:12px;color: var(--text-3);"></span>
             <button id="cleanerRefreshSug" class="btn-ghost" data-testid="cleaner-refresh-suggestions" style="margin-left:auto;">↻ Refresh</button>
         </div>
@@ -297,7 +329,7 @@ function renderSuggestions(list) {
         html += `<div class="glass-card" style="padding:14px 16px;display:flex;align-items:center;gap:12px;" data-testid="cleaner-journal-card">
             <span style="font-size:20px;">📜</span>
             <div style="flex:1;">
-                <div style="color:white;font-weight:700;font-size:13px;">Systemd journal — ${escapeHtml(d.journal.human)}</div>
+                <div style="color:var(--text-1);font-weight:700;font-size:13px;">Systemd journal — ${escapeHtml(d.journal.human)}</div>
                 <div style="font-size:11px;color: var(--text-3);">Kernel + service logs kept by journald</div>
             </div>
             <button class="cleaner-vacuum btn-ghost" data-days="7">Vacuum &gt; 7d</button>
@@ -315,7 +347,7 @@ function renderSuggestions(list) {
         html += `<div class="glass-card" style="padding:14px 16px;" data-testid="cleaner-cat-${cat}">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                 <span style="font-size:16px;">${meta.icon}</span>
-                <span style="color:white;font-weight:700;font-size:13px;">${escapeHtml(meta.label)}</span>
+                <span style="color:var(--text-1);font-weight:700;font-size:13px;">${escapeHtml(meta.label)}</span>
                 <span style="font-size:11px;color: var(--text-3);">${items.length} item(s) · ${formatBytes(catTotal)}</span>
             </div>
             <table class="app-table" style="width:100%;"><tbody>`;
@@ -324,11 +356,11 @@ function renderSuggestions(list) {
             html += `<tr data-testid="cleaner-sug-${escapeAttr(i.path)}">
                 <td style="width:24px;"><input type="checkbox" class="cleaner-sel" data-path="${escapeAttr(i.path)}" ${checked} style="cursor:pointer;"></td>
                 <td>
-                    <span style="color:white;font-weight:600;">${escapeHtml(i.name)}</span>
+                    <span style="color:var(--text-1);font-weight:600;">${escapeHtml(i.name)}</span>
                     <div style="font-size:10px;color: var(--text-3);font-family:monospace;margin-top:1px;" title="${escapeAttr(i.description)}">${escapeHtml(i.path)}</div>
                 </td>
                 <td style="width:auto;white-space:nowrap;">${_safetyBadge(i.safety)}</td>
-                <td style="text-align:right;font-family:monospace;color:white;font-weight:600;white-space:nowrap;width:90px;">${formatBytes(i.size)}</td>
+                <td style="text-align:right;font-family:monospace;color:var(--text-1);font-weight:600;white-space:nowrap;width:90px;">${formatBytes(i.size)}</td>
                 <td style="width:52px;text-align:right;"><button class="cleaner-sug-del btn-ghost" data-path="${escapeAttr(i.path)}">🗑️</button></td>
             </tr>`;
         }
@@ -378,7 +410,7 @@ function renderSuggestions(list) {
     const bulkBtn = document.getElementById('cleanerBulkDel');
     if (bulkBtn) bulkBtn.onclick = () => {
         const paths = [..._selectedPaths];
-        if (!paths.length) { window.showToast?.('Nothing selected', 'warning'); return; }
+        if (!paths.length) { _toast('Nothing selected', 'warning'); return; }
         confirmDelete(paths, `${paths.length} item(s)`, 'cleanup');
     };
 }
@@ -407,24 +439,27 @@ function syncSelectionUi(list, d) {
 
 async function vacuumJournal(days) {
     const ok = await new Promise(resolve => {
-        window.showConfirm?.({
+        _ctx.modal.confirm({
             title: 'Vacuum journal',
             message: `Remove systemd journal entries older than ${days} days?`,
-            okText: 'Vacuum', cancelText: 'Cancel',
+            confirmLabel: 'Vacuum', cancelLabel: 'Cancel',
             onConfirm: () => resolve(true), onCancel: () => resolve(false),
         });
     });
     if (!ok) return;
+    const task = _task(`Vacuuming journal (> ${days}d)`, 'Running journalctl…', 'cleaner-vacuum');
     try {
         const resp = await apiFetch('/api/disk-clean/vacuum-journal', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days }),
         });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok) throw new Error(data.detail || 'HTTP ' + resp.status);
-        window.showToast?.(`Journal vacuumed (> ${days}d)`, 'success');
+        _toast(`Journal vacuumed (> ${days}d)`, 'success');
+        task?.finish('done', { percent: 100 });
         _sugData = null; renderCleanup();
     } catch (e) {
-        window.showToast?.('Vacuum failed: ' + e.message, 'error');
+        _toast('Vacuum failed: ' + e.message, 'error');
+        task?.finish('failed', { detail: e.message });
     }
 }
 
@@ -433,10 +468,10 @@ async function vacuumJournal(days) {
 function confirmDelete(paths, label, context, knownTotal = null) {
     const total = knownTotal ?? paths.reduce((s, p) => s + (_sugSize(p) || 0), 0);
     const what = paths.length > 1 ? `${paths.length} items` : label;
-    window.showConfirm?.({
+    _ctx.modal.confirm({
         title: 'Permanently delete',
         message: `Delete ${what}${total ? ` (~${formatBytes(total)})` : ''}? This cannot be undone.`,
-        okText: 'Delete', cancelText: 'Cancel',
+        confirmLabel: 'Delete', cancelLabel: 'Cancel', danger: true,
         onConfirm: async () => { await doDelete(paths, context); },
     });
 }
@@ -444,6 +479,8 @@ function confirmDelete(paths, label, context, knownTotal = null) {
 async function doDelete(paths, context) {
     if (_busy) return;
     _busy = true;
+    const what = paths.length > 1 ? `${paths.length} items` : (paths[0] || 'item').split('/').pop();
+    const task = _task(`Deleting ${what}`, 'Removing files…', 'cleaner-delete');
     try {
         const resp = await apiFetch('/api/disk-clean/delete', {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paths }),
@@ -452,14 +489,16 @@ async function doDelete(paths, context) {
         if (!resp.ok) throw new Error(data.detail || 'HTTP ' + resp.status);
 
         const freed = data.freed_bytes || 0;
-        window.showToast?.(`Freed ${formatBytes(freed)}${data.errors?.length ? ` · ${data.errors.length} error(s)` : ''}`, data.errors?.length ? 'warning' : 'success');
+        _toast(`Freed ${formatBytes(freed)}${data.errors?.length ? ` · ${data.errors.length} error(s)` : ''}`, data.errors?.length ? 'warning' : 'success');
+        task?.finish(data.errors?.length ? 'failed' : 'done', { percent: 100, detail: `Freed ${formatBytes(freed)}` });
 
         paths.forEach(p => _selectedPaths.delete(p));
         if (context === 'cleanup') { _sugData = null; renderCleanup(); }
         else if (_view === 'files') loadTopFiles();   // analyzer: refresh current sub-view
         else loadFolderTree();
     } catch (e) {
-        window.showToast?.('Delete failed: ' + e.message, 'error');
+        _toast('Delete failed: ' + e.message, 'error');
+        task?.finish('failed', { detail: e.message });
     } finally {
         _busy = false;
     }
