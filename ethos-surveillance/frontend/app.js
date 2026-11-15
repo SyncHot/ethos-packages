@@ -169,7 +169,7 @@ function renderLive(c) {
                 <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface-1);">
                     <span class="surv-dot" data-cam="${cam.id}" style="width:9px;height:9px;border-radius:50%;background:${err ? '#f87171' : '#4ade80'};flex:none;"></span>
                     <span style="font-size:13px;font-weight:600;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(cam.name)}</span>
-                    ${(cam.motion || {}).enabled ? '<span style="margin-left:auto;font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(91,154,255,.15);color:#5b9aff;">MOTION</span>' : ''}
+                    ${(cam.motion || {}).enabled ? '<span style="margin-left:auto;font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(91,154,255,.15);color:var(--accent);">MOTION</span>' : ''}
                 </div>
             </div>`;
         }).join('')}
@@ -204,7 +204,7 @@ function renderCameras(c) {
             <button id="surv-discover-btn" data-testid="surv-discover"
                 style="padding:8px 16px;font-size:13px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text-2);cursor:pointer;font-weight:600;">🔍 Search network</button>
             <button id="surv-add-cam" data-testid="surv-add-camera"
-                style="padding:8px 16px;font-size:13px;border-radius:8px;border:none;background:#5b9aff;color:white;cursor:pointer;font-weight:600;">+ Add camera</button>
+                style="padding:8px 16px;font-size:13px;border-radius:8px;border:none;background:var(--accent);color:white;cursor:pointer;font-weight:600;">+ Add camera</button>
         </div>
         <div id="surv-discover"></div>
         ${_cameras.length ? `
@@ -216,7 +216,7 @@ function renderCameras(c) {
             <tbody>
             ${_cameras.map(cam => `
                 <tr data-cam="${cam.id}" style="border-bottom:1px solid var(--border);">
-                    <td style="padding:10px;font-weight:600;color:var(--text-1);">${escapeHtml(cam.name)}${(cam.motion || {}).enabled ? ' <span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(91,154,255,.15);color:#5b9aff;">MOTION</span>' : ''}</td>
+                    <td style="padding:10px;font-weight:600;color:var(--text-1);">${escapeHtml(cam.name)}${(cam.motion || {}).enabled ? ' <span style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(91,154,255,.15);color:var(--accent);">MOTION</span>' : ''}</td>
                     <td style="padding:10px;font-family:monospace;font-size:11px;color:var(--text-3);word-break:break-all;">${escapeHtml(cam.url)}</td>
                     <td style="padding:10px;"><input type="checkbox" class="surv-enabled" data-cam="${cam.id}" ${cam.enabled !== false ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;"></td>
                     <td style="padding:10px;">
@@ -299,10 +299,10 @@ async function _runDiscovery(container) {
                     <tbody>${results.map(row => `
                         <tr data-ip="${row.ip}" style="border-bottom:1px solid var(--border);">
                             <td style="padding:8px 10px;font-family:monospace;">${escapeHtml(row.ip)}</td>
-                            <td style="padding:8px 10px;">${[row.onvif ? 'ONVIF' : '', row.rtsp ? 'RTSP' : '', (!row.onvif && !row.rtsp) ? 'HTTP' : ''].filter(Boolean).map(t => `<span data-testid="surv-disc-badge" style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(91,154,255,.15);color:#5b9aff;margin-right:4px;">${t}</span>`).join('')}</td>
+                            <td style="padding:8px 10px;">${[row.onvif ? 'ONVIF' : '', row.rtsp ? 'RTSP' : '', (!row.onvif && !row.rtsp) ? 'HTTP' : ''].filter(Boolean).map(t => `<span data-testid="surv-disc-badge" style="font-size:10px;padding:2px 7px;border-radius:8px;background:rgba(91,154,255,.15);color:var(--accent);margin-right:4px;">${t}</span>`).join('')}</td>
                             <td style="padding:8px 10px;color:var(--text-3);">${row.ports?.length ? row.ports.join(', ') : '—'}</td>
                             <td style="padding:8px 10px;font-family:monospace;font-size:11px;word-break:break-all;">${escapeHtml(row.suggested_url || '')}</td>
-                            <td style="padding:8px 10px;"><button class="surv-disc-add" data-ip="${row.ip}" data-testid="surv-disc-add-${row.ip.replace(/\./g, '-')}" style="padding:4px 10px;font-size:12px;border-radius:6px;border:none;background:#5b9aff;color:white;cursor:pointer;font-weight:600;">Add</button></td>
+                            <td style="padding:8px 10px;"><button class="surv-disc-add" data-ip="${row.ip}" data-testid="surv-disc-add-${row.ip.replace(/\./g, '-')}" style="padding:4px 10px;font-size:12px;border-radius:6px;border:none;background:var(--accent);color:white;cursor:pointer;font-weight:600;">Add</button></td>
                         </tr>`).join('')}</tbody>
                 </table>
             </div>` : `<div style="font-size:12px;color:var(--text-3);padding:8px 0;">No cameras found${d.scanned?.network ? ` on ${escapeHtml(d.scanned.network)}` : ''}. You can still add one manually with “+ Add camera”.</div>`;
