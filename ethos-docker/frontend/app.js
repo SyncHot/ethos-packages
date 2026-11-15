@@ -725,7 +725,7 @@ window.dockerInstallEngine = async function(btnEl) {
         'This downloads packages and takes a few minutes. EthOS keeps running, but a restart is needed afterwards to activate Docker access.'
     );
     if (!ok) return;
-    const body = btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-docker"] .window-body');
+    const body = btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-pkg-ethos-docker"] .window-body');
     if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = '0.6'; }
     try {
         const res = await apiFetch('/api/docker/engine/install', { method: 'POST' });
@@ -779,7 +779,7 @@ window.dockerAction = function(name, action, btnEl) {
                 throw new Error(d.detail || `HTTP ${r.status}`);
             }
             addNotification('success', `Container "${name}" ${action}ed`);
-            _reloadCurrentTab(btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-docker"] .window-body'));
+            _reloadCurrentTab(btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-pkg-ethos-docker"] .window-body'));
         })
         .catch(e => {
             addNotification('error', `Action failed: ${e.message}`);
@@ -812,7 +812,7 @@ window.dockerComposeAction = function(project, action, btnEl) {
             }
             const verb = action === 'up' ? 'started' : action === 'down' ? 'stopped' : 'destroyed';
             addNotification('success', `Project "${project}" ${verb}`);
-            _reloadCurrentTab(btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-docker"] .window-body'));
+            _reloadCurrentTab(btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-pkg-ethos-docker"] .window-body'));
         })
         .catch(e => {
             addNotification('error', `Compose ${action} failed: ${e.message}`);
@@ -836,7 +836,7 @@ window.dockerRemove = function(name, btnEl) {
                     throw new Error(d.detail || `HTTP ${r.status}`);
                 }
                 addNotification('success', `Container "${name}" removed`);
-                _reloadCurrentTab(btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-docker"] .window-body'));
+                _reloadCurrentTab(btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-pkg-ethos-docker"] .window-body'));
             })
             .catch(e => addNotification('error', `Remove failed: ${e.message}`));
     });
