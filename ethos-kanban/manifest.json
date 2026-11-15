@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-kanban",
   "name": "Kanban Board",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Package Center app: the board lives in the package's own service and keeps working for every signed-in account. Boards from the built-in version are imported automatically on first start.",
   "icon": "🗂️",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/icon.svg",
@@ -11,6 +11,7 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
+  "min_ethos_version": "2.0.0",
   "runtime": "venv",
   "user_access": true,
   "ui": {
@@ -23,7 +24,7 @@
     "port": 8098,
     "path": "/health"
   },
-  "changelog": "1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
+  "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
   "compose": null,
   "files": [
     {
@@ -34,7 +35,7 @@
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/frontend/app.js",
-      "sha256": "4b74ba3b9d60da37e336e107d83fbfa6a7dc0691d389a45d11ca0ea761c7431e",
+      "sha256": "1169b72036d65aabd572648d2248087c08bf8b897fb44eb4b6ad6a8f63812542",
       "path": "frontend/app.js",
       "mode": 420
     },

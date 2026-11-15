@@ -44,37 +44,26 @@ function showConfirm(options) {
 }
 
 function showPrompt(title, message, defaultValue, callback) {
-    // Small self-contained prompt: the shared ctx has confirm/alert/form only.
-    return new Promise((resolve) => {
-        const overlay = document.createElement('div');
-        overlay.className = 'ethos-modal-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:10000;';
-        overlay.innerHTML = `
-            <div class="ethos-modal" role="dialog" aria-modal="true" style="width:400px;max-width:92vw;background:var(--surface-1,#1e293b);border:1px solid var(--border,#334155);border-radius:14px;padding:18px;color:var(--text-1,#e2e8f0);font-family:system-ui,sans-serif;">
-                <h3 style="margin:0 0 10px;font-size:15px;font-weight:700;">${escapeHtml(title)}</h3>
-                <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:var(--text-3,#94a3b8);">${escapeHtml(message)}</p>
-                <input type="text" data-testid="kanban-prompt-input" value="${escapeAttr(defaultValue || '')}"
-                       style="width:100%;box-sizing:border-box;padding:8px 10px;font-size:13px;border-radius:8px;border:1px solid var(--border,#334155);background:var(--surface-0,#0f172a);color:var(--text-1,#e2e8f0);">
-                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
-                    <button type="button" data-act="cancel" style="padding:7px 14px;font-size:12px;border-radius:8px;background:none;color:var(--text-3,#94a3b8);border:1px solid var(--border,#334155);cursor:pointer;">Cancel</button>
-                    <button type="button" data-act="ok" style="padding:7px 16px;font-size:12px;border-radius:8px;background:#2563eb;color:white;border:none;cursor:pointer;">OK</button>
-                </div>
-            </div>`;
-        document.body.appendChild(overlay);
-        const input = overlay.querySelector('input');
-        const close = (value) => {
-            overlay.remove();
-            resolve(value);
-            if (typeof callback === 'function') callback(value);
-        };
-        overlay.querySelector('[data-act="ok"]').onclick = () => close(input.value);
-        overlay.querySelector('[data-act="cancel"]').onclick = () => close(null);
-        overlay.addEventListener('click', (event) => { if (event.target === overlay) close(null); });
-        input.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') close(input.value);
-            if (event.key === 'Escape') close(null);
-        });
-        setTimeout(() => input.focus(), 30);
+    // The shared form modal is the only dialog implementation a package may use.
+    const inputStyle = 'width:100%;box-sizing:border-box;padding:8px 10px;font-size:13px;border-radius:8px;'
+        + 'border:1px solid var(--border);background:var(--surface-0);color:var(--text-1);';
+    return _ctx.modal.form({
+        title,
+        confirmLabel: 'OK',
+        bodyHtml: `
+            <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:var(--text-3);">${escapeHtml(message)}</p>
+            <input name="value" type="text" data-testid="kanban-prompt-input"
+                   value="${escapeAttr(defaultValue || '')}" style="${inputStyle}">`,
+        validate: (values) => (String(values.value || '').trim() ? '' : 'Enter a value'),
+        onSubmit: async (values) => {
+            const value = String(values.value || '').trim();
+            if (typeof callback === 'function') await callback(value);
+            return value;
+        },
+        onReady: (bodyEl) => {
+            const input = bodyEl.querySelector('input[name="value"]');
+            if (input) { input.focus(); input.select(); }
+        },
     });
 }
 
@@ -532,94 +521,62 @@ function window_kanbanOpenCard(cardId) {
     _openCardModal(found.card);
 }
 
-// ── Card editor modal (reuses the unified .ethos-modal-* styles) ─────────────
+// ── Card editor (shared EthOS form modal) ───────────────────────────────────
 
 function _openCardModal(card) {
-    const overlay = document.createElement('div');
-    overlay.className = 'ethos-modal-overlay';
-    // Below .unified-confirm-overlay (9999) and .ethos-modal-overlay default (10000), so a
-    // delete confirm opened from this modal stacks on top of it instead of behind.
-    overlay.style.zIndex = '9500';
-    overlay.setAttribute('data-testid', 'kanban-modal');
-
+    const board = currentBoard();
+    if (!board) return;
     const labelsValue = (card.labels || []).join(', ');
-    overlay.innerHTML = `
-        <div class="ethos-modal-box" style="width:480px;">
-            <div class="ethos-modal-header">
-                <span class="ethos-modal-title">Edit card</span>
-                <button class="ethos-modal-close" data-testid="kanban-modal-close">&times;</button>
-            </div>
-            <div class="ethos-modal-body" style="display:flex;flex-direction:column;gap:12px;">
-                <input id="kanbanModalTitle" data-testid="kanban-modal-title" value="${escapeAttr(card.title)}" placeholder="Card title"
-                       style="width:100%;box-sizing:border-box;padding:9px 11px;font-size:14px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-1);">
-                <textarea id="kanbanModalDesc" data-testid="kanban-modal-desc" rows="4" placeholder="Description (optional)"
-                       style="width:100%;box-sizing:border-box;padding:9px 11px;font-size:13px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-1);resize:vertical;">${escapeHtml(card.description || '')}</textarea>
+    const inputStyle = 'width:100%;box-sizing:border-box;padding:9px 11px;font-size:13px;border-radius:8px;'
+        + 'border:1px solid var(--border);background:var(--surface-2);color:var(--text-1);';
+    _ctx.modal.form({
+        title: 'Edit card',
+        confirmLabel: 'Save',
+        bodyHtml: `
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <input name="title" data-testid="kanban-modal-title" value="${escapeAttr(card.title)}"
+                       placeholder="Card title" style="${inputStyle}">
+                <textarea name="description" data-testid="kanban-modal-desc" rows="4" placeholder="Description (optional)"
+                          style="${inputStyle}resize:vertical;">${escapeHtml(card.description || '')}</textarea>
                 <div style="display:flex;gap:10px;">
-                    <input id="kanbanModalLabels" data-testid="kanban-modal-labels" value="${escapeAttr(labelsValue)}" placeholder="labels, comma separated"
-                           style="flex:2;padding:8px 11px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-1);">
-                    <input id="kanbanModalDue" data-testid="kanban-modal-due" type="date" value="${escapeAttr(card.due_date || '')}"
-                           style="flex:1;padding:8px 11px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-1);">
+                    <input name="labels" data-testid="kanban-modal-labels" value="${escapeAttr(labelsValue)}"
+                           placeholder="labels, comma separated" style="flex:2;min-width:0;${inputStyle}">
+                    <input name="due_date" data-testid="kanban-modal-due" type="date" value="${escapeAttr(card.due_date || '')}"
+                           style="flex:1;min-width:0;${inputStyle}">
                 </div>
-            </div>
-            <div class="ethos-modal-footer" style="display:flex;gap:8px;align-items:center;">
-                <button class="btn-ghost" data-testid="kanban-modal-delete" onclick="window._kanbanModalDelete()"
-                        style="padding:7px 14px;font-size:12px;border-radius:8px;background:none;color:#ef4444;border:1px solid rgba(239,68,68,.4);cursor:pointer;">🗑 Delete</button>
-                <div style="flex:1;"></div>
-                <button class="btn-ghost" data-testid="kanban-modal-cancel" onclick="window._kanbanModalClose()"
-                        style="padding:7px 14px;font-size:12px;border-radius:8px;background:none;color:var(--text-3);border:1px solid var(--border);cursor:pointer;">Cancel</button>
-                <button class="btn-ghost" data-testid="kanban-modal-save" onclick="window._kanbanModalSave()"
-                        style="padding:7px 16px;font-size:12px;border-radius:8px;background:#2563eb;color:white;border:none;cursor:pointer;">Save</button>
-            </div>
-        </div>`;
-
-    document.body.appendChild(overlay);
-    overlay._cardId = card.id;
-
-    const close = () => { if (overlay.parentNode) overlay.remove(); };
-    overlay.querySelector('[data-testid="kanban-modal-close"]').onclick = close;
-    overlay.querySelector('[data-testid="kanban-modal-cancel"]').onclick = close;
-    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-    const kd = e => { if (e.key === 'Escape') close(); };
-    document.addEventListener('keydown', kd);
-    overlay._kd = kd;
-
-    window._kanbanModalClose = () => { document.removeEventListener('keydown', overlay._kd); close(); };
-    window._kanbanModalSave = async () => {
-        const board = currentBoard();
-        if (!board) return;
-        const title = (document.getElementById('kanbanModalTitle')?.value || '').trim();
-        if (!title) { document.getElementById('kanbanModalTitle').focus(); return; }
-        const body = {
-            title,
-            description: document.getElementById('kanbanModalDesc')?.value || '',
-            labels: (document.getElementById('kanbanModalLabels')?.value || '').split(',').map(s => s.trim()).filter(Boolean),
-            due_date: document.getElementById('kanbanModalDue')?.value || null,
-        };
-        try {
+                <div>
+                    <button type="button" data-testid="kanban-modal-delete" class="btn-ghost"
+                            style="padding:7px 14px;font-size:12px;border-radius:8px;background:none;color:#ef4444;border:1px solid rgba(239,68,68,.4);cursor:pointer;">🗑 Delete</button>
+                </div>
+            </div>`,
+        validate: (values) => (String(values.title || '').trim() ? '' : 'Card title is required'),
+        onSubmit: async (values) => {
+            const body = {
+                title: String(values.title || '').trim(),
+                description: values.description || '',
+                labels: String(values.labels || '').split(',').map(s => s.trim()).filter(Boolean),
+                due_date: values.due_date || null,
+            };
             await _api(`/api/kanban/${board.id}/cards/${card.id}`, _jsonOpts('PUT', body));
-            window._kanbanModalClose();
             await window._kanbanLoad();
-            if (window.showToast) window.showToast('Card updated', 'success');
-        } catch (e) {
-            if (window.showToast) window.showToast(e.message, 'error');
-        }
-    };
-    window._kanbanModalDelete = async () => {
-        const board = currentBoard();
-        if (!board || !window.showConfirm) return;
-        await window.showConfirm({ title: 'Kanban', message: `Delete card “${card.title}”?`, onConfirm: async () => {
-            try {
-                await _api(`/api/kanban/${board.id}/cards/${card.id}`, { method: 'DELETE' });
-                window._kanbanModalClose();
-                await window._kanbanLoad();
-                if (window.showToast) window.showToast('Card deleted', 'success');
-            } catch (e) {
-                if (window.showToast) window.showToast(e.message, 'error');
-            }
-        }});
-    };
-
-    setTimeout(() => document.getElementById('kanbanModalTitle')?.focus(), 50);
+            showToast('Card updated', 'success');
+        },
+        onReady: (bodyEl, modal) => {
+            bodyEl.querySelector('[data-testid="kanban-modal-delete"]')?.addEventListener('click', async () => {
+                const ok = await _ctx.modal.confirm('Kanban', `Delete card “${card.title}”?`);
+                if (!ok) return;
+                try {
+                    await _api(`/api/kanban/${board.id}/cards/${card.id}`, { method: 'DELETE' });
+                    modal.querySelector('[data-testid="modal-form-cancel"]')?.click();
+                    await window._kanbanLoad();
+                    showToast('Card deleted', 'success');
+                } catch (e) {
+                    showToast(e.message, 'error');
+                }
+            });
+            bodyEl.querySelector('input[name="title"]')?.focus();
+        },
+    });
 }
 
 // ── Expose handlers for inline onclick attributes ─────────────────────────────
