@@ -315,36 +315,63 @@ export async function renderVideoStation(winBody) {
 function _renderShell() {
     if (!_body) return;
     const css = `
-        /* Netflix-style palette — scoped overrides of the global theme vars */
-        .vs-shell{--surface-0:#141414;--surface-1:#1b1b20;--surface-2:#2a2a31;--border:rgba(255,255,255,.09);--text-1:#fff;--text-2:rgba(255,255,255,.72);--text-3:rgba(255,255,255,.45);--accent:#e50914;--accent-hover:#ff2b36;background:#141414;color:#fff;font-family:'Helvetica Neue',Helvetica,Arial,system-ui,sans-serif;}
+        /* Light is the default; :root.dark restores the cinematic palette.
+           Hero/player surfaces stay dark because they sit on artwork; the shell,
+           rows, cards and lists follow the EthOS theme. */
+        .vs-shell{
+            color-scheme:light;
+            --surface-0:#ffffff;--surface-1:#f4f5f7;--surface-2:#e8eaed;
+            --border:rgba(0,0,0,.1);--text-1:#141414;--text-2:#4b5563;--text-3:#6b7280;
+            --accent:#e50914;--accent-hover:#b20710;
+            --vs-card-bg:#ffffff;--vs-card-hover:#f1f1f1;--vs-hover:rgba(0,0,0,.07);
+            --vs-nav-bg:rgba(255,255,255,.94);--vs-nav-solid:#ffffff;
+            --vs-search-bg:#ffffff;--vs-search-border:rgba(0,0,0,.2);
+            --vs-rank-color:#ffffff;--vs-rank-stroke:rgba(0,0,0,.28);
+            --vs-pill-bg:#141414;--vs-pill-fg:#ffffff;
+            --vs-skel-1:#eceef1;--vs-skel-2:#f7f8fa;--vs-scroll:#b6bcc6;
+            background:var(--surface-0);color:var(--text-1);font-family:'Helvetica Neue',Helvetica,Arial,system-ui,sans-serif;
+        }
+        :root.dark .vs-shell{
+            color-scheme:dark;
+            --surface-0:#141414;--surface-1:#1b1b20;--surface-2:#2a2a31;
+            --border:rgba(255,255,255,.09);--text-1:#fff;--text-2:rgba(255,255,255,.72);--text-3:rgba(255,255,255,.45);
+            --accent:#e50914;--accent-hover:#ff2b36;
+            --vs-card-bg:#181818;--vs-card-hover:#232323;--vs-hover:rgba(255,255,255,.14);
+            --vs-nav-bg:linear-gradient(180deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.35) 60%, rgba(0,0,0,0) 100%);
+            --vs-nav-solid:#141414;
+            --vs-search-bg:rgba(0,0,0,.75);--vs-search-border:#fff;
+            --vs-rank-color:#141414;--vs-rank-stroke:rgba(255,255,255,.55);
+            --vs-pill-bg:#fff;--vs-pill-fg:#141414;
+            --vs-skel-1:#1b1b20;--vs-skel-2:#26262c;--vs-scroll:#4d4d4d;
+        }
         .vs-shell ::-webkit-scrollbar{width:10px;height:10px}
-        .vs-shell ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:8px;border:3px solid transparent;background-clip:content-box;}
+        .vs-shell ::-webkit-scrollbar-thumb{background:var(--vs-scroll);border-radius:8px;border:3px solid transparent;background-clip:content-box;}
         .vs-shell ::-webkit-scrollbar-track{background:transparent}
         /* white primary CTA (Netflix Play button) */
-        .vs-shell .btn-primary{background:#fff;color:#141414;font-weight:700;border:none;}
+        .vs-shell .btn-primary{background:var(--text-1);color:var(--surface-0);font-weight:700;border:none;}
         .vs-shell .btn-primary:hover{opacity:.85;transform:none;}
         #vs-nav { position:absolute; top:0; left:0; right:0; z-index:50; padding:0 4%;
             transition:background .35s ease, box-shadow .35s ease;
-            background:linear-gradient(180deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.35) 60%, rgba(0,0,0,0) 100%); }
-        #vs-nav.vs-solid { background:#141414; box-shadow:0 2px 10px rgba(0,0,0,.55); }
+            background:var(--vs-nav-bg); }
+        #vs-nav.vs-solid { background:var(--vs-nav-solid); box-shadow:0 2px 10px rgba(0,0,0,.25); }
         .vs-nav-inner { display:flex; align-items:center; gap:28px; height:58px; }
         .vs-brand { color:#e50914; font-weight:900; font-size:19px; letter-spacing:.6px; cursor:pointer;
             text-transform:uppercase; white-space:nowrap; user-select:none; line-height:1.2; }
         .vs-links { display:flex; gap:18px; flex:1; min-width:0; overflow:hidden; }
-        .vs-link { font-size:13.5px; color:#e5e5e5; opacity:.72; cursor:pointer; transition:opacity .2s, color .2s; white-space:nowrap; user-select:none; }
+        .vs-link { font-size:13.5px; color:var(--text-2); opacity:.85; cursor:pointer; transition:opacity .2s, color .2s; white-space:nowrap; user-select:none; }
         .vs-link:hover { opacity:1; }
-        .vs-link.active { color:#fff; font-weight:600; opacity:1; }
+        .vs-link.active { color:var(--text-1); font-weight:600; opacity:1; }
         .vs-nav-right { display:flex; align-items:center; gap:12px; margin-left:auto; flex-shrink:0; }
-        .vs-iconbtn { background:none; border:none; color:#fff; cursor:pointer; padding:0; display:flex;
+        .vs-iconbtn { background:none; border:none; color:var(--text-1); cursor:pointer; padding:0; display:flex;
             align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; transition:background .2s; }
-        .vs-iconbtn:hover { background:rgba(255,255,255,.14); }
+        .vs-iconbtn:hover { background:var(--vs-hover); }
         .vs-search-wrap { display:flex; align-items:center; }
-        .vs-search-wrap input { width:0; opacity:0; border:1px solid transparent; background:rgba(0,0,0,.75); color:#fff;
+        .vs-search-wrap input { width:0; opacity:0; border:1px solid transparent; background:var(--vs-search-bg); color:var(--text-1);
             font-size:13px; padding:6px 0; margin-right:0; outline:none; transition:width .28s ease, opacity .2s ease, padding .28s ease, border-color .2s; }
-        .vs-search-wrap.open input { width:215px; opacity:1; padding:6px 10px; margin-right:8px; border-color:#fff; }
-        .vs-navcount { font-size:11.5px; color:#9a9a9a; white-space:nowrap; user-select:none; }
+        .vs-search-wrap.open input { width:215px; opacity:1; padding:6px 10px; margin-right:8px; border-color:var(--vs-search-border); }
+        .vs-navcount { font-size:11.5px; color:var(--text-3); white-space:nowrap; user-select:none; }
 
-        #vs-main { position:absolute; inset:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#4d4d4d transparent; }
+        #vs-main { position:absolute; inset:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--vs-scroll) transparent; }
         #vs-content { min-height:100%; display:flex; flex-direction:column; }
         #vs-main.vs-player-mode { overflow:hidden; }
         #vs-main.vs-player-mode > #vs-content { height:100%; min-height:0; }
@@ -375,7 +402,7 @@ function _renderShell() {
         /* Rows + cards */
         .vs-rowsec { position:relative; margin-top:34px; flex-shrink:0; }
         .vs-rowsech { display:flex; align-items:center; justify-content:space-between; padding:0 4%; margin-bottom:2px; }
-        .vs-rowtitle { font-size:16.5px; font-weight:700; color:#e5e5e5; letter-spacing:.2px; margin:0; user-select:none; }
+        .vs-rowtitle { font-size:16.5px; font-weight:700; color:var(--text-1); letter-spacing:.2px; margin:0; user-select:none; }
         .vs-rowwrap { position:relative; }
         .vs-row { display:flex; gap:9px; overflow-x:auto; padding:84px 4%; margin:-68px 0; scrollbar-width:none; scroll-behavior:smooth; }
         .vs-row::-webkit-scrollbar { display:none; }
@@ -385,11 +412,11 @@ function _renderShell() {
         .vs-arrow-r { right:0; border-radius:6px 0 0 6px; }
         .vs-rowwrap:hover .vs-arrow { opacity:1; }
 
-        .vs-card { position:relative; flex:0 0 auto; width:234px; cursor:pointer; background:#181818; border-radius:6px; transition:z-index 0s; z-index:1; }
-        .vs-card-title { margin:7px 2px 0; font-size:12.5px; font-weight:600; color:#dcdcdc; line-height:1.32;
+        .vs-card { position:relative; flex:0 0 auto; width:234px; cursor:pointer; background:var(--vs-card-bg); border-radius:6px; transition:z-index 0s; z-index:1; }
+        .vs-card-title { margin:7px 2px 0; font-size:12.5px; font-weight:600; color:var(--text-2); line-height:1.32;
             display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
             word-break:break-word; transition:color .15s; }
-        .vs-card:hover .vs-card-title { color:#fff; }
+        .vs-card:hover .vs-card-title { color:var(--text-1); }
         .vs-card--portrait { width:156px; }
         .vs-card:hover { z-index:30; }
         .vs-card-art { position:relative; aspect-ratio:16/9; border-radius:6px; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; }
@@ -403,33 +430,33 @@ function _renderShell() {
         .vs-card:hover .vs-cw-x { opacity:1; }
 
         /* Netflix-style hover popup panel */
-        .vs-card-panel { position:absolute; top:6px; left:-7%; width:114%; z-index:8; background:#181818; border-radius:8px; padding:10px 12px 11px;
-            box-shadow:0 14px 30px rgba(0,0,0,.75); opacity:0; transform:scale(.9) translateY(8px); transform-origin:top center; pointer-events:none;
+        .vs-card-panel { position:absolute; top:6px; left:-7%; width:114%; z-index:8; background:var(--vs-card-bg); border-radius:8px; padding:10px 12px 11px;
+            box-shadow:0 14px 30px rgba(0,0,0,.35); opacity:0; transform:scale(.9) translateY(8px); transform-origin:top center; pointer-events:none;
             transition:opacity .16s ease .38s, transform .2s ease .38s; }
         .vs-card:hover .vs-card-panel { opacity:1; transform:none; pointer-events:auto; }
         .vs-cp-top { display:flex; align-items:center; gap:7px; margin-bottom:8px; }
-        .vs-cbtn { width:30px; height:30px; border-radius:50%; border:1.6px solid rgba(255,255,255,.4); background:rgba(42,42,42,.8); color:#fff; cursor:pointer;
+        .vs-cbtn { width:30px; height:30px; border-radius:50%; border:1.6px solid var(--border); background:var(--surface-2); color:var(--text-1); cursor:pointer;
             display:flex; align-items:center; justify-content:center; padding:0; transition:border-color .15s, background .15s; }
-        .vs-cbtn:hover { border-color:#fff; }
-        .vs-cbtn-play { background:#fff; color:#000; border-color:#fff; font-size:12px; }
-        .vs-cbtn-play:hover { background:rgba(255,255,255,.8); }
-        .vs-cp-title { font-size:13px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
-        .vs-cp-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11.5px; color:#b9b9b9; }
+        .vs-cbtn:hover { border-color:var(--text-1); }
+        .vs-cbtn-play { background:var(--text-1); color:var(--surface-0); border-color:var(--text-1); font-size:12px; }
+        .vs-cbtn-play:hover { background:var(--vs-hover); }
+        .vs-cp-title { font-size:13px; font-weight:700; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+        .vs-cp-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11.5px; color:var(--text-3); }
         .vs-cp-meta .dot { opacity:.45; }
 
         /* Page headers, grids, folders */
         .vs-pagehead { padding:78px 4% 4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; user-select:none; }
-        .vs-pagehead h2 { font-size:25px; font-weight:800; margin:0; color:#fff; letter-spacing:.2px; }
-        .vs-crumb { font-size:13.5px; color:#9a9a9a; cursor:pointer; transition:color .15s; white-space:nowrap; }
-        .vs-crumb:hover { color:#fff; text-decoration:underline; }
-        .vs-crumb.current { color:#fff; font-weight:700; cursor:default; }
-        .vs-crumb-sep { color:#6d6d6e; font-size:13px; user-select:none; }
+        .vs-pagehead h2 { font-size:25px; font-weight:800; margin:0; color:var(--text-1); letter-spacing:.2px; }
+        .vs-crumb { font-size:13.5px; color:var(--text-3); cursor:pointer; transition:color .15s; white-space:nowrap; }
+        .vs-crumb:hover { color:var(--text-1); text-decoration:underline; }
+        .vs-crumb.current { color:var(--text-1); font-weight:700; cursor:default; }
+        .vs-crumb-sep { color:var(--text-3); font-size:13px; user-select:none; }
         .vs-folders { display:grid; grid-template-columns:repeat(auto-fill,minmax(205px,1fr)); gap:10px; padding:14px 4% 4px; align-content:start; }
-        .vs-folder-tile { position:relative; aspect-ratio:16/9; border-radius:6px; background:#181818; cursor:pointer; overflow:hidden; display:flex; flex-direction:column;
+        .vs-folder-tile { position:relative; aspect-ratio:16/9; border-radius:6px; background:var(--vs-card-bg); border:1px solid var(--border); cursor:pointer; overflow:hidden; display:flex; flex-direction:column;
             justify-content:center; gap:4px; padding:0 14px; transition:background .15s, transform .12s; }
-        .vs-folder-tile:hover { background:#232323; transform:scale(1.02); z-index:5; }
+        .vs-folder-tile:hover { background:var(--vs-card-hover); transform:scale(1.02); z-index:5; }
         .vs-ft-icon { font-size:26px; line-height:1; }
-        .vs-ft-name { font-size:13px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .vs-ft-name { font-size:13px; font-weight:600; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .vs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:44px 12px; padding:18px 4% 46px; align-content:start; }
         .vs-grid .vs-card { width:auto; }
         .vs-grid--posters { display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:22px 12px; padding:18px 4% 46px; align-content:start; }
@@ -445,11 +472,11 @@ function _renderShell() {
         .vs-pcard-tmdb { position:absolute; top:6px; right:6px; z-index:7; width:26px; height:26px; border-radius:50%; border:none; cursor:pointer;
             background:rgba(0,0,0,.72); color:#fff; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; }
         .vs-pcard:hover .vs-pcard-tmdb { opacity:1; }
-        .vs-pcard-title { margin-top:7px; font-size:12.5px; font-weight:600; color:#e6e6e6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .vs-pcard-meta { margin-top:2px; font-size:11px; color:#8c8c8c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .vs-pcard-title { margin-top:7px; font-size:12.5px; font-weight:600; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .vs-pcard-meta { margin-top:2px; font-size:11px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         .vs-list { display:flex; flex-direction:column; gap:5px; padding:10px 4% 36px; }
-        .vs-listrow { display:flex; align-items:center; gap:12px; padding:7px 10px; border-radius:8px; cursor:pointer; background:#181818; transition:background .15s; }
-        .vs-listrow:hover { background:#232323; }
+        .vs-listrow { display:flex; align-items:center; gap:12px; padding:7px 10px; border-radius:8px; cursor:pointer; background:var(--vs-card-bg); border:1px solid var(--border); transition:background .15s; }
+        .vs-listrow:hover { background:var(--vs-card-hover); }
 
         /* ── Cinematic shine: Ken Burns hero, ambient glow, hover sweep ── */
         .vs-hero-bg { animation:vs-kenburns 38s ease-in-out infinite alternate; will-change:transform; }
@@ -466,29 +493,29 @@ function _renderShell() {
         @keyframes vs-sweep { from { transform:translateX(-70%); } to { transform:translateX(70%); } }
         .vs-rowsec { animation:vs-fadeup .45s ease both; }
         @keyframes vs-fadeup { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
-        .vs-rowsech:hover .vs-rowtitle { color:#fff; }
+        .vs-rowsech:hover .vs-rowtitle { color:var(--text-1); }
         .vs-rowtitle { transition:color .2s; }
         .vs-btn-play, .vs-btn-info { transition:background .15s, transform .15s; }
         .vs-btn-play:hover, .vs-btn-info:hover { transform:scale(1.03); }
 
         /* Empty / welcome */
-        .vs-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#8c8c8c; font-size:14px; padding:60px 20px; text-align:center; }
+        .vs-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--text-3); font-size:14px; padding:60px 20px; text-align:center; }
 
         /* ── Netflix polish: hover zoom, rank numerals, NEW badge, shimmer ── */
         .vs-card { transition:transform .18s ease, box-shadow .18s ease; }
         .vs-card:hover { transform:scale(1.045); box-shadow:0 12px 30px rgba(0,0,0,.62); }
         .vs-badge { position:absolute; top:6px; left:6px; z-index:7; background:#e50914; color:#fff; font-size:9.5px; font-weight:800;
             letter-spacing:.7px; padding:2px 5px; border-radius:2px; text-transform:uppercase; pointer-events:none; }
-        .vs-in-list { border-color:#fff !important; background:#fff !important; color:#141414 !important; }
+        .vs-in-list { border-color:var(--text-1) !important; background:var(--vs-pill-bg) !important; color:var(--vs-pill-fg) !important; }
         .vs-top10 { position:relative; display:flex; align-items:flex-end; flex:0 0 auto; cursor:pointer; }
         .vs-top10-num { font-family:'Helvetica Neue',Arial,sans-serif; font-weight:900; font-size:104px; line-height:.72; letter-spacing:-.07em;
-            color:#141414; -webkit-text-stroke:3.5px rgba(255,255,255,.55); margin-right:-14px; user-select:none; transition:-webkit-text-stroke-color .2s; }
-        .vs-top10:hover .vs-top10-num { -webkit-text-stroke-color:#fff; }
+            color:var(--vs-rank-color); -webkit-text-stroke:3.5px var(--vs-rank-stroke); margin-right:-14px; user-select:none; transition:-webkit-text-stroke-color .2s; }
+        .vs-top10:hover .vs-top10-num { -webkit-text-stroke-color:var(--text-1); }
         .vs-top10 .vs-card { margin-bottom:6px; }
-        .vs-skel { background:linear-gradient(90deg,#1b1b20 25%,#26262c 37%,#1b1b20 63%); background-size:400% 100%;
+        .vs-skel { background:linear-gradient(90deg,var(--vs-skel-1) 25%,var(--vs-skel-2) 37%,var(--vs-skel-1) 63%); background-size:400% 100%;
             animation:vs-shimmer 1.4s ease-in-out infinite; border-radius:6px; }
         @keyframes vs-shimmer { 0% { background-position:100% 0; } 100% { background-position:-100% 0; } }
-        .vs-skel-shell { position:absolute; inset:0; background:#141414; overflow:hidden; }
+        .vs-skel-shell { position:absolute; inset:0; background:var(--surface-0); overflow:hidden; }
         .vs-pcard-list { right:38px !important; }
         .vs-pcard-list.vs-in-list { opacity:1 !important; }
     `;
@@ -1089,9 +1116,9 @@ function _renderHome(c) {
     const lib = _allVideos || [];
     if (!cw.length && !ra.length && !lib.length) {
         c.innerHTML = `
-            <div style="height:clamp(300px,48vh,520px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:radial-gradient(ellipse at 30% 20%, #1f1a17 0%, #141414 65%);">
+            <div style="height:clamp(300px,48vh,520px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--surface-1);">
                 <div style="font-size:48px;">🍿</div>
-                <div style="color:#9a9a9a;font-size:14.5px;max-width:380px;text-align:center;line-height:1.5;">Nothing here yet — start watching something and it will show up on your home screen.</div>
+                <div style="color:var(--text-3);font-size:14.5px;max-width:380px;text-align:center;line-height:1.5;">Nothing here yet — start watching something and it will show up on your home screen.</div>
                 <button class="vs-btn-play" style="margin-top:6px;" onclick="_vsNavTo(null)">Browse All Videos</button>
             </div>`;
         _setCount('');
@@ -1178,14 +1205,14 @@ function _renderMyList(c) {
     _viewVideos = items;
     if (!items.length) {
         c.innerHTML = `<div class="vs-pagehead"><h2>My List</h2></div>
-            <div class="vs-empty"><div style="color:#4d4d4d;display:flex;">${uiIcon('plus', 44)}</div>
-            <div>Nothing saved yet — hover any title and press the <b style="color:#e5e5e5;">+</b> button to add it here.</div>
+            <div class="vs-empty"><div style="color:var(--text-3);display:flex;">${uiIcon('plus', 44)}</div>
+            <div>Nothing saved yet — hover any title and press the <b style="color:var(--text-1);">+</b> button to add it here.</div>
             <button class="vs-btn-info" onclick="_vsGoHome()" style="margin-top:6px;">Browse Home</button></div>`;
         _setCount('0 titles');
         return;
     }
     c.innerHTML = `<div class="vs-pagehead"><h2>My List</h2>
-            <span style="font-size:12.5px;color:#8c8c8c;margin-left:8px;">saved by ${escapeHtml(_listUser())}</span></div>
+            <span style="font-size:12.5px;color:var(--text-3);margin-left:8px;">saved by ${escapeHtml(_listUser())}</span></div>
         <div class="vs-grid--posters" data-testid="vs-mylist-grid">${items.map((v, i) =>
             _posterCardHtml(v, i, { play: '_vsOpenPlayer', arr: 'view', tmdb: true })).join('')}</div>`;
     _setCount(`${items.length} saved`);
@@ -1371,7 +1398,7 @@ function _renderSearchResults(c) {
         return;
     }
     const html = `
-        <div class="vs-pagehead"><h2>Results for “${escapeHtml(_q)}”</h2><span style="color:#9a9a9a;font-size:13px;">${items.length} video${items.length === 1 ? '' : 's'}</span></div>
+        <div class="vs-pagehead"><h2>Results for “${escapeHtml(_q)}”</h2><span style="color:var(--text-3);font-size:13px;">${items.length} video${items.length === 1 ? '' : 's'}</span></div>
         <div class="vs-grid--posters">${items.map((v, i) => _posterCardHtml(v, i, { play: '_vsOpenPlayer', arr: 'view', tmdb: true })).join('')}</div>`;
     c.innerHTML = html;
     _setCount(`${items.length} videos`);
@@ -1429,7 +1456,7 @@ function _renderLibrary(c) {
             </div>`).join('')}</div>`;
     }
     if (!_viewVideos.length) {
-        c.innerHTML = html + `<div style="padding:26px 4%;color:#8c8c8c;font-size:13.5px;">No videos in this folder — open a subfolder above.</div>`;
+        c.innerHTML = html + `<div style="padding:26px 4%;color:var(--text-3);font-size:13.5px;">No videos in this folder — open a subfolder above.</div>`;
         _setCount(`${_listing.folders.length} folders`);
         return;
     }
@@ -1442,7 +1469,7 @@ function _renderLibrary(c) {
                 </div>
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(_displayTitle(v))}</div>
-                    <div style="font-size:11.5px;color:#8c8c8c;margin-top:2px;">${v.tmdb && v.tmdb.rating != null ? `★ ${v.tmdb.rating} · ` : ''}${fmtBytes(v.size)} · ${fmtDate(v.modified)}${v.folder ? ' · ' + escapeHtml(v.folder) : ''}</div>
+                    <div style="font-size:11.5px;color:var(--text-3);margin-top:2px;">${v.tmdb && v.tmdb.rating != null ? `★ ${v.tmdb.rating} · ` : ''}${fmtBytes(v.size)} · ${fmtDate(v.modified)}${v.folder ? ' · ' + escapeHtml(v.folder) : ''}</div>
                 </div>
             </div>`).join('')}</div>`;
     } else {
@@ -1456,9 +1483,9 @@ function _renderLibrary(c) {
 // ── Welcome (no library folders yet) ────────────────────────────────────────
 function _renderWelcome(c) {
     c.innerHTML = `
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px 24px;text-align:center;background:radial-gradient(ellipse at 50% 30%, #1d1a18 0%, #141414 70%);">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px 24px;text-align:center;background:var(--surface-1);">
             <div class="vs-brand" style="font-size:30px;">Video Station</div>
-            <div style="color:#b9b9b9;font-size:15px;max-width:420px;line-height:1.6;">Your library is empty. Add a folder with videos to get started — movies, series and everything in between.</div>
+            <div style="color:var(--text-2);font-size:15px;max-width:420px;line-height:1.6;">Your library is empty. Add a folder with videos to get started — movies, series and everything in between.</div>
             <button class="vs-btn-play" onclick="_vsShowPicker()">＋ Add Your First Folder</button>
         </div>`;
     _setCount('');
@@ -2084,8 +2111,20 @@ let _pickerPath = null;          // null → show allowed roots
 let _pickerRoots = [];           // [{path,name,folders}] from the no-path browse
 let _pickerFolders = [];         // folder names at _pickerPath
 
-function _showPicker() {
+async function _showPicker() {
     if (!_body) return;
+    // Prefer the shared EthOS picker (it cannot leave the backend roots); the
+    // in-window browser below stays as a fallback for older cores.
+    if (typeof _ctx.pickFolder === 'function') {
+        const picked = await _ctx.pickFolder({
+            title: 'Add video folder',
+            startPath: (_cfg.roots && _cfg.roots[0]) || '/home',
+            roots: ['/home', '/mnt', '/media'],
+            acceptLabel: 'Add folder',
+        });
+        if (picked) await _addRoot(picked);
+        return;
+    }
     _pickerPath = null; _pickerRoots = []; _pickerFolders = [];
     const old = document.getElementById('vs-picker'); if (old) old.remove();
     const shell = _body.querySelector('[data-testid="vs-shell"]');
@@ -2157,15 +2196,19 @@ async function _pickerLoad(path) {
 
 function _pickerOpen(path) { _pickerLoad(path); }
 
-async function _pickerAddCurrent() {
-    if (!_pickerPath) { _toast('Open a location first', true); return; }
+async function _addRoot(path) {
     try {
-        await _saveCfg({ roots: [..._cfg.roots, _pickerPath] });
-        _hidePicker();
-        _toast(`Added ${_pickerPath.split('/').pop() || _pickerPath} to library`);
+        await _saveCfg({ roots: [..._cfg.roots, path] });
+        _toast(`Added ${path.split('/').pop() || path} to library`);
         _path = null; _q = '';
         await _reloadView();
     } catch (e) { /* _saveCfg already toasted */ }
+}
+
+async function _pickerAddCurrent() {
+    if (!_pickerPath) { _toast('Open a location first', true); return; }
+    await _addRoot(_pickerPath);
+    _hidePicker();
 }
 
 // ── Keyboard ──────────────────────────────────────────────────────────────────
