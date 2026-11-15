@@ -4,10 +4,10 @@
 // keeps ownership of the window manager, progress rows, the log viewer and the
 // Notification Center — this module only renders into the container it is given.
 let _ctx = null;
+let _windowBody = null;
 
 const escapeHtml = (value) => _ctx.escape.html(value);
 const escapeAttr = (value) => _ctx.escape.attr(value);
-const jsAttr = (value) => _ctx.escape.js(value);
 
 function fmtBytes(bytes) {
     const n = Number(bytes);
@@ -258,6 +258,9 @@ let _pullVisible = false;
 let _isAdmin = null;
 let _engineJobTimer = null;
 let _engineTask = null;   // shared progress row (core/progress.js)
+// Every tab load takes a token. A slower request that finishes after a newer
+// one (e.g. two actions in a row) must not overwrite the newer view.
+let _loadToken = 0;
 
 const ENGINE_STEP_LABELS = {
     queued: 'Queued',
@@ -290,7 +293,7 @@ function _errorCard(e, retryFn) {
     return `<div class="dk-empty" data-testid="docker-error">
         <strong>Could not load this view</strong>
         <span style="color:var(--dk-red);">${escapeHtml(msg)}</span>
-        ${retryFn ? `<div class="dk-row" style="justify-content:center;margin-top:12px;"><button class="dk-btn" onclick="${retryFn}">Try again</button></div>` : ''}
+        <div class="dk-row" style="justify-content:center;margin-top:12px;"><button class="dk-btn" data-action="refresh">Try again</button></div>
     </div>`;
 }
 
@@ -403,7 +406,7 @@ async function _renderEnginePanel(body, engine) {
         title = 'Installed — restart EthOS to activate Docker';
         detail = 'EthOS was added to the docker group after it started, so this process cannot open the Docker socket yet. A restart finishes the setup.';
         if (isAdmin) {
-            action = `<button class="dk-btn primary" data-testid="docker-engine-restart" onclick="dockerRestartEthos()">♻ Restart EthOS</button>`;
+            action = `<button class="dk-btn primary" data-testid="docker-engine-restart" data-action="engine-restart">Restart EthOS</button>`;
         }
     } else if (conflict) {
         title = 'Another container engine is installed';
@@ -422,7 +425,7 @@ async function _renderEnginePanel(body, engine) {
         title = 'Docker Engine is not installed';
         detail = 'Install Docker Engine and Compose v2 from Docker’s official apt repository. This needs internet access and takes a few minutes.';
         if (isAdmin) {
-            action = `<button class="dk-btn primary" data-testid="docker-engine-install" onclick="dockerInstallEngine(this)">⬇ Install Docker Engine</button>`;
+            action = `<button class="dk-btn primary" data-testid="docker-engine-install" data-action="engine-install">Install Docker Engine</button>`;
         } else {
             action = `<span class="dk-sub">An administrator can install it from this screen.</span>`;
         }
@@ -466,6 +469,8 @@ async function _renderEnginePanel(body, engine) {
 
 export async function renderDockerApp(body) {
     _stopEnginePolling();
+    _loadToken += 1;   // cancel any in-flight tab load from the previous render
+    _windowBody = body;
     _ensureStyles();
     body.innerHTML = `
         <div class="dk-root" data-testid="docker-root">
@@ -507,6 +512,8 @@ export async function renderDockerApp(body) {
             </main>
         </div>`;
 
+    body.querySelector('.dk-root').addEventListener('click', _handleRootClick);
+
     // The daemon has to answer before any section makes sense. When it does not,
     // the screen explains why and offers the one-command install instead of tabs
     // that can only fail with "Docker daemon is not running".
@@ -527,17 +534,6 @@ export async function renderDockerApp(body) {
         _setStatus(body, 'Engine status unavailable.', 'warn');
     }
 
-    body.querySelectorAll('.dk-nav-item').forEach((tab) => {
-        tab.addEventListener('click', () => {
-            _activeTab = tab.dataset.tab;
-            body.querySelectorAll('.dk-nav-item').forEach((t) => t.classList.remove('is-active'));
-            tab.classList.add('is-active');
-            if (_activeTab === 'containers') _loadContainersTab();
-            else if (_activeTab === 'images') _loadImagesTab();
-            else _loadVolumesTab();
-        });
-    });
-
     if (_activeTab === 'containers') await _loadContainersTab();
     else if (_activeTab === 'images') await _loadImagesTab();
     else await _loadVolumesTab();
@@ -547,11 +543,11 @@ export async function renderDockerApp(body) {
 // CONTAINERS TAB
 // ════════════════════════════════════════════
 
-// Compose projects the user has collapsed. Groups start expanded: a collapsed
-// project hid every container a package (Package Center) had started, so the
-// list looked like it only contained the standalone ones. Kept in module scope
-// so the state survives refreshes (e.g. after an action re-renders the tab).
-const _collapsedProjects = new Set();
+// Compose projects the user has expanded. Groups start collapsed so a NAS with
+// many stacks opens as a scannable list of projects instead of hundreds of
+// container rows. Expansion is kept in module scope so it survives refreshes
+// (e.g. after an action re-renders the tab) but resets when the window reopens.
+const _expandedProjects = new Set();
 
 // Package Center stacks are shown as system apps with the `ethos-` prefix. The
 // real compose project name never changes — actions are sent with it.
@@ -576,6 +572,11 @@ function _containerRow(c, project, hidden) {
     const safeName = escapeAttr(c.name || '?');
     const meta = _statusMeta(c.status);
     const isRunning = c.status === 'running';
+    // The API refuses to remove a running container (409). Explain that before
+    // the click instead of surfacing "is running — stop it first" as an error.
+    const removeBtn = isRunning
+        ? `<button class="dk-btn small danger" disabled data-testid="container-action-${safeName}-remove" title="Stop the container first">Remove</button>`
+        : `<button class="dk-btn small danger" data-testid="container-action-${safeName}-remove" data-action="container-remove" data-name="${safeName}" title="Remove container">Remove</button>`;
     const serviceTag = (project && c.compose_service)
         ? `<span class="dk-meta-line" style="display:inline;margin-left:6px;">· ${escapeHtml(c.compose_service)}</span>`
         : '';
@@ -605,12 +606,12 @@ function _containerRow(c, project, hidden) {
         <td>
             <div class="dk-actions">
                 ${isRunning
-                    ? `<button class="dk-btn small danger" data-testid="container-action-${safeName}-stop" onclick="dockerAction('${safeName}','stop',this)" title="Stop container">Stop</button>
-                       <button class="dk-btn small" data-testid="container-action-${safeName}-restart" onclick="dockerAction('${safeName}','restart',this)" title="Restart container">Restart</button>`
-                    : `<button class="dk-btn small" data-testid="container-action-${safeName}-start" onclick="dockerAction('${safeName}','start',this)" title="Start container">Start</button>`
+                          ? `<button class="dk-btn small danger" data-testid="container-action-${safeName}-stop" data-action="container-action" data-name="${safeName}" data-verb="stop" title="Stop container">Stop</button>
+                              <button class="dk-btn small" data-testid="container-action-${safeName}-restart" data-action="container-action" data-name="${safeName}" data-verb="restart" title="Restart container">Restart</button>`
+                          : `<button class="dk-btn small" data-testid="container-action-${safeName}-start" data-action="container-action" data-name="${safeName}" data-verb="start" title="Start container">Start</button>`
                 }
-                <button class="dk-btn small" data-testid="container-action-${safeName}-logs" onclick="openContainerLogs('${safeName}')" title="Open the unified log viewer">Logs</button>
-                <button class="dk-btn small danger" data-testid="container-action-${safeName}-remove" onclick="dockerRemove('${safeName}',this)" title="Remove container">Remove</button>
+                     <button class="dk-btn small" data-testid="container-action-${safeName}-logs" data-action="container-logs" data-name="${safeName}" title="Open the unified log viewer">Logs</button>
+                ${removeBtn}
             </div>
         </td>
     </tr>`;
@@ -621,22 +622,22 @@ function _composeGroupRow(project, members, info) {
     const label = _projectLabel(project, info);
     const running = members.filter(m => m.status === 'running').length;
     const restarting = members.filter(m => m.status === 'restarting').length;
-    const expanded = !_collapsedProjects.has(project);
+    const expanded = _expandedProjects.has(project);
     const tone = running === members.length ? 'is-ok' : (running > 0 ? 'is-warn' : 'is-bad');
     // A project's compose file can outlive its directory — say so instead of
     // showing buttons that silently fail (that was the "why can't I destroy" case).
     const known = !!info.known_location;
     const problem = info.location_problem || '';
     const upBtn = known
-        ? `<button class="dk-btn small" data-testid="compose-action-${safe}-up" onclick="event.stopPropagation();dockerComposeAction('${safe}','up',this)" title="docker compose up -d">Up</button>`
+        ? `<button class="dk-btn small" data-testid="compose-action-${safe}-up" data-action="compose-action" data-project="${safe}" data-verb="up" title="docker compose up -d">Up</button>`
         : `<button class="dk-btn small" disabled data-testid="compose-action-${safe}-up" title="${escapeAttr(problem || 'compose file not found')}">Up</button>`;
     // Project-level compose actions. Down/Destroy stay enabled even without a
     // compose file: the backend removes the stack by its Docker labels.
     const actions = `
                 <span class="dk-actions" style="margin-left:auto;">
                     ${upBtn}
-                    <button class="dk-btn small" data-testid="compose-action-${safe}-down" onclick="event.stopPropagation();dockerComposeAction('${safe}','down',this)" title="${known ? 'docker compose down' : 'Compose file unavailable — stops and removes the project by label'}">Down</button>
-                    <button class="dk-btn small danger" data-testid="compose-action-${safe}-destroy" onclick="event.stopPropagation();dockerComposeAction('${safe}','destroy',this)" title="${known ? 'docker compose down --volumes' : 'Compose file unavailable — removes containers, network and volumes by label'}">Destroy</button>
+                    <button class="dk-btn small" data-testid="compose-action-${safe}-down" data-action="compose-action" data-project="${safe}" data-verb="down" title="${known ? 'docker compose down' : 'Compose file unavailable — stops and removes the project by label'}">Down</button>
+                    <button class="dk-btn small danger" data-testid="compose-action-${safe}-destroy" data-action="compose-action" data-project="${safe}" data-verb="destroy" title="${known ? 'docker compose down --volumes' : 'Compose file unavailable — removes containers, network and volumes by label'}">Destroy</button>
                 </span>`;
     return `<tr class="compose-group-header" data-compose-group="${safe}" style="cursor:pointer;user-select:none;">
         <td colspan="5" style="background:var(--dk-surface);">
@@ -654,12 +655,29 @@ function _composeGroupRow(project, members, info) {
 }
 
 async function _loadContainersTab() {
-    const content = document.getElementById('dockerContent');
+    const content = _windowBody && _windowBody.querySelector('#dockerContent');
     if (!content) return;
+    const token = ++_loadToken;
     content.innerHTML = skeletonRows(6);
+    const body = content.closest('.dk-root');
+    // Chrome first: the tab must keep its Refresh button even when the API fails.
+    _setChrome(body, {
+        title: 'Containers',
+        sub: 'Containers, Compose stacks and their health.',
+        panelTitle: 'All containers',
+        panelSub: 'Reading containers…',
+        actions: `<button class="dk-btn small" data-action="refresh" data-testid="containers-refresh-btn">Refresh</button>`,
+    });
 
     try {
-        const [r, cr] = await Promise.all([apiFetch('/api/containers'), apiFetch('/api/compose/projects')]);
+        // Fetch sequentially: the two endpoints read the daemon independently, so
+        // parallel fetches can disagree right after a start/stop (containers gone
+        // but compose still reporting the old count) and a project would vanish
+        // from both the live and the stopped list. Reading compose second makes
+        // its view at least as new as the container list.
+        const r = await apiFetch('/api/containers');
+        const cr = await apiFetch('/api/compose/projects');
+        if (token !== _loadToken) return;   // a newer load owns the view
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const d = await r.json();
         const cs = d.containers || [];
@@ -687,7 +705,6 @@ async function _loadContainersTab() {
         // Projects remembered by the backend but currently down (no containers) — can be brought back up.
         const stoppedProjects = composeProjects.filter(p => p.container_count === 0 && p.known_location);
 
-        const body = content.closest('.dk-root');
         const runningCount = Number(d.running_count || cs.filter(c => c.status === 'running').length);
         const attentionCount = cs.filter(c => c.status === 'restarting'
             || c.network_detached
@@ -697,7 +714,7 @@ async function _loadContainersTab() {
             sub: 'Containers, Compose stacks and their health.',
             panelTitle: 'All containers',
             panelSub: `${cs.length} total · ${runningCount} running · ${groups.size} compose project${groups.size === 1 ? '' : 's'}`,
-            actions: `<button class="dk-btn small" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="containers-refresh-btn">Refresh</button>`,
+            actions: `<button class="dk-btn small" data-action="refresh" data-testid="containers-refresh-btn">Refresh</button>`,
         });
 
         if (cs.length === 0) {
@@ -727,18 +744,27 @@ async function _loadContainersTab() {
             </div>`;
         }
 
+        // Compose metadata drives the Up buttons and the stopped-project list. If
+        // that call failed, say so instead of silently disabling project actions.
+        if (!cr.ok) {
+            html += `<div class="dk-callout" data-testid="containers-compose-error">
+                <strong>Compose project details are unavailable</strong>
+                The Docker daemon did not return project information (HTTP ${cr.status}). Project Up and the stopped-project list stay hidden until the next refresh.
+            </div>`;
+        }
+
         html += `<table class="dk-table" data-testid="containers-table"><thead><tr>
             <th>Status</th><th>Container</th><th>Image</th><th>Ports</th><th style="width:200px;"></th>
         </tr></thead><tbody>`;
 
-        // Compose projects as collapsible groups (expanded by default), then standalone containers.
+        // Compose projects as collapsible groups (collapsed by default), then standalone containers.
         // Package Center stacks get their own System section, shown with the `ethos-` prefix.
         const projectGroups = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
         const _isManaged = ([project]) => !!(projectInfo.get(project) || {}).managed;
         const systemGroups = projectGroups.filter(_isManaged);
         const userGroups = projectGroups.filter(g => !_isManaged(g));
         const _renderGroup = ([project, members]) => {
-            const expanded = !_collapsedProjects.has(project);
+            const expanded = _expandedProjects.has(project);
             let out = _composeGroupRow(project, members, projectInfo.get(project) || {});
             for (const c of members) out += _containerRow(c, project, !expanded);
             return out;
@@ -772,7 +798,7 @@ async function _loadContainersTab() {
                 return `<tr>
                     <td class="dk-name"${label !== p.name ? ` title="compose project: ${escapeAttr(p.name)}"` : ''}>${escapeHtml(label)}</td>
                     <td class="dk-mono" style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dk-muted);" title="${escapeAttr(p.working_dir || '')}">${escapeHtml(p.working_dir || '—')}</td>
-                    <td><div class="dk-actions"><button class="dk-btn small" data-testid="compose-stopped-up-${safe}" onclick="dockerComposeAction('${safe}','up',this)" title="docker compose up -d">Up</button></div></td>
+                    <td><div class="dk-actions"><button class="dk-btn small" data-testid="compose-stopped-up-${safe}" data-action="compose-action" data-project="${safe}" data-verb="up" title="docker compose up -d">Up</button></div></td>
                 </tr>`;
             }).join('');
             if (stoppedSystem.length) html += _sectionRow('System', 3) + _stoppedRows(stoppedSystem);
@@ -782,22 +808,9 @@ async function _loadContainersTab() {
 
         content.innerHTML = html;
 
-        // Wire up group expand/collapse.
-        content.querySelectorAll('.compose-group-header').forEach(h => {
-            h.addEventListener('click', () => {
-                const project = h.dataset.composeGroup;
-                if (_collapsedProjects.has(project)) _collapsedProjects.delete(project);
-                else _collapsedProjects.add(project);
-                const expanded = !_collapsedProjects.has(project);
-                content.querySelectorAll(`tr[data-compose-child="${CSS.escape(project)}"]`).forEach(row => {
-                    row.style.display = expanded ? '' : 'none';
-                });
-                const chev = h.querySelector('[data-chevron]');
-                if (chev) chev.style.transform = expanded ? 'rotate(90deg)' : '';
-            });
-        });
     } catch (e) {
-        content.innerHTML = _errorCard(e, "renderDockerApp(document.getElementById('dockerContent').closest('.window-body'))");
+        if (token !== _loadToken) return;
+        content.innerHTML = _errorCard(e);
     }
 }
 
@@ -806,26 +819,38 @@ async function _loadContainersTab() {
 // ════════════════════════════════════════════
 
 async function _loadImagesTab() {
-    const content = document.getElementById('dockerContent');
+    const content = _windowBody && _windowBody.querySelector('#dockerContent');
     if (!content) return;
+    const token = ++_loadToken;
     content.innerHTML = skeletonRows(6);
+    const body = content.closest('.dk-root');
+    _setChrome(body, {
+        title: 'Images',
+        sub: 'Images stored on this NAS.',
+        panelTitle: 'Local images',
+        panelSub: 'Reading images…',
+        actions: `
+            <button class="dk-btn primary small" data-action="toggle-pull" data-testid="images-pull-btn">Pull image</button>
+            <button class="dk-btn danger small" data-action="prune-images" data-testid="images-prune-btn" title="Remove all unused images">Prune</button>
+            <button class="dk-btn small" data-action="refresh" data-testid="images-refresh-btn">Refresh</button>`,
+    });
 
     try {
         const r = await apiFetch('/api/images');
+        if (token !== _loadToken) return;
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const d = await r.json();
         const imgs = d.images || [];
 
-        const body = content.closest('.dk-root');
         _setChrome(body, {
             title: 'Images',
             sub: 'Images stored on this NAS.',
             panelTitle: 'Local images',
             panelSub: `${imgs.length} image${imgs.length !== 1 ? 's' : ''}${d.total_size_bytes ? ` · ${formatBytes(d.total_size_bytes)}` : ''}`,
             actions: `
-                <button class="dk-btn primary small" onclick="_togglePull(this.closest('.window-body'))" data-testid="images-pull-btn">Pull image</button>
-                <button class="dk-btn danger small" onclick="_pruneImages()" data-testid="images-prune-btn" title="Remove all unused images">Prune</button>
-                <button class="dk-btn small" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="images-refresh-btn">Refresh</button>`,
+                <button class="dk-btn primary small" data-action="toggle-pull" data-testid="images-pull-btn">Pull image</button>
+                <button class="dk-btn danger small" data-action="prune-images" data-testid="images-prune-btn" title="Remove all unused images">Prune</button>
+                <button class="dk-btn small" data-action="refresh" data-testid="images-refresh-btn">Refresh</button>`,
         });
 
         let html = '';
@@ -833,8 +858,8 @@ async function _loadImagesTab() {
             html += `<div class="dk-row" style="margin-bottom:12px;">
                 <input id="imagesPullInput" data-testid="images-pull-input" class="dk-input" type="text"
                        placeholder="e.g. nginx:latest or bitnami/redis:7.2" style="flex:1;min-width:220px;" />
-                <button class="dk-btn primary small" data-testid="images-pull-execute-btn" onclick="_executePull()">Pull</button>
-                <button class="dk-btn small" data-testid="images-pull-cancel-btn" onclick="_cancelPullImage()">Cancel</button>
+                <button class="dk-btn primary small" data-testid="images-pull-execute-btn" data-action="execute-pull">Pull</button>
+                <button class="dk-btn small" data-testid="images-pull-cancel-btn" data-action="cancel-pull">Cancel</button>
             </div>`;
         }
 
@@ -869,13 +894,14 @@ async function _loadImagesTab() {
                 <td class="dk-mono">${sizeStr}</td>
                 <td style="color:var(--dk-muted);white-space:nowrap;">${createdDate}</td>
                 <td>${statusTag}</td>
-                <td><div class="dk-actions"><button class="dk-btn small danger" data-testid="image-delete-${escapeAttr(img.id || img.repository)}" onclick="_deleteImage('${jsAttr(img.id || img.repository)}')" title="Delete image">Delete</button></div></td>
+                <td><div class="dk-actions"><button class="dk-btn small danger" data-testid="image-delete-${escapeAttr(img.id || img.repository)}" data-action="delete-image" data-image="${escapeAttr(img.id || img.repository)}" title="Delete image">Delete</button></div></td>
             </tr>`;
         }
         html += '</tbody></table>';
         content.innerHTML = html;
     } catch (e) {
-        content.innerHTML = _errorCard(e, "renderDockerApp(document.getElementById('dockerContent').closest('.window-body'))");
+        if (token !== _loadToken) return;
+        content.innerHTML = _errorCard(e);
     }
 }
 
@@ -884,25 +910,36 @@ async function _loadImagesTab() {
 // ════════════════════════════════════════════
 
 async function _loadVolumesTab() {
-    const content = document.getElementById('dockerContent');
+    const content = _windowBody && _windowBody.querySelector('#dockerContent');
     if (!content) return;
+    const token = ++_loadToken;
     content.innerHTML = skeletonRows(5);
+    const body = content.closest('.dk-root');
+    _setChrome(body, {
+        title: 'Volumes',
+        sub: 'Named volumes that hold container data.',
+        panelTitle: 'Volumes',
+        panelSub: 'Reading volumes…',
+        actions: `
+            <button class="dk-btn danger small" data-action="prune-volumes" data-testid="volumes-prune-btn" title="Remove all unused volumes">Prune unused</button>
+            <button class="dk-btn small" data-action="refresh" data-testid="volumes-refresh-btn">Refresh</button>`,
+    });
 
     try {
         const r = await apiFetch('/api/volumes');
+        if (token !== _loadToken) return;
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const d = await r.json();
         const vols = d.volumes || [];
 
-        const body = content.closest('.dk-root');
         _setChrome(body, {
             title: 'Volumes',
             sub: 'Named volumes that hold container data.',
             panelTitle: 'Volumes',
             panelSub: `${vols.length} volume${vols.length !== 1 ? 's' : ''}${d.orphaned_count > 0 ? ` · ${d.orphaned_count} orphaned` : ''}`,
             actions: `
-                <button class="dk-btn danger small" onclick="_pruneVolumes()" data-testid="volumes-prune-btn" title="Remove all unused volumes">Prune unused${d.orphaned_count > 0 ? ` (${d.orphaned_count})` : ''}</button>
-                <button class="dk-btn small" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="volumes-refresh-btn">Refresh</button>`,
+                <button class="dk-btn danger small" data-action="prune-volumes" data-testid="volumes-prune-btn" title="Remove all unused volumes">Prune unused${d.orphaned_count > 0 ? ` (${d.orphaned_count})` : ''}</button>
+                <button class="dk-btn small" data-action="refresh" data-testid="volumes-refresh-btn">Refresh</button>`,
         });
 
         if (vols.length === 0) {
@@ -931,13 +968,14 @@ async function _loadVolumesTab() {
                 </td>
                 ${anySize ? `<td class="dk-mono">${v.size_human ? escapeHtml(v.size_human) : '—'}</td>` : ''}
                 <td>${statusTag}</td>
-                <td><div class="dk-actions"><button class="dk-btn small danger" data-testid="volume-delete-${escapeAttr(v.name)}" onclick="_deleteVolume('${jsAttr(v.name)}')" title="Delete volume">Delete</button></div></td>
+                <td><div class="dk-actions"><button class="dk-btn small danger" data-testid="volume-delete-${escapeAttr(v.name)}" data-action="delete-volume" data-name="${escapeAttr(v.name)}" title="Delete volume">Delete</button></div></td>
             </tr>`;
         }
         html += '</tbody></table>';
         content.innerHTML = html;
     } catch (e) {
-        content.innerHTML = _errorCard(e, "renderDockerApp(document.getElementById('dockerContent').closest('.window-body'))");
+        if (token !== _loadToken) return;
+        content.innerHTML = _errorCard(e);
     }
 }
 
@@ -946,18 +984,103 @@ async function _loadVolumesTab() {
 // ════════════════════════════════════════════
 
 function _reloadCurrentTab(bodyEl) {
-    if (!bodyEl || typeof renderDockerApp !== 'function') return;
+    if (!bodyEl) return;
     renderDockerApp(bodyEl);
 }
 
-window.dockerInstallEngine = async function(btnEl) {
+function _handleRootClick(event) {
+    const root = event.currentTarget;
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+
+    const tab = target.closest('[data-tab]');
+    if (tab && root.contains(tab)) {
+        if (tab.disabled) return;
+        _activeTab = tab.dataset.tab;
+        root.querySelectorAll('.dk-nav-item').forEach((item) => {
+            item.classList.toggle('is-active', item === tab);
+        });
+        if (_activeTab === 'containers') _loadContainersTab();
+        else if (_activeTab === 'images') _loadImagesTab();
+        else _loadVolumesTab();
+        return;
+    }
+
+    const actionElement = target.closest('[data-action]');
+    if (actionElement && root.contains(actionElement)) {
+        const { action, name, verb, project, image } = actionElement.dataset;
+        switch (action) {
+            case 'refresh':
+                renderDockerApp(_windowBody);
+                break;
+            case 'engine-install':
+                dockerInstallEngine(actionElement);
+                break;
+            case 'engine-restart':
+                dockerRestartEthos();
+                break;
+            case 'container-action':
+                dockerAction(name, verb, actionElement);
+                break;
+            case 'container-remove':
+                dockerRemove(name, actionElement);
+                break;
+            case 'container-logs':
+                openContainerLogs(name);
+                break;
+            case 'compose-action':
+                dockerComposeAction(project, verb, actionElement);
+                break;
+            case 'toggle-pull':
+                _togglePull(_windowBody);
+                break;
+            case 'execute-pull':
+                _executePull();
+                break;
+            case 'cancel-pull':
+                _cancelPullImage();
+                break;
+            case 'delete-image':
+                _deleteImage(image);
+                break;
+            case 'prune-images':
+                _pruneImages();
+                break;
+            case 'delete-volume':
+                _deleteVolume(name);
+                break;
+            case 'prune-volumes':
+                _pruneVolumes();
+                break;
+            default:
+                return;
+        }
+        event.preventDefault();
+        return;
+    }
+
+    const groupHeader = target.closest('.compose-group-header');
+    if (!groupHeader || !root.contains(groupHeader)) return;
+    const projectName = groupHeader.dataset.composeGroup;
+    if (_expandedProjects.has(projectName)) _expandedProjects.delete(projectName);
+    else _expandedProjects.add(projectName);
+    const expanded = _expandedProjects.has(projectName);
+    const content = root.querySelector('#dockerContent');
+    content.querySelectorAll('tr[data-compose-child]').forEach((row) => {
+        if (row.dataset.composeChild === projectName) row.style.display = expanded ? '' : 'none';
+    });
+    const chevron = groupHeader.querySelector('[data-chevron]');
+    if (chevron) chevron.style.transform = expanded ? 'rotate(90deg)' : '';
+}
+
+async function dockerInstallEngine(btnEl) {
     const ok = await _ctx.modal.confirm(
         'Install Docker Engine',
         'Install Docker Engine and Compose v2 from Docker’s official apt repository?\n\n' +
         'This downloads packages and takes a few minutes. EthOS keeps running, but a restart is needed afterwards to activate Docker access.'
     );
     if (!ok) return;
-    const body = btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-pkg-ethos-docker"] .window-body');
+    const body = _windowBody;
     if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = '0.6'; }
     try {
         const res = await apiFetch('/api/docker/engine/install', { method: 'POST' });
@@ -978,7 +1101,7 @@ window.dockerInstallEngine = async function(btnEl) {
     }
 };
 
-window.dockerRestartEthos = async function() {
+async function dockerRestartEthos() {
     const ok = await _ctx.modal.confirm(
         'Restart EthOS',
         'Restart EthOS NAS to activate Docker access?\n\nThe web server restarts and this page refreshes automatically.'
@@ -993,7 +1116,7 @@ window.dockerRestartEthos = async function() {
     }
 };
 
-window.dockerAction = function(name, action, btnEl) {
+function dockerAction(name, action, btnEl) {
     const verb = action === 'stop' ? 'Stop' : action === 'restart' ? 'Restart' : 'Start';
     _ctx.modal.confirm('Docker Action', `${verb} container "${name}"?`).then(ok => {
         if (!ok) return;
@@ -1011,7 +1134,7 @@ window.dockerAction = function(name, action, btnEl) {
                 throw new Error(d.detail || `HTTP ${r.status}`);
             }
             addNotification('success', `Container "${name}" ${action}ed`);
-            _reloadCurrentTab(btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-pkg-ethos-docker"] .window-body'));
+            _reloadCurrentTab(_windowBody);
         })
         .catch(e => {
             addNotification('error', `Action failed: ${e.message}`);
@@ -1020,7 +1143,7 @@ window.dockerAction = function(name, action, btnEl) {
     });
 };
 
-window.dockerComposeAction = function(project, action, btnEl) {
+function dockerComposeAction(project, action, btnEl) {
     const prompts = {
         up:      ['Compose Up', `Run "docker compose up -d" for project "${project}"? Starts stopped services and applies compose file changes (may pull images).`],
         down:    ['Compose Down', `Run "docker compose down" for project "${project}"? Containers and networks are removed. Volumes (data) are kept.`],
@@ -1044,7 +1167,7 @@ window.dockerComposeAction = function(project, action, btnEl) {
             }
             const verb = action === 'up' ? 'started' : action === 'down' ? 'stopped' : 'destroyed';
             addNotification('success', `Project "${project}" ${verb}`);
-            _reloadCurrentTab(btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-pkg-ethos-docker"] .window-body'));
+            _reloadCurrentTab(_windowBody);
         })
         .catch(e => {
             addNotification('error', `Compose ${action} failed: ${e.message}`);
@@ -1053,7 +1176,7 @@ window.dockerComposeAction = function(project, action, btnEl) {
     });
 };
 
-window.dockerRemove = function(name, btnEl) {
+function dockerRemove(name, btnEl) {
     _ctx.modal.confirm('Remove Container', `Permanently remove container "${name}"? Its data in named volumes is kept.`).then(ok => {
         if (!ok) return;
 
@@ -1068,19 +1191,19 @@ window.dockerRemove = function(name, btnEl) {
                     throw new Error(d.detail || `HTTP ${r.status}`);
                 }
                 addNotification('success', `Container "${name}" removed`);
-                _reloadCurrentTab(btnEl ? btnEl.closest('.window-body') : document.querySelector('[data-testid="window-pkg-ethos-docker"] .window-body'));
+                _reloadCurrentTab(_windowBody);
             })
             .catch(e => addNotification('error', `Remove failed: ${e.message}`));
     });
 };
 
-window.openContainerLogs = function(name) {
+function openContainerLogs(name) {
     // One viewer for every source (docs/logs.md) — no handoff globals.
     openLogs({ container: name });
 };
 
 // Pull controls
-window._togglePull = function (bodyEl) {
+function _togglePull(bodyEl) {
     _pullVisible = !_pullVisible;
     if (_activeTab === 'images') _loadImagesTab();
     else if (bodyEl) renderDockerApp(bodyEl);
@@ -1092,10 +1215,8 @@ async function _cancelPullImage() {
 }
 // Inline onclick handlers resolve against the global scope, and this is an ES
 // module — without the explicit window assignment the ✕ button did nothing.
-window._cancelPullImage = _cancelPullImage;
-
 async function _executePull() {
-    const input = document.getElementById('imagesPullInput');
+    const input = _windowBody && _windowBody.querySelector('#imagesPullInput');
     if (!input) return;
     const name = input.value.trim();
     if (!name) { addNotification('error', 'Please enter an image reference (e.g. nginx:latest)'); return; }
@@ -1118,8 +1239,6 @@ async function _executePull() {
     }
 }
 
-window._executePull = _executePull;
-
 // Delete image
 async function _deleteImage(idOrTag) {
     const displayName = idOrTag.split(':')[0] || idOrTag;
@@ -1141,8 +1260,6 @@ async function _deleteImage(idOrTag) {
     }
 }
 
-window._deleteImage = _deleteImage;
-
 // Prune images
 async function _pruneImages() {
     if (!await _ctx.modal.confirm('Prune Images', 'Remove ALL unused Docker images? This cannot be undone.')) return;
@@ -1159,8 +1276,6 @@ async function _pruneImages() {
         addNotification('error', `Prune failed: ${e.message}`);
     }
 }
-
-window._pruneImages = _pruneImages;
 
 // Delete volume
 async function _deleteVolume(name) {
@@ -1182,8 +1297,6 @@ async function _deleteVolume(name) {
     }
 }
 
-window._deleteVolume = _deleteVolume;
-
 // Prune volumes
 async function _pruneVolumes() {
     if (!await _ctx.modal.confirm('Prune Volumes', 'Remove all unused Docker volumes (named + anonymous)? All data in them will be lost.\n\nVolumes still referenced by any container — including stopped ones — are kept.')) return;
@@ -1200,11 +1313,6 @@ async function _pruneVolumes() {
         addNotification('error', `Prune failed: ${e.message}`);
     }
 }
-
-window._pruneVolumes = _pruneVolumes;
-
-// Expose globally for onclick handlers
-window.renderDockerApp = renderDockerApp;
 
 // ── Package entry point ──────────────────────────────────────────────────────
 export async function render(container, ctx) {
