@@ -1,0 +1,37 @@
+{
+  "schema": 2,
+  "id": "ethos-music",
+  "name": "Music",
+  "version": "1.0.0",
+  "description": "Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared with the EthOS Music Android app. The music API stays in EthOS so the phone keeps working; this package ships the desktop app. Install “Music Engine” for search, streaming and downloads.",
+  "icon": "🎵",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/icon.svg",
+  "category": "media",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js"
+  },
+  "requires": [
+    "ethos-music-engine"
+  ],
+  "changelog": "1.0.0: first release. The Music desktop app moves out of the core install; it requires the Music Engine package, which Package Center installs automatically. Your library, likes, playlists and podcast subscriptions stay in EthOS and remain shared with the Android app.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/frontend/app.js",
+      "sha256": "05531ea77fe614b6280e60efe4d57426b8507a7a04ae83d182a1534da90b230e",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/icon.svg",
+      "sha256": "5b9818289c95e214a41edbc095019427be19db8ab2d9e79d9fba33e5dfef3be6",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}

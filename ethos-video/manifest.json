@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "id": "ethos-video",
+  "name": "Video Station",
+  "version": "1.0.0",
+  "description": "Browse and watch the videos on your NAS: live folder browsing, ffmpeg thumbnails, resume positions, subtitles and TMDB metadata. The video API stays in EthOS so the Android Video app keeps working; this package ships the desktop app. Needs ffmpeg on the NAS for thumbnails and transcoding.",
+  "icon": "🎬",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/icon.svg",
+  "category": "media",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js"
+  },
+  "changelog": "1.0.0: first release. The Video Station desktop app moves out of the core install; the video library API, thumbnails and streaming stay in EthOS, shared with the Android app.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/frontend/app.js",
+      "sha256": "4b9ddcc4e9a88d7d2f8d7607ed139c01ecfc11222b6c2e2b7a5e813846282183",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/icon.svg",
+      "sha256": "e8fe605f81a27a17184d7be9277de62391c74b3791016dbd2b0efbfd3c8ae422",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}

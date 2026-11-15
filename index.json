@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-15T07:33:28+00:00",
+  "generated_at": "2026-11-15T07:55:13+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -137,6 +137,29 @@
       "size_bytes": 5240
     },
     {
+      "id": "ethos-music",
+      "name": "Music",
+      "version": "1.0.0",
+      "description": "Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared with the EthOS Music Android app. The music API stays in EthOS so the phone keeps working; this package ships the desktop app. Install “Music Engine” for search, streaming and downloads.",
+      "icon": "🎵",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/icon.svg",
+      "category": "media",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [
+        "ethos-music-engine"
+      ],
+      "runtime": "compose",
+      "capabilities": [],
+      "screenshots": [],
+      "changelog": "1.0.0: first release. The Music desktop app moves out of the core install; it requires the Music Engine package, which Package Center installs automatically. Your library, likes, playlists and podcast subscriptions stay in EthOS and remain shared with the Android app.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/manifest.json",
+      "manifest_sha256": "d3ed496669604dc60f410ec327072d6b74aebb40c76c9ce9ccbc64a14c91c0e6",
+      "size_bytes": 108851
+    },
+    {
       "id": "ethos-music-engine",
       "name": "Music Engine",
       "version": "1.0.0",
@@ -156,6 +179,48 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music-engine/manifest.json",
       "manifest_sha256": "22fe19358dbd56348c39b51a6c3b53a7bdfad35f9611de424cc7b29c629091ec",
       "size_bytes": 9436
+    },
+    {
+      "id": "ethos-photos",
+      "name": "Photos",
+      "version": "1.0.0",
+      "description": "PhotoStation for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer. The gallery index stays in EthOS (the Android Moments app reads it too); this package ships the desktop app, so it can update on its own.",
+      "icon": "📷",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/icon.svg",
+      "category": "media",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [],
+      "screenshots": [],
+      "changelog": "1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/manifest.json",
+      "manifest_sha256": "f90b4de7c4b5f208465bf29fa142d0e1b0b1f11155df132c47a416394f79675c",
+      "size_bytes": 181533
+    },
+    {
+      "id": "ethos-video",
+      "name": "Video Station",
+      "version": "1.0.0",
+      "description": "Browse and watch the videos on your NAS: live folder browsing, ffmpeg thumbnails, resume positions, subtitles and TMDB metadata. The video API stays in EthOS so the Android Video app keeps working; this package ships the desktop app. Needs ffmpeg on the NAS for thumbnails and transcoding.",
+      "icon": "🎬",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/icon.svg",
+      "category": "media",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [],
+      "screenshots": [],
+      "changelog": "1.0.0: first release. The Video Station desktop app moves out of the core install; the video library API, thumbnails and streaming stay in EthOS, shared with the Android app.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/manifest.json",
+      "manifest_sha256": "1bc52b7bf079c36b0fe388e3f5e7b85e21b13a44d7c116b022d845822eac72f9",
+      "size_bytes": 132617
     },
     {
       "id": "ethos-welcome",
