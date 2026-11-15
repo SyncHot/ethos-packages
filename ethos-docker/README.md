@@ -11,7 +11,9 @@ the privilege.
 - No Docker socket bind, no `privileged`, no host mounts in this package.
 
 Long operations (engine install, image pull, compose up/down) report through the shared progress
-panel; container logs open in the unified Logs viewer.
+panel; container logs open in the unified Logs viewer. The window uses the shared package shell
+(218 px rail with text-only nav, summary tiles, one table per section) and follows the light/dark
+theme toggle.
 
 ## Development
 

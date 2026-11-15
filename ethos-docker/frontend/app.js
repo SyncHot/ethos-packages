@@ -66,6 +66,192 @@ function showRestartOverlay(...args) { return _ctx.windows.showRestartOverlay(..
 function openLogs(options) { return _ctx.logs.open(options); }
 function startTask(...args) { return _ctx.progress.startTask(...args); }
 
+// ── Shared package shell (same layout/tokens as AntiVirus, Domains, Backups) ──
+const STYLE = `
+.dk-root {
+    color-scheme: light;
+    --dk-bg: #eef2f7;
+    --dk-side-bg: rgba(255, 255, 255, 0.88);
+    --dk-panel: #ffffff;
+    --dk-surface: #f4f5f7;
+    --dk-input-bg: #ffffff;
+    --dk-border: #e3e5e8;
+    --dk-text: #1f2430;
+    --dk-muted: #5b6472;
+    --dk-accent: #2563eb;
+    --dk-accent-soft: rgba(37, 99, 235, 0.10);
+    --dk-accent-border: rgba(37, 99, 235, 0.45);
+    --dk-green: #15803d;
+    --dk-green-soft: rgba(21, 128, 61, 0.12);
+    --dk-green-border: rgba(21, 128, 61, 0.35);
+    --dk-red: #b91c1c;
+    --dk-red-soft: rgba(185, 28, 28, 0.08);
+    --dk-red-border: rgba(185, 28, 28, 0.32);
+    --dk-amber: #b45309;
+    --dk-amber-soft: rgba(180, 83, 9, 0.10);
+    --dk-amber-border: rgba(180, 83, 9, 0.30);
+    --dk-hover: rgba(15, 23, 42, 0.06);
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 8% 4%, var(--dk-glow-1, rgba(37, 99, 235, 0.08)), transparent 40%),
+        radial-gradient(circle at 92% 96%, var(--dk-glow-2, rgba(21, 128, 61, 0.06)), transparent 40%),
+        var(--dk-bg);
+    color: var(--dk-text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root.dark .dk-root {
+    color-scheme: dark;
+    --dk-bg: #08111d;
+    --dk-side-bg: rgba(2, 6, 23, 0.45);
+    --dk-panel: rgba(148, 163, 184, 0.07);
+    --dk-surface: rgba(15, 23, 42, 0.45);
+    --dk-input-bg: rgba(2, 6, 23, 0.55);
+    --dk-border: rgba(148, 163, 184, 0.22);
+    --dk-text: #e2e8f0;
+    --dk-muted: #94a3b8;
+    --dk-accent: #38bdf8;
+    --dk-accent-soft: rgba(56, 189, 248, 0.14);
+    --dk-accent-border: rgba(56, 189, 248, 0.55);
+    --dk-green: #4ade80;
+    --dk-green-soft: rgba(74, 222, 128, 0.14);
+    --dk-green-border: rgba(74, 222, 128, 0.45);
+    --dk-red: #f87171;
+    --dk-red-soft: rgba(248, 113, 113, 0.12);
+    --dk-red-border: rgba(248, 113, 113, 0.45);
+    --dk-amber: #fbbf24;
+    --dk-amber-soft: rgba(251, 191, 36, 0.10);
+    --dk-amber-border: rgba(251, 191, 36, 0.45);
+    --dk-hover: rgba(148, 163, 184, 0.09);
+}
+.dk-root *, .dk-root *::before, .dk-root *::after { box-sizing: border-box; }
+.dk-root button, .dk-root input { font-family: inherit; }
+.dk-side { flex: none; width: 218px; padding: 20px 14px; border-right: 1px solid var(--dk-border);
+    background: var(--dk-side-bg); display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+.dk-brand { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
+.dk-brand-icon { font-size: 26px; line-height: 1; }
+.dk-brand strong { display: block; font-size: 13.5px; }
+.dk-brand small { display: block; margin-top: 2px; font-size: 11px; color: var(--dk-muted); }
+.dk-nav { display: flex; flex-direction: column; gap: 2px; }
+.dk-nav-item { text-align: left; border: 0; background: transparent; color: var(--dk-text);
+    padding: 9px 11px; border-radius: 9px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.dk-nav-item:hover { background: var(--dk-hover); }
+.dk-nav-item:disabled { opacity: 0.45; cursor: not-allowed; }
+.dk-nav-item.is-active { background: var(--dk-accent-soft); color: var(--dk-accent); }
+.dk-side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding: 0 4px; }
+.dk-side-note { font-size: 11px; line-height: 1.45; color: var(--dk-muted); }
+.dk-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+    font-size: 10px; font-weight: 700; background: var(--dk-surface); border: 1px solid var(--dk-border); color: var(--dk-muted); }
+.dk-pill.ready { background: var(--dk-green-soft); border-color: transparent; color: var(--dk-green); }
+.dk-pill.starting { background: var(--dk-amber-soft); border-color: transparent; color: var(--dk-amber); }
+.dk-pill.offline { background: var(--dk-red-soft); border-color: transparent; color: var(--dk-red); }
+.dk-main { flex: 1; min-width: 0; overflow-y: auto; padding: 24px 28px 32px; }
+.dk-main header h1 { margin: 0; font-size: clamp(22px, 3.4vw, 30px); letter-spacing: -0.02em; }
+.dk-page-sub { margin: 6px 0 0; font-size: 12px; color: var(--dk-muted); }
+.dk-status { margin: 8px 0 0; min-height: 18px; font-size: 12px; font-weight: 600; color: var(--dk-accent); }
+.dk-status.error { color: var(--dk-red); }
+.dk-status.warn { color: var(--dk-amber); }
+.dk-view { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
+.dk-panel { padding: 17px 18px; border: 1px solid var(--dk-border); border-radius: 15px; background: var(--dk-panel); }
+.dk-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.dk-toolbar h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.dk-sub { margin: 4px 0 0; font-size: 12px; color: var(--dk-muted); }
+.dk-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dk-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-bottom: 14px; }
+.dk-summary div { padding: 11px; border: 1px solid var(--dk-border); border-radius: 10px; background: var(--dk-surface); }
+.dk-summary span { display: block; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dk-muted); }
+.dk-summary strong { display: block; margin-top: 4px; font-size: 20px; font-variant-numeric: tabular-nums; }
+.dk-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.dk-table th { padding: 8px 9px; text-align: left; font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--dk-muted); border-bottom: 1px solid var(--dk-border); }
+.dk-table td { padding: 9px; vertical-align: middle; border-bottom: 1px solid var(--dk-border); }
+.dk-table tr:last-child td { border-bottom: 0; }
+.dk-name { font-weight: 600; color: var(--dk-text); }
+.dk-meta-line { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 400; color: var(--dk-muted); }
+.dk-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.dk-actions { display: flex; justify-content: flex-end; gap: 4px; flex-wrap: wrap; }
+.dk-btn { border: 1px solid var(--dk-border); background: var(--dk-surface); color: var(--dk-text);
+    border-radius: 9px; padding: 6px 12px; font-size: 11px; font-weight: 600; cursor: pointer; }
+.dk-btn:hover { background: var(--dk-hover); }
+.dk-btn.primary { background: var(--dk-accent); border-color: var(--dk-accent); color: #fff; }
+:root.dark .dk-root .dk-btn.primary { color: #04121f; }
+.dk-btn.danger { color: var(--dk-red); border-color: var(--dk-red-border); }
+.dk-btn.small { padding: 4px 9px; font-size: 10px; }
+.dk-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.dk-input { padding: 7px 10px; border-radius: 9px; border: 1px solid var(--dk-border);
+    background: var(--dk-input-bg); color: var(--dk-text); font-size: 12px; }
+.dk-tag { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 999px;
+    font-size: 10px; font-weight: 700; background: var(--dk-surface); border: 1px solid var(--dk-border); color: var(--dk-muted); }
+.dk-tag.is-ok { background: var(--dk-green-soft); border-color: transparent; color: var(--dk-green); }
+.dk-tag.is-bad { background: var(--dk-red-soft); border-color: transparent; color: var(--dk-red); }
+.dk-tag.is-warn { background: var(--dk-amber-soft); border-color: transparent; color: var(--dk-amber); }
+.dk-tag.is-info { background: var(--dk-accent-soft); border-color: transparent; color: var(--dk-accent); }
+.dk-empty { padding: 26px 18px; border: 1px dashed var(--dk-border); border-radius: 12px;
+    text-align: center; color: var(--dk-muted); font-size: 11px; line-height: 1.6; }
+.dk-empty strong { display: block; margin-bottom: 4px; font-size: 13px; color: var(--dk-text); }
+.dk-callout { padding: 10px 12px; margin-bottom: 12px; border-radius: 9px; font-size: 11px; line-height: 1.55;
+    background: var(--dk-amber-soft); border: 1px solid var(--dk-amber-border); color: var(--dk-amber); }
+.dk-callout.error { background: var(--dk-red-soft); border-color: var(--dk-red-border); color: var(--dk-red); }
+.dk-callout.info { background: var(--dk-accent-soft); border-color: var(--dk-accent-border); color: var(--dk-accent); }
+.dk-callout strong { display: block; margin-bottom: 3px; font-size: 12px; }
+.dk-section { padding: 14px 2px 6px; font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--dk-muted); }
+.dk-warn { display: block; margin-top: 2px; font-size: 10.5px; }
+.dk-warn.error { color: var(--dk-red); }
+.dk-warn.warn { color: var(--dk-amber); }
+@media (max-width: 780px) {
+    .dk-root { flex-direction: column; }
+    .dk-side { width: auto; flex: none; flex-direction: row; align-items: center; gap: 10px;
+        padding: 10px 12px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--dk-border); }
+    .dk-nav { flex-direction: row; }
+    .dk-side-note { display: none; }
+    .dk-side-foot { margin-top: 0; flex-direction: row; align-items: center; }
+    .dk-main { padding: 16px; }
+    .dk-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+`;
+
+function _ensureStyles() {
+    if (document.getElementById('dk-docker-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'dk-docker-styles';
+    style.textContent = STYLE;
+    document.head.appendChild(style);
+}
+
+/** Update the shared header + panel chrome for the active section. */
+function _setChrome(body, { title, sub, panelTitle, panelSub, actions }) {
+    if (!body) return;
+    const set = (selector, html) => {
+        const el = body.querySelector(selector);
+        if (el && html != null) el.innerHTML = html;
+    };
+    const text = (selector, value) => {
+        const el = body.querySelector(selector);
+        if (el && value != null) el.textContent = value;
+    };
+    text('[data-page-title]', title);
+    text('[data-page-sub]', sub);
+    text('[data-panel-title]', panelTitle);
+    text('[data-panel-sub]', panelSub);
+    set('[data-panel-actions]', actions || '');
+}
+
+function _setStatus(body, text, tone = '') {
+    const el = body ? body.querySelector('[data-status]') : null;
+    if (!el) return;
+    el.textContent = text;
+    el.className = `dk-status${tone ? ` ${tone}` : ''}`;
+}
+
+function _setEnginePill(body, label, tone) {
+    const el = body ? body.querySelector('[data-health]') : null;
+    if (!el) return;
+    el.textContent = label;
+    el.className = `dk-pill${tone ? ` ${tone}` : ''}`;
+}
+
 
 let _activeTab = 'containers';
 let _pullVisible = false;
@@ -98,19 +284,20 @@ function _statusMeta(status) {
 function _cap(s) { return String(s || '?').charAt(0).toUpperCase() + String(s || '').slice(1); }
 
 function _errorCard(e, retryFn) {
-    const msg = e.message.includes('503') ? 'Docker daemon is not running or not accessible.' : (e.message || 'Unknown error');
-    return `<div class="glass-card" style="text-align:center;padding:40px;">
-        <div style="font-size:40px;margin-bottom:12px;opacity:.6;">⚠️</div>
-        <p style="color:#ef4444;font-weight:600;margin-bottom:6px;">${escapeHtml(msg)}</p>
-        ${retryFn ? `<button class="btn-ghost" onclick="${retryFn}" style="margin-top:12px;">🔄 Try again</button>` : ''}
+    const msg = String(e.message || '').includes('503')
+        ? 'Docker daemon is not running or not accessible.'
+        : (e.message || 'Unknown error');
+    return `<div class="dk-empty" data-testid="docker-error">
+        <strong>Could not load this view</strong>
+        <span style="color:var(--dk-red);">${escapeHtml(msg)}</span>
+        ${retryFn ? `<div class="dk-row" style="justify-content:center;margin-top:12px;"><button class="dk-btn" onclick="${retryFn}">Try again</button></div>` : ''}
     </div>`;
 }
 
-function _emptyCard(emoji, title, hint) {
-    return `<div class="glass-card" style="text-align:center;padding:48px 24px;">
-        <div style="font-size:56px;margin-bottom:16px;opacity:.5;">${emoji}</div>
-        <p style="font-size:16px;font-weight:600;color: var(--text-2);margin-bottom:4px;">${escapeHtml(title)}</p>
-        <p style="font-size:13px;color: var(--text-3);">${hint || ''}</p>
+function _emptyCard(title, hint) {
+    return `<div class="dk-empty">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${hint || ''}</span>
     </div>`;
 }
 
@@ -142,19 +329,6 @@ function _stopEnginePolling() {
         clearTimeout(_engineJobTimer);
         _engineJobTimer = null;
     }
-}
-
-function _engineDiagnostics(engine) {
-    const rows = [
-        ['Docker CLI', engine.cli ? 'found' : 'not found'],
-        ['Daemon socket', engine.socket && engine.socket.exists ? engine.socket.path : 'missing'],
-        ['Compose plugin', engine.compose || 'not available'],
-        ['docker group', engine.group_member ? 'active'
-            : (engine.group_granted ? 'granted — restart required' : 'not granted')],
-    ];
-    return `<ul style="font-size:12px;color:var(--text-2);margin:12px 0 0;padding-left:18px;line-height:1.7;" data-testid="docker-engine-diagnostics">
-        ${rows.map(([key, value]) => `<li>${escapeHtml(key)}: <b style="font-weight:600;">${escapeHtml(value)}</b></li>`).join('')}
-    </ul>`;
 }
 
 function _renderEngineJob(box, job) {
@@ -214,56 +388,75 @@ function _watchEngineJob(body, jobId) {
 }
 
 async function _renderEnginePanel(body, engine) {
-    const content = body.querySelector('#dockerContent');
+    const content = body ? body.querySelector('#dockerContent') : null;
     if (!content) return;
-    const meta = body.querySelector('[data-testid="docker-engine-meta"]');
-    if (meta) meta.textContent = 'Docker Engine not available';
 
     const isAdmin = await _adminCheck();
     const conflict = engine.conflict || '';
     const restartNeeded = !!engine.restart_required;
     let title;
     let detail;
+    let tone = 'info';
     let action = '';
 
     if (restartNeeded) {
-        title = 'Docker Engine is installed — restart EthOS to activate it';
+        title = 'Installed — restart EthOS to activate Docker';
         detail = 'EthOS was added to the docker group after it started, so this process cannot open the Docker socket yet. A restart finishes the setup.';
         if (isAdmin) {
-            action = `<button class="btn-primary" data-testid="docker-engine-restart" onclick="dockerRestartEthos()" style="font-size:13px;padding:8px 16px;">♻ Restart EthOS</button>`;
+            action = `<button class="dk-btn primary" data-testid="docker-engine-restart" onclick="dockerRestartEthos()">♻ Restart EthOS</button>`;
         }
     } else if (conflict) {
         title = 'Another container engine is installed';
         detail = conflict;
+        tone = 'error';
     } else if (!engine.helper) {
         title = 'Docker Engine is not installed';
         detail = 'EthOS needs its privileged installer helper before it can provision Docker. Re-run the service setup on the NAS (as root):';
-        action = `<code style="display:inline-block;background:var(--surface-2);padding:6px 10px;border-radius:6px;font-size:12px;">sudo bash setup_scripts/setup_service.sh</code>`;
+        tone = 'error';
+        action = `<code class="dk-mono" style="background:var(--dk-surface);padding:6px 10px;border-radius:6px;">sudo bash setup_scripts/setup_service.sh</code>`;
     } else if (!engine.install_supported) {
         title = 'Docker Engine cannot be installed automatically';
         detail = `Automatic installation is supported on Ubuntu and Debian. This system reports ${engine.os && engine.os.id ? engine.os.id : 'an unknown distribution'} ${engine.os && engine.os.version ? engine.os.version : ''}.`;
+        tone = 'error';
     } else {
         title = 'Docker Engine is not installed';
         detail = 'Install Docker Engine and Compose v2 from Docker’s official apt repository. This needs internet access and takes a few minutes.';
         if (isAdmin) {
-            action = `<button class="btn-primary" data-testid="docker-engine-install" onclick="dockerInstallEngine(this)" style="font-size:13px;padding:8px 16px;">⬇ Install Docker Engine</button>`;
+            action = `<button class="dk-btn primary" data-testid="docker-engine-install" onclick="dockerInstallEngine(this)">⬇ Install Docker Engine</button>`;
         } else {
-            action = '<span style="font-size:12px;color:var(--text-3);">An administrator can install it from this screen.</span>';
+            action = `<span class="dk-sub">An administrator can install it from this screen.</span>`;
         }
     }
 
+    _setChrome(body, {
+        title: 'Docker Engine',
+        sub: 'The host service every container needs.',
+        panelTitle: 'Engine status',
+        panelSub: 'Host software, not part of this package.',
+        actions: '',
+    });
+    _setStatus(body, restartNeeded ? 'Engine installed — restart required.' : 'Engine unavailable.',
+        restartNeeded ? 'warn' : 'error');
+    _setEnginePill(body, 'offline', 'offline');
+    const note = body.querySelector('[data-engine-note]');
+    if (note) note.textContent = 'Docker Engine not available.';
+    body.querySelectorAll('.dk-nav-item').forEach((item) => { item.disabled = true; });
+
     content.innerHTML = `
-        <div class="glass-card" data-testid="docker-engine-panel" style="padding:24px;max-width:720px;">
-            <div style="display:flex;align-items:flex-start;gap:12px;">
-                <div style="font-size:32px;line-height:1;">🐳</div>
-                <div style="min-width:0;">
-                    <div style="font-size:15px;font-weight:700;color:var(--text-1);">${escapeHtml(title)}</div>
-                    <div style="font-size:13px;color:var(--text-2);line-height:1.55;margin-top:6px;">${escapeHtml(detail)}</div>
-                    ${_engineDiagnostics(engine)}
-                </div>
-            </div>
-            ${action ? `<div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;">${action}</div>` : ''}
-            <div id="engineJobBox" data-testid="docker-engine-job" style="margin-top:14px;"></div>
+        <div class="dk-callout ${tone}" data-testid="docker-engine-panel">
+            <strong>${escapeHtml(title)}</strong>
+            ${escapeHtml(detail)}
+            <ul style="margin:10px 0 0;padding-left:16px;line-height:1.7;" data-testid="docker-engine-diagnostics">
+                ${[
+                    ['Docker CLI', engine.cli ? 'found' : 'not found'],
+                    ['Daemon socket', engine.socket && engine.socket.exists ? engine.socket.path : 'missing'],
+                    ['Compose plugin', engine.compose || 'not available'],
+                    ['docker group', engine.group_member ? 'active'
+                        : (engine.group_granted ? 'granted — restart required' : 'not granted')],
+                ].map(([key, value]) => `<li>${escapeHtml(key)}: <b>${escapeHtml(value)}</b></li>`).join('')}
+            </ul>
+            ${action ? `<div class="dk-row" style="margin-top:12px;">${action}</div>` : ''}
+            <div id="engineJobBox" data-testid="docker-engine-job" style="margin-top:12px;"></div>
         </div>`;
 }
 
@@ -273,48 +466,72 @@ async function _renderEnginePanel(body, engine) {
 
 export async function renderDockerApp(body) {
     _stopEnginePolling();
+    _ensureStyles();
     body.innerHTML = `
-        <div style="display:flex;flex-direction:column;height:100%;background:var(--surface-0);color: var(--text-1);">
-            <div style="padding:16px 20px 0;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <h2 style="font-size:18px;font-weight:700;color: var(--text-1);margin:0;">🐳 Docker Manager <span data-testid="docker-engine-meta" style="font-size:11px;font-weight:500;color:var(--text-3);margin-left:6px;"></span></h2>
-                    <button class="btn-ghost" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="docker-refresh-btn" style="font-size:12px;padding:5px 12px;">🔄 Refresh</button>
+        <div class="dk-root" data-testid="docker-root">
+            <aside class="dk-side">
+                <div class="dk-brand">
+                    <span class="dk-brand-icon" aria-hidden="true">🐳</span>
+                    <div><strong>Docker Manager</strong><small>EthOS package</small></div>
                 </div>
-            </div>
-            <div id="dockerTabs" style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface-0);padding:8px 20px 0;gap:4px;" data-testid="docker-tabs">
-                <button class="docker-tab active" data-tab="containers" data-testid="docker-tab-containers" style="padding:10px 16px;background:none;border:none;color: var(--text-1);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--accent);transition:all .15s;">Containers</button>
-                <button class="docker-tab" data-tab="images" data-testid="docker-tab-images" style="padding:10px 16px;background:none;border:none;color: var(--text-3);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;">Images</button>
-                <button class="docker-tab" data-tab="volumes" data-testid="docker-tab-volumes" style="padding:10px 16px;background:none;border:none;color: var(--text-3);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;">Volumes</button>
-            </div>
-            <div id="dockerContent" style="flex:1;overflow-y:auto;padding:16px 20px;">
-                ${skeletonRows(6)}
-            </div>
+                <nav class="dk-nav" id="dockerTabs" data-testid="docker-tabs" aria-label="Docker Manager sections">
+                    <button class="dk-nav-item${_activeTab === 'containers' ? ' is-active' : ''}" type="button" data-tab="containers" data-testid="docker-tab-containers">Containers</button>
+                    <button class="dk-nav-item${_activeTab === 'images' ? ' is-active' : ''}" type="button" data-tab="images" data-testid="docker-tab-images">Images</button>
+                    <button class="dk-nav-item${_activeTab === 'volumes' ? ' is-active' : ''}" type="button" data-tab="volumes" data-testid="docker-tab-volumes">Volumes</button>
+                </nav>
+                <div class="dk-side-foot">
+                    <span class="dk-pill starting" data-health role="status" aria-live="polite">Checking engine…</span>
+                    <span class="dk-side-note" data-engine-note>Docker Engine and Compose v2.</span>
+                </div>
+            </aside>
+            <main class="dk-main">
+                <header>
+                    <h1 data-page-title>Containers</h1>
+                    <p class="dk-page-sub" data-page-sub>Everything running on this NAS.</p>
+                    <p class="dk-status" data-status role="status" aria-live="polite">Reading the Docker engine…</p>
+                </header>
+                <div class="dk-view">
+                    <section class="dk-panel">
+                        <div class="dk-toolbar">
+                            <div>
+                                <h2 data-panel-title>Containers</h2>
+                                <p class="dk-sub" data-panel-sub></p>
+                            </div>
+                            <div class="dk-row" data-panel-actions></div>
+                        </div>
+                        <div id="dockerContent" data-testid="docker-content">
+                            ${skeletonRows(5)}
+                        </div>
+                    </section>
+                </div>
+            </main>
         </div>`;
 
-    // The daemon has to answer before any tab makes sense. When it does not, the
-    // screen explains why and offers the one-command install instead of four
-    // tabs that can only fail with "Docker daemon is not running".
+    // The daemon has to answer before any section makes sense. When it does not,
+    // the screen explains why and offers the one-command install instead of tabs
+    // that can only fail with "Docker daemon is not running".
     const engine = await _engineStatus();
     if (engine && !engine.daemon) {
-        const tabs = body.querySelector('#dockerTabs');
-        if (tabs) tabs.style.display = 'none';
         await _renderEnginePanel(body, engine);
         return;
     }
+
     if (engine && engine.version) {
-        const meta = body.querySelector('[data-testid="docker-engine-meta"]');
-        if (meta) meta.textContent = `v${engine.version}${engine.compose ? ' · compose ' + engine.compose : ''}`;
+        _setEnginePill(body, 'ready', 'ready');
+        const compose = engine.compose ? ` · Compose ${engine.compose}` : '';
+        _setStatus(body, `Docker ${engine.version}${compose} is running.`);
+        const note = body.querySelector('[data-engine-note]');
+        if (note) note.textContent = `Docker ${engine.version}${compose}`;
+    } else {
+        _setEnginePill(body, 'unknown', 'starting');
+        _setStatus(body, 'Engine status unavailable.', 'warn');
     }
 
-    body.querySelectorAll('.docker-tab').forEach(tab => {
+    body.querySelectorAll('.dk-nav-item').forEach((tab) => {
         tab.addEventListener('click', () => {
             _activeTab = tab.dataset.tab;
-            body.querySelectorAll('.docker-tab').forEach(t => {
-                t.style.color = 'var(--text-3)';
-                t.style.borderBottomColor = 'transparent';
-            });
-            tab.style.color = 'var(--text-1)';
-            tab.style.borderBottomColor = 'var(--accent)';
+            body.querySelectorAll('.dk-nav-item').forEach((t) => t.classList.remove('is-active'));
+            tab.classList.add('is-active');
             if (_activeTab === 'containers') _loadContainersTab();
             else if (_activeTab === 'images') _loadImagesTab();
             else _loadVolumesTab();
@@ -344,17 +561,23 @@ function _projectLabel(name, info) {
 }
 
 /** Section divider inside the containers table (System vs user projects). */
-function _sectionRow(label, colspan = 6) {
-    return `<tr class="docker-section-row"><td colspan="${colspan}" style="padding:16px 2px 6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color: var(--text-3);">${escapeHtml(label)}</td></tr>`;
+function _sectionRow(label, colspan = 5) {
+    return `<tr><td colspan="${colspan}" class="dk-section">${escapeHtml(label)}</td></tr>`;
+}
+
+function _statusTone(status) {
+    if (status === 'running') return 'is-ok';
+    if (status === 'exited') return 'is-bad';
+    if (status === 'paused' || status === 'restarting') return 'is-warn';
+    return 'is-info';
 }
 
 function _containerRow(c, project, hidden) {
     const safeName = escapeAttr(c.name || '?');
     const meta = _statusMeta(c.status);
     const isRunning = c.status === 'running';
-    // Inside a compose group, show which service the container belongs to.
     const serviceTag = (project && c.compose_service)
-        ? `<span style="color: var(--text-3);font-size:11px;font-weight:400;margin-left:6px;" title="compose service">· ${escapeHtml(c.compose_service)}</span>`
+        ? `<span class="dk-meta-line" style="display:inline;margin-left:6px;">· ${escapeHtml(c.compose_service)}</span>`
         : '';
     // Diagnostics: a running container with no network endpoint cannot resolve
     // its peers (EAI_AGAIN), and `restart: no` means a stopped container never
@@ -362,35 +585,32 @@ function _containerRow(c, project, hidden) {
     let warn = '';
     const restarts = Number(c.restart_count || 0);
     if (c.status === 'restarting') {
-        warn = `<div data-testid="container-warn-crashloop-${safeName}" style="color:#ef4444;font-size:11px;margin-top:3px;" title="Docker keeps restarting this container — open the logs to see why">↻ restart loop${restarts ? ` · ${restarts}× restarts` : ''}</div>`;
+        warn = `<span class="dk-warn error" data-testid="container-warn-crashloop-${safeName}" title="Docker keeps restarting this container — open the logs to see why">restart loop${restarts ? ` · ${restarts}×` : ''}</span>`;
     } else if (c.network_detached) {
-        warn = `<div data-testid="container-warn-network-${safeName}" style="color:#ef4444;font-size:11px;margin-top:3px;" title="Attached to no Docker network — DNS lookups for other services will fail">⚠ no network attached</div>`;
+        warn = `<span class="dk-warn error" data-testid="container-warn-network-${safeName}" title="Attached to no Docker network — DNS lookups fail">no network attached</span>`;
     } else if (!isRunning && (c.restart_policy || 'no') === 'no') {
-        warn = `<div data-testid="container-warn-restart-${safeName}" style="color:#eab308;font-size:11px;margin-top:3px;" title="Restart policy is 'no' — this container stays down until started manually">⚠ won't auto-restart</div>`;
+        warn = `<span class="dk-warn warn" data-testid="container-warn-restart-${safeName}" title="Restart policy is 'no' — stays down until started manually">won't auto-restart</span>`;
     } else if (c.health === 'unhealthy') {
-        warn = `<div data-testid="container-warn-health-${safeName}" style="color:#ef4444;font-size:11px;margin-top:3px;">⚠ unhealthy</div>`;
+        warn = `<span class="dk-warn error" data-testid="container-warn-health-${safeName}">unhealthy</span>`;
     }
 
     return `<tr${project ? ` data-compose-child="${escapeAttr(project)}"` : ''}${hidden ? ' style="display:none;"' : ''}>
+        <td><span class="dk-tag ${_statusTone(c.status)}" data-testid="container-status-${safeName}">${escapeHtml(meta.label)}</span></td>
         <td>
-            <span style="display:inline-flex;align-items:center;gap:7px;">
-                <span style="width:8px;height:8px;border-radius:50%;background:${meta.dot};flex-shrink:0;"></span>
-                <span class="${meta.badge}" data-testid="container-status-${safeName}" style="padding:2px 9px;border-radius:5px;font-size:11px;font-weight:600;">${escapeHtml(meta.label)}</span>
-            </span>
+            <span class="dk-name">${escapeHtml(c.name || '?')}</span>${serviceTag}
+            <span class="dk-meta-line">${escapeHtml(c.state || c.status || '—')}${warn}</span>
         </td>
-        <td style="font-weight:600;color: var(--text-1);">${escapeHtml(c.name || '?')}${serviceTag}</td>
-        <td style="font-family:monospace;font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeAttr(c.image || '')}">${escapeHtml(c.image || '—')}</td>
-        <td style="color: var(--text-2);font-size:12px;white-space:nowrap;">${escapeHtml(c.state || c.status || '—')}${warn}</td>
-        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;font-size:12px;" title="${escapeAttr(c.ports || '')}">${formatPorts(c.ports)}</td>
+        <td class="dk-mono" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeAttr(c.image || '')}">${escapeHtml(c.image || '—')}</td>
+        <td class="dk-mono" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeAttr(c.ports || '')}">${formatPorts(c.ports)}</td>
         <td>
-            <div style="display:flex;gap:4px;">
+            <div class="dk-actions">
                 ${isRunning
-                    ? `<button class="btn-ghost" data-testid="container-action-${safeName}-stop" onclick="dockerAction('${safeName}','stop',this)" style="font-size:11px;padding:3px 9px;color:#ef4444;" title="Stop container">⏹ Stop</button>
-                       <button class="btn-ghost" data-testid="container-action-${safeName}-restart" onclick="dockerAction('${safeName}','restart',this)" style="font-size:11px;padding:3px 9px;color:#eab308;" title="Restart container">↻ Restart</button>`
-                    : `<button class="btn-ghost" data-testid="container-action-${safeName}-start" onclick="dockerAction('${safeName}','start',this)" style="font-size:11px;padding:3px 9px;color:#22c55e;" title="Start container">▶ Start</button>`
+                    ? `<button class="dk-btn small danger" data-testid="container-action-${safeName}-stop" onclick="dockerAction('${safeName}','stop',this)" title="Stop container">Stop</button>
+                       <button class="dk-btn small" data-testid="container-action-${safeName}-restart" onclick="dockerAction('${safeName}','restart',this)" title="Restart container">Restart</button>`
+                    : `<button class="dk-btn small" data-testid="container-action-${safeName}-start" onclick="dockerAction('${safeName}','start',this)" title="Start container">Start</button>`
                 }
-                <button class="btn-ghost" data-testid="container-action-${safeName}-logs" onclick="openContainerLogs('${safeName}')" style="font-size:11px;padding:3px 9px;color:#3b82f6;" title="View logs">📋 Logs</button>
-                <button class="btn-ghost" data-testid="container-action-${safeName}-remove" onclick="dockerRemove('${safeName}',this)" style="font-size:11px;padding:3px 9px;color:#ef4444;" title="Remove container">🗑</button>
+                <button class="dk-btn small" data-testid="container-action-${safeName}-logs" onclick="openContainerLogs('${safeName}')" title="Open the unified log viewer">Logs</button>
+                <button class="dk-btn small danger" data-testid="container-action-${safeName}-remove" onclick="dockerRemove('${safeName}',this)" title="Remove container">Remove</button>
             </div>
         </td>
     </tr>`;
@@ -402,32 +622,32 @@ function _composeGroupRow(project, members, info) {
     const running = members.filter(m => m.status === 'running').length;
     const restarting = members.filter(m => m.status === 'restarting').length;
     const expanded = !_collapsedProjects.has(project);
-    const dot = running === members.length ? '#22c55e' : (running > 0 ? '#eab308' : '#ef4444');
+    const tone = running === members.length ? 'is-ok' : (running > 0 ? 'is-warn' : 'is-bad');
     // A project's compose file can outlive its directory — say so instead of
     // showing buttons that silently fail (that was the "why can't I destroy" case).
     const known = !!info.known_location;
     const problem = info.location_problem || '';
     const upBtn = known
-        ? `<button class="btn-ghost" data-testid="compose-action-${safe}-up" onclick="event.stopPropagation();dockerComposeAction('${safe}','up',this)" style="font-size:11px;padding:3px 9px;color:#22c55e;" title="docker compose up -d">⬆ Up</button>`
-        : `<button class="btn-ghost" disabled data-testid="compose-action-${safe}-up" style="font-size:11px;padding:3px 9px;color: var(--text-3);opacity:.5;cursor:not-allowed;" title="${escapeAttr(problem || 'compose file not found')}">⬆ Up</button>`;
+        ? `<button class="dk-btn small" data-testid="compose-action-${safe}-up" onclick="event.stopPropagation();dockerComposeAction('${safe}','up',this)" title="docker compose up -d">Up</button>`
+        : `<button class="dk-btn small" disabled data-testid="compose-action-${safe}-up" title="${escapeAttr(problem || 'compose file not found')}">Up</button>`;
     // Project-level compose actions. Down/Destroy stay enabled even without a
     // compose file: the backend removes the stack by its Docker labels.
     const actions = `
-                <span style="margin-left:auto;display:flex;gap:4px;">
+                <span class="dk-actions" style="margin-left:auto;">
                     ${upBtn}
-                    <button class="btn-ghost" data-testid="compose-action-${safe}-down" onclick="event.stopPropagation();dockerComposeAction('${safe}','down',this)" style="font-size:11px;padding:3px 9px;color:#eab308;" title="${known ? 'docker compose down' : 'Compose file unavailable — stops and removes the project by label'}">⬇ Down</button>
-                    <button class="btn-ghost" data-testid="compose-action-${safe}-destroy" onclick="event.stopPropagation();dockerComposeAction('${safe}','destroy',this)" style="font-size:11px;padding:3px 9px;color:#ef4444;" title="${known ? 'docker compose down --volumes' : 'Compose file unavailable — removes containers, network and volumes by label'}">💥 Destroy</button>
+                    <button class="dk-btn small" data-testid="compose-action-${safe}-down" onclick="event.stopPropagation();dockerComposeAction('${safe}','down',this)" title="${known ? 'docker compose down' : 'Compose file unavailable — stops and removes the project by label'}">Down</button>
+                    <button class="dk-btn small danger" data-testid="compose-action-${safe}-destroy" onclick="event.stopPropagation();dockerComposeAction('${safe}','destroy',this)" title="${known ? 'docker compose down --volumes' : 'Compose file unavailable — removes containers, network and volumes by label'}">Destroy</button>
                 </span>`;
     return `<tr class="compose-group-header" data-compose-group="${safe}" style="cursor:pointer;user-select:none;">
-        <td colspan="6" style="background:var(--surface-1);">
-            <div style="display:flex;align-items:center;gap:8px;padding:2px 0;">
-                <span data-chevron style="font-size:9px;color: var(--text-3);display:inline-block;transition:transform .15s;${expanded ? 'transform:rotate(90deg);' : ''}">▶</span>
-                <span style="font-weight:700;font-size:13px;color: var(--text-1);"${label !== project ? ` title="compose project: ${escapeAttr(project)}"` : ''}>📁 ${escapeHtml(label)}</span>
-                <span class="badge-blue" data-testid="compose-group-count-${safe}" style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;">${members.length} service${members.length !== 1 ? 's' : ''}</span>
-                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color: var(--text-3);">
-                    <span style="width:8px;height:8px;border-radius:50%;background:${dot};"></span>
-                    ${running}/${members.length} running
-                </span>${restarting ? `<span data-testid="compose-group-restarting-${safe}" style="font-size:12px;font-weight:600;color:#ef4444;">↻ ${restarting} restarting</span>` : ''}${problem ? `<span data-testid="compose-group-problem-${safe}" style="font-size:11px;color:#eab308;" title="${escapeAttr(problem)}">⚠ compose file unavailable</span>` : ''}${actions}
+        <td colspan="5" style="background:var(--dk-surface);">
+            <div class="dk-row" style="gap:8px;padding:2px 0;">
+                <span data-chevron style="font-size:9px;color:var(--dk-muted);display:inline-block;transition:transform .15s;${expanded ? 'transform:rotate(90deg);' : ''}">▶</span>
+                <span class="dk-name"${label !== project ? ` title="compose project: ${escapeAttr(project)}"` : ''}>${escapeHtml(label)}</span>
+                <span class="dk-tag is-info" data-testid="compose-group-count-${safe}">${members.length} service${members.length !== 1 ? 's' : ''}</span>
+                <span class="dk-tag ${tone}" data-compose-running>${running}/${members.length} running</span>
+                ${restarting ? `<span class="dk-tag is-bad" data-testid="compose-group-restarting-${safe}">${restarting} restarting</span>` : ''}
+                ${problem ? `<span class="dk-tag is-warn" data-testid="compose-group-problem-${safe}" title="${escapeAttr(problem)}">compose file unavailable</span>` : ''}
+                ${actions}
             </div>
         </td>
     </tr>`;
@@ -467,21 +687,30 @@ async function _loadContainersTab() {
         // Projects remembered by the backend but currently down (no containers) — can be brought back up.
         const stoppedProjects = composeProjects.filter(p => p.container_count === 0 && p.known_location);
 
-        let html = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <span style="font-size:13px;color: var(--text-2);">
-                    ${cs.length > 0 ? `<span class="badge-green" data-testid="containers-running-badge" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;">${d.running_count} running</span>` : ''}
-                    <span style="margin-left:8px;color: var(--text-3);font-size:12px;">${cs.length} total</span>
-                    ${groups.size > 0 ? `<span style="margin-left:8px;color: var(--text-3);font-size:12px;">· ${groups.size} compose project${groups.size !== 1 ? 's' : ''}</span>` : ''}
-                    ${stoppedProjects.length > 0 ? `<span style="margin-left:8px;color: var(--text-3);font-size:12px;">· ${stoppedProjects.length} stopped</span>` : ''}
-                </span>
-                <button class="btn-ghost" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="containers-refresh-btn" style="font-size:12px;padding:5px 12px;">🔄 Refresh</button>
-            </div>`;
+        const body = content.closest('.dk-root');
+        const runningCount = Number(d.running_count || cs.filter(c => c.status === 'running').length);
+        const attentionCount = cs.filter(c => c.status === 'restarting'
+            || c.network_detached
+            || (c.status === 'exited' && (c.restart_policy || 'no') === 'no')).length;
+        _setChrome(body, {
+            title: 'Containers',
+            sub: 'Containers, Compose stacks and their health.',
+            panelTitle: 'All containers',
+            panelSub: `${cs.length} total · ${runningCount} running · ${groups.size} compose project${groups.size === 1 ? '' : 's'}`,
+            actions: `<button class="dk-btn small" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="containers-refresh-btn">Refresh</button>`,
+        });
 
         if (cs.length === 0) {
-            content.innerHTML = html + _emptyCard('🐳', 'No containers found', 'Start a Docker container to see it here');
+            content.innerHTML = _emptyCard('No containers found', 'Start a container or install a package to see it here.');
             return;
         }
+
+        let html = `<div class="dk-summary">
+            <div><span>Containers</span><strong>${cs.length}</strong></div>
+            <div><span>Running</span><strong>${runningCount}</strong></div>
+            <div><span>Compose projects</span><strong>${groups.size}</strong></div>
+            <div><span>Need attention</span><strong style="${attentionCount ? 'color:var(--dk-red);' : ''}">${attentionCount}</strong></div>
+        </div>`;
 
         // Containers that will not recover on their own: crash-looping, stopped
         // with restart=no, or running without a network. Surfacing them is the
@@ -492,17 +721,14 @@ async function _loadContainersTab() {
         const crashLoops = attention.filter(c => c.status === 'restarting');
         if (attention.length) {
             const names = attention.slice(0, 4).map(c => c.name).join(', ');
-            html += `<div class="glass-card" data-testid="containers-attention-banner" style="border-left:3px solid #ef4444;padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px;">
-                <span style="font-size:18px;line-height:1;">⚠️</span>
-                <div style="font-size:13px;color: var(--text-1);line-height:1.45;">
-                    <b>${attention.length} container${attention.length !== 1 ? 's' : ''} need${attention.length === 1 ? 's' : ''} attention</b>${crashLoops.length ? ` — ${crashLoops.length} stuck in a restart loop` : ''}.
-                    <div style="color: var(--text-3);font-size:12px;margin-top:2px;">${escapeHtml(names)}${attention.length > 4 ? ` +${attention.length - 4} more` : ''} · open 📋 Logs to see the reason.</div>
-                </div>
+            html += `<div class="dk-callout error" data-testid="containers-attention-banner">
+                <strong>${attention.length} container${attention.length !== 1 ? 's' : ''} need${attention.length === 1 ? 's' : ''} attention${crashLoops.length ? ` — ${crashLoops.length} in a restart loop` : ''}</strong>
+                ${escapeHtml(names)}${attention.length > 4 ? ` +${attention.length - 4} more` : ''}. Open Logs to see the reason.
             </div>`;
         }
 
-        html += `<table class="app-table" data-testid="containers-table"><thead><tr>
-            <th>Status</th><th>Name</th><th>Image</th><th>State</th><th>Ports</th><th style="width:190px;">Actions</th>
+        html += `<table class="dk-table" data-testid="containers-table"><thead><tr>
+            <th>Status</th><th>Container</th><th>Image</th><th>Ports</th><th style="width:200px;"></th>
         </tr></thead><tbody>`;
 
         // Compose projects as collapsible groups (expanded by default), then standalone containers.
@@ -534,10 +760,9 @@ async function _loadContainersTab() {
 
         // Stopped projects (no containers left) — kept reachable so they can be brought back up.
         if (stoppedProjects.length > 0) {
-            html += `<div style="margin-top:16px;">
-                <div style="font-size:11px;font-weight:600;color: var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">⏸ Stopped projects</div>
-                <table class="app-table" data-testid="stopped-projects-table"><thead><tr>
-                    <th>Project</th><th>Location</th><th style="width:100px;"></th>
+            html += `<div class="dk-section" style="padding-top:18px;">Stopped projects</div>
+                <table class="dk-table" data-testid="stopped-projects-table"><thead><tr>
+                    <th>Project</th><th>Location</th><th style="width:90px;"></th>
                 </tr></thead><tbody>`;
             const stoppedSystem = stoppedProjects.filter(p => p.managed);
             const stoppedUser = stoppedProjects.filter(p => !p.managed);
@@ -545,9 +770,9 @@ async function _loadContainersTab() {
                 const safe = escapeAttr(p.name);
                 const label = _projectLabel(p.name, p);
                 return `<tr>
-                    <td style="font-weight:600;color: var(--text-1);"${label !== p.name ? ` title="compose project: ${escapeAttr(p.name)}"` : ''}>📁 ${escapeHtml(label)}</td>
-                    <td style="color: var(--text-3);font-family:monospace;font-size:11px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeAttr(p.working_dir || '')}">${escapeHtml(p.working_dir || '—')}</td>
-                    <td><button class="btn-ghost" data-testid="compose-stopped-up-${safe}" onclick="dockerComposeAction('${safe}','up',this)" style="font-size:11px;padding:3px 9px;color:#22c55e;" title="docker compose up -d">⬆ Up</button></td>
+                    <td class="dk-name"${label !== p.name ? ` title="compose project: ${escapeAttr(p.name)}"` : ''}>${escapeHtml(label)}</td>
+                    <td class="dk-mono" style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dk-muted);" title="${escapeAttr(p.working_dir || '')}">${escapeHtml(p.working_dir || '—')}</td>
+                    <td><div class="dk-actions"><button class="dk-btn small" data-testid="compose-stopped-up-${safe}" onclick="dockerComposeAction('${safe}','up',this)" title="docker compose up -d">Up</button></div></td>
                 </tr>`;
             }).join('');
             if (stoppedSystem.length) html += _sectionRow('System', 3) + _stoppedRows(stoppedSystem);
@@ -591,52 +816,60 @@ async function _loadImagesTab() {
         const d = await r.json();
         const imgs = d.images || [];
 
-        let html = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-                <span style="font-size:13px;color: var(--text-2);">
-                    ${imgs.length} image${imgs.length !== 1 ? 's' : ''}${d.total_size_bytes ? ` · ${formatBytes(d.total_size_bytes)}` : ''}
-                </span>
-                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                    ${_pullVisible ? `<input id="imagesPullInput" data-testid="images-pull-input" type="text" placeholder="e.g. nginx:latest or bitnami/redis:7.2" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);color: var(--text-1);font-size:13px;width:240px;" />
-                        <button class="btn-primary" data-testid="images-pull-execute-btn" onclick="_executePull()" style="font-size:12px;padding:5px 14px;border-radius:8px;">⬇ Pull</button>
-                        <button class="btn-ghost" data-testid="images-pull-cancel-btn" onclick="_cancelPullImage()">✕</button>` : ''}
-                    ${_pullVisible ? '' : `<button class="btn-primary" onclick="_togglePull(this.closest('.window-body'))" data-testid="images-pull-btn" style="font-size:12px;padding:5px 14px;border-radius:8px;">⬇ Pull Image</button>`}
-                    <button class="btn-ghost" onclick="_pruneImages()" data-testid="images-prune-btn" style="font-size:12px;padding:5px 12px;color:#ef4444;" title="Remove all unused images">🗑 Prune</button>
-                    <button class="btn-ghost" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="images-refresh-btn" style="font-size:12px;padding:5px 12px;">🔄 Refresh</button>
-                </div>
+        const body = content.closest('.dk-root');
+        _setChrome(body, {
+            title: 'Images',
+            sub: 'Images stored on this NAS.',
+            panelTitle: 'Local images',
+            panelSub: `${imgs.length} image${imgs.length !== 1 ? 's' : ''}${d.total_size_bytes ? ` · ${formatBytes(d.total_size_bytes)}` : ''}`,
+            actions: `
+                <button class="dk-btn primary small" onclick="_togglePull(this.closest('.window-body'))" data-testid="images-pull-btn">Pull image</button>
+                <button class="dk-btn danger small" onclick="_pruneImages()" data-testid="images-prune-btn" title="Remove all unused images">Prune</button>
+                <button class="dk-btn small" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="images-refresh-btn">Refresh</button>`,
+        });
+
+        let html = '';
+        if (_pullVisible) {
+            html += `<div class="dk-row" style="margin-bottom:12px;">
+                <input id="imagesPullInput" data-testid="images-pull-input" class="dk-input" type="text"
+                       placeholder="e.g. nginx:latest or bitnami/redis:7.2" style="flex:1;min-width:220px;" />
+                <button class="dk-btn primary small" data-testid="images-pull-execute-btn" onclick="_executePull()">Pull</button>
+                <button class="dk-btn small" data-testid="images-pull-cancel-btn" onclick="_cancelPullImage()">Cancel</button>
             </div>`;
+        }
 
         if (imgs.length === 0) {
-            content.innerHTML = html + _emptyCard('🖼️', 'No Docker images found', 'Click "⬇ Pull Image" to pull one from a registry');
+            content.innerHTML = html + _emptyCard('No images yet', 'Pull an image from a registry to get started.');
             return;
         }
 
-        html += `<table class="app-table"><thead><tr>
-            <th>Repository</th><th>Tag</th><th>ID</th><th>Size</th><th>Created</th><th>Status</th><th style="width:50px;"></th>
+        html += `<table class="dk-table"><thead><tr>
+            <th>Repository</th><th>Size</th><th>Created</th><th>Status</th><th style="width:50px;"></th>
         </tr></thead><tbody>`;
 
         for (const img of imgs) {
             const isDangling = img.is_dangling;
             const sizeStr = img.size?.raw ? formatBytes(img.size.raw) : '—';
             const createdDate = img.created_at ? new Date(img.created_at).toLocaleDateString() : '—';
-            const statusBadge = isDangling
-                ? '<span class="badge-yellow" style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;">Dangling</span>'
+            const statusTag = isDangling
+                ? '<span class="dk-tag is-warn">Dangling</span>'
                 : img.in_use
-                    ? '<span class="badge-green" style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;">In use</span>'
-                    : '<span class="badge-blue" style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;">Unused</span>';
+                    ? '<span class="dk-tag is-ok">In use</span>'
+                    : '<span class="dk-tag is-info">Unused</span>';
+            const repo = isDangling
+                ? '<span class="dk-mono" style="color:var(--dk-muted);">&lt;none&gt;</span>'
+                : escapeHtml(img.repository);
 
             html += `<tr>
-                <td style="font-weight:600;color: var(--text-1);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeAttr(img.repository || '')}">
-                    ${isDangling ? '<span style="color: var(--text-3);font-style:italic;">&lt;none&gt;</span>' : escapeHtml(img.repository)}
-                </td>
-                <td><span class="badge-blue" style="padding:2px 8px;border-radius:5px;font-size:11px;font-family:monospace;">${escapeHtml(img.tag || 'latest')}</span></td>
-                <td style="font-family:monospace;font-size:11px;color: var(--text-3);">${escapeHtml((img.id || '').replace('sha256:', ''))}</td>
-                <td style="font-family:monospace;font-size:12px;white-space:nowrap;">${sizeStr}</td>
-                <td style="color: var(--text-2);font-size:12px;white-space:nowrap;">${createdDate}</td>
-                <td>${statusBadge}</td>
                 <td>
-                    <button class="btn-ghost" data-testid="image-delete-${escapeAttr(img.id || img.repository)}" onclick="_deleteImage('${jsAttr(img.id || img.repository)}')" title="Delete image" style="font-size:11px;padding:3px 8px;color:#ef4444;">🗑</button>
+                    <span class="dk-name">${repo}</span>
+                    <span class="dk-meta-line">${img.tag ? `<span class="dk-tag">${escapeHtml(img.tag)}</span>` : ''}
+                        <span class="dk-mono" style="margin-left:4px;">${escapeHtml((img.id || '').replace('sha256:', '').slice(0, 12))}</span></span>
                 </td>
+                <td class="dk-mono">${sizeStr}</td>
+                <td style="color:var(--dk-muted);white-space:nowrap;">${createdDate}</td>
+                <td>${statusTag}</td>
+                <td><div class="dk-actions"><button class="dk-btn small danger" data-testid="image-delete-${escapeAttr(img.id || img.repository)}" onclick="_deleteImage('${jsAttr(img.id || img.repository)}')" title="Delete image">Delete</button></div></td>
             </tr>`;
         }
         html += '</tbody></table>';
@@ -661,45 +894,44 @@ async function _loadVolumesTab() {
         const d = await r.json();
         const vols = d.volumes || [];
 
-        let html = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <span style="font-size:13px;color: var(--text-2);">
-                    ${vols.length} volume${vols.length !== 1 ? 's' : ''}${d.orphaned_count > 0 ? ` · <span style="color:#eab308;">${d.orphaned_count} orphaned</span>` : ''}
-                </span>
-                <span style="display:flex;gap:6px;align-items:center;">
-                    <button class="btn-ghost" onclick="_pruneVolumes()" data-testid="volumes-prune-btn" title="Remove all unused volumes (named + anonymous)" style="font-size:12px;padding:5px 12px;color:#eab308;">🧹 Prune unused${d.orphaned_count > 0 ? ` (${d.orphaned_count})` : ''}</button>
-                    <button class="btn-ghost" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="volumes-refresh-btn" style="font-size:12px;padding:5px 12px;">🔄 Refresh</button>
-                </span>
-            </div>`;
+        const body = content.closest('.dk-root');
+        _setChrome(body, {
+            title: 'Volumes',
+            sub: 'Named volumes that hold container data.',
+            panelTitle: 'Volumes',
+            panelSub: `${vols.length} volume${vols.length !== 1 ? 's' : ''}${d.orphaned_count > 0 ? ` · ${d.orphaned_count} orphaned` : ''}`,
+            actions: `
+                <button class="dk-btn danger small" onclick="_pruneVolumes()" data-testid="volumes-prune-btn" title="Remove all unused volumes">Prune unused${d.orphaned_count > 0 ? ` (${d.orphaned_count})` : ''}</button>
+                <button class="dk-btn small" onclick="renderDockerApp(this.closest('.window-body'))" data-testid="volumes-refresh-btn">Refresh</button>`,
+        });
 
         if (vols.length === 0) {
-            content.innerHTML = html + _emptyCard('💾', 'No Docker volumes found', 'Create one with <code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;">docker volume create</code>');
+            content.innerHTML = _emptyCard('No volumes yet', 'Volumes appear when a container declares one.');
             return;
         }
 
         const anySize = vols.some(v => v.size != null);
 
-        html += `<table class="app-table"><thead><tr>
-            <th>Name</th><th>Driver</th>${anySize ? '<th>Size</th>' : ''}<th>Mountpoint</th><th>Status</th><th style="width:50px;"></th>
+        let html = `<table class="dk-table"><thead><tr>
+            <th>Name</th>${anySize ? '<th>Size</th>' : ''}<th>Status</th><th style="width:50px;"></th>
         </tr></thead><tbody>`;
 
         for (const v of vols) {
             const isOrphan = v.is_orphaned;
             const heldByExited = (v.held_by_exited || []).length > 0;
-            const statusBadge = isOrphan
-                ? '<span class="badge-yellow" style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;">Orphaned</span>'
+            const statusTag = isOrphan
+                ? '<span class="dk-tag is-warn">Orphaned</span>'
                 : heldByExited
-                    ? `<span class="badge-blue" style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;cursor:help;" title="Referenced by exited container(s): ${(v.held_by_exited || []).join(', ')} — remove those containers first to free this volume">Held (exited)</span>`
-                    : '<span class="badge-green" style="padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;">In use</span>';
+                    ? `<span class="dk-tag is-info" style="cursor:help;" title="Referenced by exited container(s): ${escapeAttr((v.held_by_exited || []).join(', '))}">Held (exited)</span>`
+                    : '<span class="dk-tag is-ok">In use</span>';
             html += `<tr>
-                <td style="font-weight:600;color: var(--text-1);font-family:monospace;font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeAttr(v.name)}">${escapeHtml(v.name)}</td>
-                <td style="color: var(--text-2);font-size:12px;">${escapeHtml(v.driver || 'local')}</td>
-                ${anySize ? `<td style="font-family:monospace;font-size:12px;white-space:nowrap;">${v.size_human ? escapeHtml(v.size_human) : '—'}</td>` : ''}
-                <td style="color: var(--text-3);font-family:monospace;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeAttr(v.mountpoint || '')}">${escapeHtml(v.mountpoint || '—')}</td>
-                <td>${statusBadge}</td>
                 <td>
-                    <button class="btn-ghost" data-testid="volume-delete-${escapeAttr(v.name)}" onclick="_deleteVolume('${jsAttr(v.name)}')" title="Delete volume" style="font-size:11px;padding:3px 8px;color:#ef4444;">🗑</button>
+                    <span class="dk-name dk-mono">${escapeHtml(v.name)}</span>
+                    <span class="dk-meta-line">${escapeHtml(v.driver || 'local')}${v.mountpoint ? ` · ${escapeHtml(v.mountpoint)}` : ''}</span>
                 </td>
+                ${anySize ? `<td class="dk-mono">${v.size_human ? escapeHtml(v.size_human) : '—'}</td>` : ''}
+                <td>${statusTag}</td>
+                <td><div class="dk-actions"><button class="dk-btn small danger" data-testid="volume-delete-${escapeAttr(v.name)}" onclick="_deleteVolume('${jsAttr(v.name)}')" title="Delete volume">Delete</button></div></td>
             </tr>`;
         }
         html += '</tbody></table>';
@@ -719,7 +951,7 @@ function _reloadCurrentTab(bodyEl) {
 }
 
 window.dockerInstallEngine = async function(btnEl) {
-    const ok = await window.showModalConfirm(
+    const ok = await _ctx.modal.confirm(
         'Install Docker Engine',
         'Install Docker Engine and Compose v2 from Docker’s official apt repository?\n\n' +
         'This downloads packages and takes a few minutes. EthOS keeps running, but a restart is needed afterwards to activate Docker access.'
@@ -747,7 +979,7 @@ window.dockerInstallEngine = async function(btnEl) {
 };
 
 window.dockerRestartEthos = async function() {
-    const ok = await window.showModalConfirm(
+    const ok = await _ctx.modal.confirm(
         'Restart EthOS',
         'Restart EthOS NAS to activate Docker access?\n\nThe web server restarts and this page refreshes automatically.'
     );
@@ -763,7 +995,7 @@ window.dockerRestartEthos = async function() {
 
 window.dockerAction = function(name, action, btnEl) {
     const verb = action === 'stop' ? 'Stop' : action === 'restart' ? 'Restart' : 'Start';
-    window.showModalConfirm('Docker Action', `${verb} container "${name}"?`).then(ok => {
+    _ctx.modal.confirm('Docker Action', `${verb} container "${name}"?`).then(ok => {
         if (!ok) return;
 
         if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = '0.5'; }
@@ -795,7 +1027,7 @@ window.dockerComposeAction = function(project, action, btnEl) {
         destroy: ['Compose Destroy', `Run "docker compose down --volumes" for project "${project}"? ALL containers, networks AND named volumes are removed — data in those volumes is lost. Images are kept.`],
     };
     const [title, msg] = prompts[action];
-    window.showModalConfirm(title, msg).then(ok => {
+    _ctx.modal.confirm(title, msg).then(ok => {
         if (!ok) return;
 
         if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = '0.5'; }
@@ -822,7 +1054,7 @@ window.dockerComposeAction = function(project, action, btnEl) {
 };
 
 window.dockerRemove = function(name, btnEl) {
-    window.showModalConfirm('Remove Container', `Permanently remove container "${name}"? Its data in named volumes is kept.`).then(ok => {
+    _ctx.modal.confirm('Remove Container', `Permanently remove container "${name}"? Its data in named volumes is kept.`).then(ok => {
         if (!ok) return;
 
         apiFetch(`/api/containers/${encodeURIComponent(name)}`, { method: 'DELETE' })
@@ -891,7 +1123,7 @@ window._executePull = _executePull;
 // Delete image
 async function _deleteImage(idOrTag) {
     const displayName = idOrTag.split(':')[0] || idOrTag;
-    if (!await window.showModalConfirm('Delete Image', `Delete Docker image "${displayName}"?`)) return;
+    if (!await _ctx.modal.confirm('Delete Image', `Delete Docker image "${displayName}"?`)) return;
     try {
         const r = await apiFetch(`/api/images/${encodeURIComponent(idOrTag)}`, { method: 'DELETE' });
         if (r.status === 409) {
@@ -913,7 +1145,7 @@ window._deleteImage = _deleteImage;
 
 // Prune images
 async function _pruneImages() {
-    if (!await window.showModalConfirm('Prune Images', 'Remove ALL unused Docker images? This cannot be undone.')) return;
+    if (!await _ctx.modal.confirm('Prune Images', 'Remove ALL unused Docker images? This cannot be undone.')) return;
     try {
         const r = await apiFetch('/api/images/prune', { method: 'POST' });
         if (!r.ok) {
@@ -932,7 +1164,7 @@ window._pruneImages = _pruneImages;
 
 // Delete volume
 async function _deleteVolume(name) {
-    if (!await window.showModalConfirm('Delete Volume', `Delete Docker volume "${name}"? All data in it will be lost.`)) return;
+    if (!await _ctx.modal.confirm('Delete Volume', `Delete Docker volume "${name}"? All data in it will be lost.`)) return;
     try {
         const r = await apiFetch(`/api/volumes/${encodeURIComponent(name)}`, { method: 'DELETE' });
         if (r.status === 409) {
@@ -954,7 +1186,7 @@ window._deleteVolume = _deleteVolume;
 
 // Prune volumes
 async function _pruneVolumes() {
-    if (!await window.showModalConfirm('Prune Volumes', 'Remove all unused Docker volumes (named + anonymous)? All data in them will be lost.\n\nVolumes still referenced by any container — including stopped ones — are kept.')) return;
+    if (!await _ctx.modal.confirm('Prune Volumes', 'Remove all unused Docker volumes (named + anonymous)? All data in them will be lost.\n\nVolumes still referenced by any container — including stopped ones — are kept.')) return;
     try {
         const r = await apiFetch('/api/volumes/prune', { method: 'POST' });
         if (!r.ok) {

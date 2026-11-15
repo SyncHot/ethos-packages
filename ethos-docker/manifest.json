@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-docker",
   "name": "Docker Manager",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Engine status, containers, images, volumes and Compose projects in one place: start, stop, restart, inspect logs, prune and install Docker Engine on the NAS. The engine helper and the /api/docker endpoints stay in EthOS because the package runtime depends on them; this package is the desktop app.",
   "icon": "🐳",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/icon.svg",
@@ -16,12 +16,12 @@
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.0.1: Package Center icon redrawn on the 256 px grid; requires EthOS 2.0. 1.0.0: first release. The Docker Manager desktop app moves out of the core install; the Docker Engine helper, the compose runtime and the /api/docker endpoints stay in EthOS because every container package depends on them.",
+  "changelog": "1.0.2: window redesigned with the shared AntiVirus/Domains shell — 218 px rail with text-only nav, summary tiles, one simple table per section and an engine panel that states the next step; dialogs use the shared modal. 1.0.1: Package Center icon redrawn on the 256 px grid; requires EthOS 2.0. 1.0.0: first release. The Docker Manager desktop app moves out of the core install; the Docker Engine helper, the compose runtime and the /api/docker endpoints stay in EthOS because every container package depends on them.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/frontend/app.js",
-      "sha256": "ad2cc55e01a67d78f6b0d855beb2419ebb9e4b24f5187bccc2eb029099e3b3ce",
+      "sha256": "38278bcc91024918dfb94c8e3c58a9a42870f42cc96340cd7cb7a37180e7c81c",
       "path": "frontend/app.js",
       "mode": 420
     },
