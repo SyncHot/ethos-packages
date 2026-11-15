@@ -772,11 +772,26 @@ export function render(container, ctx) {
         state.scanning = true;
         updateBusy();
         setStatus(`${label}: scanning ${targets.join(', ')}… this can take a while.`);
+        // Long scans report through the shared progress panel (core/progress.js).
+        const task = ctx.progress?.startTask
+            ? ctx.progress.startTask({
+                appId: 'pkg-ethos-antivirus',
+                title: label,
+                total: groups.length,
+                detail: `Scanning ${targets.join(', ')}…`,
+                testIdPrefix: 'av-scan',
+            })
+            : null;
         try {
             for (let index = 0; index < groups.length; index += 1) {
                 if (options.sequential) {
                     setStatus(`${label}: scanning ${groups[index][0]}… (${index + 1}/${groups.length})`);
                 }
+                task?.update({
+                    index,
+                    percent: groups.length ? Math.round((index / groups.length) * 100) : null,
+                    detail: `Scanning ${groups[index].join(', ')} (${index + 1}/${groups.length})`,
+                });
                 const data = await ctx.proxy('api/scan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -789,12 +804,19 @@ export function render(container, ctx) {
                 ? `${label} finished: ${threats} threat${threats === 1 ? '' : 's'} found.`
                 : `${label} finished: ${merged.clean} clean file${merged.clean === 1 ? '' : 's'} checked${merged.skipped ? `, ${merged.skipped} skipped` : ''}.`,
                 threats ? 'error' : '');
+            task?.finish('done', {
+                percent: 100,
+                detail: threats
+                    ? `${threats} threat${threats === 1 ? '' : 's'} found`
+                    : `${merged.clean} clean, ${merged.skipped} skipped`,
+            });
             if (threats) {
                 notify(`AntiVirus: ${threats} threat${threats === 1 ? '' : 's'} found`, 'error');
             }
             await Promise.all([loadStatus(), loadLogs(), loadQuarantine()]);
         } catch (err) {
             setStatus(`${label} failed: ${errorText(err)}`, 'error');
+            task?.finish('failed', { detail: errorText(err) });
         } finally {
             state.scanning = false;
             updateBusy();
