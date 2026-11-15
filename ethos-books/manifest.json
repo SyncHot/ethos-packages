@@ -1,0 +1,98 @@
+{
+  "schema": 2,
+  "id": "ethos-books",
+  "name": "Books",
+  "version": "1.0.0",
+  "description": "Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied and your permissions still apply; covers and your place in every title are kept per account.",
+  "icon": "📚",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/icon.svg",
+  "category": "media",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "min_ethos_version": "2.0.0",
+  "runtime": "venv",
+  "user_access": true,
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js",
+    "port": 8089
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 8089,
+    "path": "/health"
+  },
+  "changelog": "1.0.0: first release — a library for EPUB, PDF and audiobooks with per-account progress. Add one or more folders, scan them through the EthOS file API (no copying, no extra share access), and read in a paginated or scrolled reader with light, sepia and dark themes. Audiobooks play from .m4b files or folders of .mp3/.flac tracks with resume, speed, skip and a sleep timer. Covers, titles, authors and series are extracted in the browser; the package service stores metadata only.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/server/main.py",
+      "sha256": "b851128f0d286a5bd0a56d7ec4615814de321d675f815638f59c47bee47c7e0a",
+      "path": "server/main.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/frontend/app.js",
+      "sha256": "ac5ac7d09dfda6fa82d23eb428450b326430e76b03703165e49f7d5eb906f79f",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/frontend/vendor/jszip.min.js",
+      "sha256": "acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e",
+      "path": "frontend/vendor/jszip.min.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/frontend/vendor/epub.min.js",
+      "sha256": "06eae15745107b4aa508c95538275251f69bfb9f1175621fc458d9f42ed082d4",
+      "path": "frontend/vendor/epub.min.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/frontend/vendor/pdf.min.js",
+      "sha256": "5b5799e6f8c680663207ac5b42ee14eed2a406fa7af48f50c154f0c0b1566946",
+      "path": "frontend/vendor/pdf.min.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/frontend/vendor/pdf.worker.min.js",
+      "sha256": "feabdf309770ed24bba31a5467836cdc8cf639c705af27d52b585b041bb8527b",
+      "path": "frontend/vendor/pdf.worker.min.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/frontend/vendor/LICENSE-jszip.txt",
+      "sha256": "566c953c6090b1218ca6217dd7359d45dde46581968586dc607d59a78af6a9c4",
+      "path": "frontend/vendor/LICENSE-jszip.txt",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/frontend/vendor/LICENSE-epubjs.txt",
+      "sha256": "ee49d890f870527720083a89b6985c6303f6075ab8579286da91949c5d75d20a",
+      "path": "frontend/vendor/LICENSE-epubjs.txt",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/frontend/vendor/LICENSE-pdfjs.txt",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "path": "frontend/vendor/LICENSE-pdfjs.txt",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/icon.svg",
+      "sha256": "7aa92255df2b7638b8ffa5851469e26ae2e633ce5190d57811fd61a56f6ac0f2",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ],
+  "python": {
+    "entry": "server/main.py",
+    "port": 8089,
+    "requirements": [],
+    "requires_python": "3.14",
+    "wheels": []
+  }
+}

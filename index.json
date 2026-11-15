@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-15T10:26:13+00:00",
+  "generated_at": "2026-11-15T18:10:24+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -97,6 +97,28 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
       "manifest_sha256": "898852890b1f564df966f27fd13c173b9fdd6a07d428d665c8d0fa6b950fef76",
       "size_bytes": 92567
+    },
+    {
+      "id": "ethos-books",
+      "name": "Books",
+      "version": "1.0.0",
+      "description": "Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied and your permissions still apply; covers and your place in every title are kept per account.",
+      "icon": "📚",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/icon.svg",
+      "category": "media",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "venv",
+      "capabilities": [],
+      "system_requires": [],
+      "screenshots": [],
+      "changelog": "1.0.0: first release — a library for EPUB, PDF and audiobooks with per-account progress. Add one or more folders, scan them through the EthOS file API (no copying, no extra share access), and read in a paginated or scrolled reader with light, sepia and dark themes. Audiobooks play from .m4b files or folders of .mp3/.flac tracks with resume, speed, skip and a sleep timer. Covers, titles, authors and series are extracted in the browser; the package service stores metadata only.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/manifest.json",
+      "manifest_sha256": "edbde6cd9408aa57b127ad67d97c621fc2ffd0ae6c240a219973f235d2839ed3",
+      "size_bytes": 1898475
     },
     {
       "id": "ethos-cleaner",
