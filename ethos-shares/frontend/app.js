@@ -45,9 +45,9 @@ const _sambaMissingHtml = (status) => {
     const hint = status.install_hint
         ? `<div style="margin-top:6px;">Run this on the NAS, then press Refresh: <code style="background:rgba(0,0,0,0.35);padding:1px 6px;border-radius:4px;">${escapeHtml(status.install_hint)}</code></div>`
         : '';
-    return `<div data-testid="shares-samba-missing" style="margin-bottom:12px;padding:10px 12px;border:1px solid #f59e0b;border-radius:8px;background:rgba(245,158,11,0.1);font-size:12px;line-height:1.55;color:#fbbf24;flex-shrink:0;">
+    return `<div data-testid="shares-samba-missing" style="margin-bottom:12px;padding:10px 12px;border:1px solid var(--pkg-amber-border, #b45309);border-radius:8px;background:var(--pkg-amber-soft, rgba(180,83,9,0.10));font-size:12px;line-height:1.55;color:var(--pkg-amber, #b45309);flex-shrink:0;">
         <strong>Samba is not installed on this NAS.</strong>
-        Shares cannot be validated or applied until it is.${missing ? `<div style="margin-top:6px;">Missing: <code style="background:rgba(0,0,0,0.35);padding:1px 6px;border-radius:4px;">${escapeHtml(missing)}</code></div>` : ''}${hint}
+        Shares cannot be validated or applied until it is.${missing ? `<div style="margin-top:6px;">Missing: <code style="background:var(--surface-1);padding:1px 6px;border-radius:4px;">${escapeHtml(missing)}</code></div>` : ''}${hint}
     </div>`;
 };
 
@@ -73,16 +73,22 @@ export async function renderSharesPage(body) {
     _sharesBody = body;
     body.innerHTML = `<div style="padding:20px;display:flex;flex-direction:column;height:100%;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-shrink:0;">
-            <h2 style="font-size:18px;font-weight:700;color:white;margin:0;">📁 Samba Shares</h2>
+            <h2 style="font-size:18px;font-weight:700;color:var(--text-1);margin:0;">📁 Samba Shares</h2>
             <div style="display:flex;gap:8px;align-items:center;">
                 <span id="sharesStatus" data-testid="shares-status" style="font-size:12px;padding:4px 10px;border-radius:6px;"></span>
-                <button class="btn-ghost" data-testid="shares-refresh-btn" onclick="renderSharesPage(document.querySelector('[data-testid=\"window-shares\"] .window-body'))" style="padding:6px 12px;font-size:12px;">🔄 Refresh</button>
+                <button class="btn-ghost" id="sharesRefreshBtn" data-testid="shares-refresh-btn" style="padding:6px 12px;font-size:12px;">🔄 Refresh</button>
                 <button class="btn-primary" data-testid="shares-add-btn" onclick="sharesShowAddForm()" style="padding:6px 14px;font-size:12px;border-radius:6px;background:var(--accent);color:white;border:none;cursor:pointer;">+ Add Share</button>
             </div>
         </div>
         <div id="sharesTableWrap" style="flex:1;overflow-y:auto;min-height:0;"><div style="text-align:center;padding:40px;color: var(--text-3);">Loading…</div></div>
         <div id="sharesFormWrap" style="flex-shrink:0;"></div>
     </div>`;
+
+    // Keep the module self-contained: a package window is `pkg-<id>`, so the
+    // old `window-shares` selector never matched.
+    body.querySelector('#sharesRefreshBtn')?.addEventListener('click', () => {
+        if (body.isConnected) renderSharesPage(body);
+    });
 
     await _loadShares();
 }
@@ -134,7 +140,7 @@ async function _loadShares() {
             const access = s.read_only ? 'Read-only' : (s.guest_ok ? 'Guest' : 'User');
             const accessClass = s.read_only ? 'badge-yellow' : (s.guest_ok ? 'badge-blue' : 'badge-green');
             html += `<tr data-testid="shares-row-${escapeAttr(s.name)}">
-                <td style="font-weight:600;color:white;">${escapeHtml(s.name)}</td>
+                <td style="font-weight:600;color:var(--text-1);">${escapeHtml(s.name)}</td>
                 <td style="color: var(--text-2);font-family:monospace;font-size:12px;">${escapeHtml(s.path || '—')}</td>
                 <td><span class="${accessClass}" style="padding:2px 8px;border-radius:4px;font-size:11px;">${access}</span></td>
                 <td>
@@ -176,7 +182,7 @@ function _showShareForm(existing) {
 
     wrap.innerHTML = `<div style="background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:8px;" data-testid="shares-form">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <span style="font-weight:600;color:white;font-size:14px;">${isEdit ? '✏️ Edit Share' : '➕ Add Share'}</span>
+            <span style="font-weight:600;color:var(--text-1);font-size:14px;">${isEdit ? '✏️ Edit Share' : '➕ Add Share'}</span>
             <button class="btn-ghost" onclick="sharesCancelForm()" style="padding:4px 10px;font-size:12px;">✕ Cancel</button>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -255,10 +261,22 @@ let _spDirs = [];
 function _spArg(s) { return JSON.stringify(String(s)).replace(/"/g, '&quot;'); }
 const _SP_CHIP_STYLE = 'padding:4px 12px;border-radius:999px;background:var(--surface-1);border:1px solid var(--border);color: var(--text-2);font-size:12px;cursor:pointer;white-space:nowrap;';
 
-window.sharesShowFolderPicker = function() {
+window.sharesShowFolderPicker = async function() {
     if (!_sharesBody) return;
     const input = document.getElementById('sharesFormPath');
     const current = input ? input.value.trim() : '';
+    // Prefer the shared EthOS picker: it cannot leave the roots the backend
+    // allows. The in-window browser below stays as a fallback for older cores.
+    if (typeof _ctx.pickFolder === 'function') {
+        const picked = await _ctx.pickFolder({
+            title: 'Choose share folder',
+            startPath: current && current.startsWith('/') ? current : '/home',
+            roots: ['/home', '/mnt', '/media'],
+            acceptLabel: 'Choose folder',
+        });
+        if (picked && input) input.value = picked;
+        return;
+    }
     _spDirs = [];
     if (document.getElementById('shares-picker')) document.getElementById('shares-picker').remove();
     _sharesBody.style.position = 'relative';
@@ -335,7 +353,7 @@ function _spRenderBc() {
     let acc = '';
     for (const p of parts) {
         acc += '/' + p;
-        html += `<span style="color: var(--text-3);">/</span><span onclick="_spBrowseTo(${_spArg(acc)})" style="cursor:pointer;color:${acc === _spPath ? '#f8fafc' : '#94a3b8'};">${escapeHtml(p)}</span>`;
+        html += `<span style="color: var(--text-3);">/</span><span onclick="_spBrowseTo(${_spArg(acc)})" style="cursor:pointer;color:${acc === _spPath ? 'var(--text-1)' : 'var(--text-2)'};">${escapeHtml(p)}</span>`;
     }
     el.innerHTML = html;
 }
@@ -365,7 +383,7 @@ async function _spLoadDirs(fallback) {
     }
     for (let i = 0; i < _spDirs.length; i++) {
         html += `<div data-testid="shares-picker-dir-${i}" onclick="_spOpen(${i})" ondblclick="_spOpen(${i})"
-            style="cursor:pointer;border-radius:10px;padding:14px 10px;background:#20222a;border:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;align-items:center;gap:6px;">
+            style="cursor:pointer;border-radius:10px;padding:14px 10px;background:var(--surface-1);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;">
             <span style="font-size:26px;">📁</span>
             <span style="font-size:12px;color: var(--text-1);text-align:center;word-break:break-all;line-height:1.3;">${escapeHtml(_spDirs[i].name)}</span></div>`;
     }
