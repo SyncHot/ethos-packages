@@ -1,0 +1,56 @@
+{
+  "schema": 2,
+  "id": "ethos-sticky-notes",
+  "name": "Sticky Notes",
+  "version": "1.0.0",
+  "description": "Per-account sticky notes on colored cards: always-editable text, five pastel colors, reorder and one-click remove. Now a Packages app with its own private service.",
+  "icon": "🗒️",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/icon.svg",
+  "category": "productivity",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "min_ethos_version": "2.0.0",
+  "runtime": "venv",
+  "user_access": true,
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js",
+    "port": 8099
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 8099,
+    "path": "/health"
+  },
+  "changelog": "1.0.0: first release. Sticky Notes moves out of the core install into Package Center: a native window, a private stdlib Python service and per-account notes imported automatically from the built-in widget.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/server/main.py",
+      "sha256": "9cafc143a7205750f9bc411d14c0130faeb14e5babf7339dba399933f82b7254",
+      "path": "server/main.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/frontend/app.js",
+      "sha256": "32d510ca3b8e3c7a5ef303817769cfecce4d8d80d933b39f753f60650048b569",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/icon.svg",
+      "sha256": "7452cbc26e5ffe18db46062da790d891e017e98dbf4a3811c0d9305b333cf3d0",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ],
+  "python": {
+    "entry": "server/main.py",
+    "port": 8099,
+    "requirements": [],
+    "requires_python": "3.14",
+    "wheels": []
+  }
+}

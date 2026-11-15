@@ -2,7 +2,7 @@
 
 Signed package repository for [EthOS NAS](https://github.com/SyncHot/ethos-nas).
 
-The catalog currently contains nineteen packages:
+The catalog currently contains twenty packages:
 
 | Package | Version | UI | What it is |
 |---|---|---|---|
@@ -20,6 +20,7 @@ The catalog currently contains nineteen packages:
 | `ethos-music-engine` 🎵 | 1.0.1 | engine | yt-dlp search/stream/download for Music, installed offline from a pinned wheelhouse |
 | `ethos-photos` 📷 | 1.0.1 | native | Photo library: folders, grid/timeline, calendar, Moments, albums, favourites and the PIN-encrypted Private section |
 | `ethos-shares` 📁 | 1.2.1 | native | Samba share management; Samba is installed with the package through the host-dependency helper |
+| `ethos-sticky-notes` 🗒️ | 1.0.0 | native | Per-account sticky notes on colored cards with auto-save, reorder and five pastel colors; ships a small venv service (`user_access`) |
 | `ethos-surveillance` 📹 | 1.0.1 | native | Camera monitoring: live MJPEG grid, motion detection and an event timeline; recording stays in the core |
 | `ethos-video` 🎬 | 1.0.1 | native | Video Station: movies/series, search, My List, resume positions and an in-window player |
 | `ethos-welcome` 🌅 | 1.0.3 | window 8090 | Static welcome page served by nginx (the reference port UI; no EthOS login) |

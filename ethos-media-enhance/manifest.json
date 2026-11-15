@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-media-enhance",
   "name": "Media Enhancements",
-  "version": "1.0.1",
-  "description": "Face-aware video thumbnails for File Station: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a private environment that only this package installs. Without this package thumbnails still work — EthOS falls back to the first valid frame.",
+  "version": "1.0.2",
+  "description": "Face-aware video thumbnails for Files: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a private environment that only this package installs. Without this package thumbnails still work — EthOS falls back to the first valid frame.",
   "icon": "🎯",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-media-enhance/icon.svg",
   "category": "media",
@@ -18,7 +18,7 @@
     "port": 8097,
     "path": "/health"
   },
-  "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. Face detection for movie thumbnails moves out of the EthOS core into this package (OpenCV ~130 MB stays out of the core venv). File Station calls it locally and falls back to the first valid frame when it is not installed.",
+  "changelog": "1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: requires EthOS 2.0. 1.0.0: first release. Face detection for movie thumbnails moves out of the EthOS core into this package (OpenCV ~130 MB stays out of the core venv). File Station calls it locally and falls back to the first valid frame when it is not installed.",
   "compose": null,
   "files": [
     {

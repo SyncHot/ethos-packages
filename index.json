@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-15T10:05:21+00:00",
+  "generated_at": "2026-11-15T10:26:13+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -189,8 +189,8 @@
     {
       "id": "ethos-kanban",
       "name": "Kanban Board",
-      "version": "1.0.1",
-      "description": "Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Package Center app: the board lives in the package's own service and keeps working for every signed-in account. Boards from the built-in version are imported automatically on first start.",
+      "version": "1.0.2",
+      "description": "Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Packages app: the board lives in the package's own service and keeps working for every signed-in account. Boards from the built-in version are imported automatically on first start.",
       "icon": "🗂️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/icon.svg",
       "category": "productivity",
@@ -203,16 +203,16 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
+      "changelog": "1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: requires EthOS 2.0. 1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/manifest.json",
-      "manifest_sha256": "c23370e5d3a641bba53117aafbce0383c7bc8c65815ef9f04674a437dfdbec37",
+      "manifest_sha256": "f97e548fb5702478982c3f29921229bc6cca4e8d55561a9e7e1194a1225cfa0f",
       "size_bytes": 52828
     },
     {
       "id": "ethos-media-enhance",
       "name": "Media Enhancements",
-      "version": "1.0.1",
-      "description": "Face-aware video thumbnails for File Station: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a private environment that only this package installs. Without this package thumbnails still work — EthOS falls back to the first valid frame.",
+      "version": "1.0.2",
+      "description": "Face-aware video thumbnails for Files: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a private environment that only this package installs. Without this package thumbnails still work — EthOS falls back to the first valid frame.",
       "icon": "🎯",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-media-enhance/icon.svg",
       "category": "media",
@@ -225,9 +225,9 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. Face detection for movie thumbnails moves out of the EthOS core into this package (OpenCV ~130 MB stays out of the core venv). File Station calls it locally and falls back to the first valid frame when it is not installed.",
+      "changelog": "1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: requires EthOS 2.0. 1.0.0: first release. Face detection for movie thumbnails moves out of the EthOS core into this package (OpenCV ~130 MB stays out of the core venv). File Station calls it locally and falls back to the first valid frame when it is not installed.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-media-enhance/manifest.json",
-      "manifest_sha256": "04a422b1ad5448b64a66063c3f55ea4ff321064ca447eeffb0bc25e401359c24",
+      "manifest_sha256": "102792c76527565b67a30d49a0ee81df0fbbe8fa34fd3ce1cda7547dc2e82fd1",
       "size_bytes": 5240
     },
     {
@@ -279,8 +279,8 @@
     {
       "id": "ethos-photos",
       "name": "Photos",
-      "version": "1.0.1",
-      "description": "PhotoStation for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer. The gallery index stays in EthOS (the Android Moments app reads it too); this package ships the desktop app, so it can update on its own.",
+      "version": "1.0.2",
+      "description": "Photos for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer. The gallery index stays in EthOS (the EthOS Photos Android app reads it too); this package ships the desktop app, so it can update on its own.",
       "icon": "📷",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/icon.svg",
       "category": "media",
@@ -293,9 +293,9 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: Add folder uses the EthOS folder picker, and moving items to trash reports progress in the shared task panel. 1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
+      "changelog": "1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: Add folder uses the EthOS folder picker, and moving items to trash reports progress in the shared task panel. 1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/manifest.json",
-      "manifest_sha256": "5a8702feb2fa10f56f525ae8899d4238f5e1bb8015387d80bbdeb47033516f0c",
+      "manifest_sha256": "7352de3f6712404675f1d56b364e1fa915f00aac19f24d24f7568237406f9578",
       "size_bytes": 182823
     },
     {
@@ -323,9 +323,31 @@
       "size_bytes": 25878
     },
     {
+      "id": "ethos-sticky-notes",
+      "name": "Sticky Notes",
+      "version": "1.0.0",
+      "description": "Per-account sticky notes on colored cards: always-editable text, five pastel colors, reorder and one-click remove. Now a Packages app with its own private service.",
+      "icon": "🗒️",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/icon.svg",
+      "category": "productivity",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "venv",
+      "capabilities": [],
+      "system_requires": [],
+      "screenshots": [],
+      "changelog": "1.0.0: first release. Sticky Notes moves out of the core install into Package Center: a native window, a private stdlib Python service and per-account notes imported automatically from the built-in widget.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/manifest.json",
+      "manifest_sha256": "165bfc8c06ec511d8c054b2340798393b43a0c4e3a0ff21ef220338b70dd785c",
+      "size_bytes": 41515
+    },
+    {
       "id": "ethos-surveillance",
-      "name": "Surveillance Station",
-      "version": "1.0.1",
+      "name": "Cameras",
+      "version": "1.0.2",
       "description": "Watch your IP cameras from EthOS: MJPEG live grid, per-camera motion detection with event thumbnails, snapshots and MP4 recordings. The camera service stays in EthOS (ffmpeg, motion threads, path-scoped recordings) so recordings keep running headless; this package ships the desktop app.",
       "icon": "📹",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/icon.svg",
@@ -339,15 +361,15 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: requires EthOS 2.0. 1.0.0: first release. The Surveillance desktop app moves out of the core install; cameras, motion detection and recordings stay in EthOS, so recording continues even without this package.",
+      "changelog": "1.0.2: renamed to Cameras as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: requires EthOS 2.0. 1.0.0: first release. The Surveillance desktop app moves out of the core install; cameras, motion detection and recordings stay in EthOS, so recording continues even without this package.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/manifest.json",
-      "manifest_sha256": "65d09befac52b9ce57a1a3286323ab939412b0ed276fba96b97b2688f7a7fbc9",
+      "manifest_sha256": "9e3a0cfed651f689a5093d6ede1c301754c37beac7be1c1c9c0da411b8fa0320",
       "size_bytes": 32297
     },
     {
       "id": "ethos-video",
-      "name": "Video Station",
-      "version": "1.0.1",
+      "name": "Videos",
+      "version": "1.0.2",
       "description": "Browse and watch the videos on your NAS: live folder browsing, ffmpeg thumbnails, resume positions, subtitles and TMDB metadata. The video API stays in EthOS so the Android Video app keeps working; this package ships the desktop app. Needs ffmpeg on the NAS for thumbnails and transcoding.",
       "icon": "🎬",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/icon.svg",
@@ -361,9 +383,9 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: light theme for the shell, rows and empty states (the hero and player stay cinematic), and adding a folder uses the EthOS folder picker. 1.0.0: first release. The Video Station desktop app moves out of the core install; the video library API, thumbnails and streaming stay in EthOS, shared with the Android app.",
+      "changelog": "1.0.2: renamed to Videos as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: light theme for the shell, rows and empty states (the hero and player stay cinematic), and adding a folder uses the EthOS folder picker. 1.0.0: first release. The Video Station desktop app moves out of the core install; the video library API, thumbnails and streaming stay in EthOS, shared with the Android app.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/manifest.json",
-      "manifest_sha256": "90a2ba430fef2c70cdf6fd51a93b4d562cc8d25fbae3d06d9ca5a28e00937fc1",
+      "manifest_sha256": "b420912d72c04302fd739298b4074661c38025e30b8c7c4d28d159928f39f77b",
       "size_bytes": 134987
     },
     {
