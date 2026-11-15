@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-15T18:41:24+00:00",
+  "generated_at": "2026-11-15T18:57:24+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -145,7 +145,7 @@
     {
       "id": "ethos-docker",
       "name": "Docker Manager",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "description": "Engine status, containers, images, volumes and Compose projects in one place: start, stop, restart, inspect logs, prune and install Docker Engine on the NAS. The engine helper and the /api/docker endpoints stay in EthOS because the package runtime depends on them; this package is the desktop app.",
       "icon": "🐳",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/icon.svg",
@@ -159,10 +159,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.3: scope actions and data lookups to each Docker Manager window; remove global inline handlers. 1.0.2: window redesigned with the shared AntiVirus/Domains shell — 218 px rail with text-only nav, summary tiles, one simple table per section and an engine panel that states the next step; dialogs use the shared modal. 1.0.1: Package Center icon redrawn on the 256 px grid; requires EthOS 2.0. 1.0.0: first release. The Docker Manager desktop app moves out of the core install; the Docker Engine helper, the compose runtime and the /api/docker endpoints stay in EthOS because every container package depends on them.",
+      "changelog": "1.0.4: show authorization errors clearly and report pull/prune progress while requests run. 1.0.3: scope actions and data lookups to each Docker Manager window; remove global inline handlers. 1.0.2: window redesigned with the shared AntiVirus/Domains shell — 218 px rail with text-only nav, summary tiles, one simple table per section and an engine panel that states the next step; dialogs use the shared modal. 1.0.1: Package Center icon redrawn on the 256 px grid; requires EthOS 2.0. 1.0.0: first release. The Docker Manager desktop app moves out of the core install; the Docker Engine helper, the compose runtime and the /api/docker endpoints stay in EthOS because every container package depends on them.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/manifest.json",
-      "manifest_sha256": "194d78c4a0aa800006e646c0f7a5f37e9bd9393506b3e5442cea66158048250f",
-      "size_bytes": 68225
+      "manifest_sha256": "12f682f511b9333e1f6d9b0e26939626e2d18873b4d0023230c8fd5502ed42d9",
+      "size_bytes": 70229
     },
     {
       "id": "ethos-editor",

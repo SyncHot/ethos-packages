@@ -12,7 +12,7 @@ The catalog currently contains twenty-one packages:
 | `ethos-antivirus` 🛡️ | 2.1.5 | native | ClamAV scanner with quarantine, scan history, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
 | `ethos-books` 📚 | 1.0.0 | native | EPUB/PDF reader and audiobook player for books already on the NAS: folders are scanned through the core file API, progress and covers per account; ships a small venv service (`user_access`) |
 | `ethos-cleaner` 🧹 | 1.0.1 | native | Disk space analyzer, biggest files and safe cleanup suggestions (trash, temp, caches, journal) through the core disk-clean API |
-| `ethos-docker` 🐳 | 1.0.3 | native | Containers, images, volumes and Compose projects; the Docker engine itself stays host software installed through the privileged helper |
+| `ethos-docker` 🐳 | 1.0.4 | native | Containers, images, volumes and Compose projects; the Docker engine itself stays host software installed through the privileged helper |
 | `ethos-editor` ⌨️ | 1.0.1 | native | VS Code-style workbench: files and folders, tabs, find/replace, Source Control with inline git gutters, terminals, Problems/Output and Markdown preview |
 | `ethos-git-diff` ⎇ | 1.0.1 | native | IntelliJ-style side-by-side diff with hunk staging/unstaging, backed by the core editor git API |
 | `ethos-kanban` 🗂️ | 1.0.1 | native | Kanban boards with drag & drop, labels and due dates; ships a small venv service (`user_access`) |

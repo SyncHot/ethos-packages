@@ -270,6 +270,12 @@ const ENGINE_STEP_LABELS = {
     done: 'Complete',
 };
 
+const ADMIN_REQUIRED_ACTIONS = new Set([
+    'engine-install', 'engine-restart', 'container-action', 'container-remove',
+    'compose-action', 'execute-pull', 'delete-image', 'prune-images',
+    'delete-volume', 'prune-volumes',
+]);
+
 // ── Small helpers ────────────────────────────────────────────────
 
 const STATUS_META = {
@@ -286,7 +292,7 @@ function _statusMeta(status) {
 
 function _cap(s) { return String(s || '?').charAt(0).toUpperCase() + String(s || '').slice(1); }
 
-function _errorCard(e, retryFn) {
+function _errorCard(e) {
     const msg = String(e.message || '').includes('503')
         ? 'Docker daemon is not running or not accessible.'
         : (e.message || 'Unknown error');
@@ -980,7 +986,7 @@ async function _loadVolumesTab() {
 }
 
 // ════════════════════════════════════════════
-// GLOBAL FUNCTIONS (inline onclick handlers)
+// WINDOW-SCOPED ACTIONS
 // ════════════════════════════════════════════
 
 function _reloadCurrentTab(bodyEl) {
@@ -988,7 +994,7 @@ function _reloadCurrentTab(bodyEl) {
     renderDockerApp(bodyEl);
 }
 
-function _handleRootClick(event) {
+async function _handleRootClick(event) {
     const root = event.currentTarget;
     const target = event.target instanceof Element ? event.target : null;
     if (!target) return;
@@ -1009,6 +1015,12 @@ function _handleRootClick(event) {
     const actionElement = target.closest('[data-action]');
     if (actionElement && root.contains(actionElement)) {
         const { action, name, verb, project, image } = actionElement.dataset;
+        if (ADMIN_REQUIRED_ACTIONS.has(action) && !await _adminCheck()) {
+            const message = 'Administrator access is required for Docker actions.';
+            addNotification(message, 'error');
+            _setStatus(root, message, 'warn');
+            return;
+        }
         switch (action) {
             case 'refresh':
                 renderDockerApp(_windowBody);
@@ -1035,7 +1047,7 @@ function _handleRootClick(event) {
                 _togglePull(_windowBody);
                 break;
             case 'execute-pull':
-                _executePull();
+                _executePull(actionElement);
                 break;
             case 'cancel-pull':
                 _cancelPullImage();
@@ -1044,13 +1056,13 @@ function _handleRootClick(event) {
                 _deleteImage(image);
                 break;
             case 'prune-images':
-                _pruneImages();
+                _pruneImages(actionElement);
                 break;
             case 'delete-volume':
                 _deleteVolume(name);
                 break;
             case 'prune-volumes':
-                _pruneVolumes();
+                _pruneVolumes(actionElement);
                 break;
             default:
                 return;
@@ -1213,15 +1225,56 @@ async function _cancelPullImage() {
     _pullVisible = false;
     await _loadImagesTab();
 }
-// Inline onclick handlers resolve against the global scope, and this is an ES
-// module — without the explicit window assignment the ✕ button did nothing.
-async function _executePull() {
+
+async function _runTrackedAction(button, { title, detail, failurePrefix }, work, refresh) {
+    const root = _windowBody && _windowBody.querySelector('.dk-root');
+    const originalLabel = button ? button.textContent : '';
+    if (button) {
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        button.textContent = `${title}…`;
+    }
+    if (root) _setStatus(root, `${title}…`, 'warn');
+
+    const task = startTask({ appId: 'docker', title, detail, testIdPrefix: 'docker-action' });
+    try {
+        const message = await work();
+        task.finish('done', { detail: message });
+        addNotification(message, 'success');
+        if (root) _setStatus(root, message);
+        await refresh();
+    } catch (error) {
+        const detailMessage = error.message || 'Unknown error';
+        task.finish('failed', { detail: detailMessage });
+        const message = `${failurePrefix}: ${detailMessage}`;
+        addNotification(message, 'error');
+        if (root) _setStatus(root, message, 'error');
+    } finally {
+        if (button && button.isConnected) {
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+            button.textContent = originalLabel;
+        }
+    }
+}
+
+async function _executePull(button) {
     const input = _windowBody && _windowBody.querySelector('#imagesPullInput');
     if (!input) return;
     const name = input.value.trim();
-    if (!name) { addNotification('error', 'Please enter an image reference (e.g. nginx:latest)'); return; }
+    if (!name) {
+        const message = 'Please enter an image reference (e.g. nginx:latest)';
+        addNotification(message, 'error');
+        _setStatus(_windowBody.querySelector('.dk-root'), message, 'error');
+        input.focus();
+        return;
+    }
 
-    try {
+    await _runTrackedAction(button, {
+        title: 'Pulling image',
+        detail: name,
+        failurePrefix: 'Pull failed',
+    }, async () => {
         const r = await apiFetch('/api/images/pull', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1231,12 +1284,9 @@ async function _executePull() {
             const d = await r.json().catch(() => ({}));
             throw new Error(d.detail || `HTTP ${r.status}`);
         }
-        addNotification('success', `Image "${name}" pulled successfully`);
         _pullVisible = false;
-        await _loadImagesTab();
-    } catch (e) {
-        addNotification('error', `Pull failed: ${e.message}`);
-    }
+        return `Image "${name}" pulled successfully`;
+    }, _loadImagesTab);
 }
 
 // Delete image
@@ -1261,20 +1311,21 @@ async function _deleteImage(idOrTag) {
 }
 
 // Prune images
-async function _pruneImages() {
+async function _pruneImages(button) {
     if (!await _ctx.modal.confirm('Prune Images', 'Remove ALL unused Docker images? This cannot be undone.')) return;
-    try {
+    await _runTrackedAction(button, {
+        title: 'Pruning images',
+        detail: 'Removing images not referenced by any container',
+        failurePrefix: 'Image prune failed',
+    }, async () => {
         const r = await apiFetch('/api/images/prune', { method: 'POST' });
         if (!r.ok) {
             const d = await r.json().catch(() => ({}));
             throw new Error(d.detail || `HTTP ${r.status}`);
         }
         const data = await r.json();
-        addNotification('success', data.message || 'Images pruned successfully');
-        _loadImagesTab();
-    } catch (e) {
-        addNotification('error', `Prune failed: ${e.message}`);
-    }
+        return data.message || 'Unused images pruned successfully';
+    }, _loadImagesTab);
 }
 
 // Delete volume
@@ -1298,20 +1349,21 @@ async function _deleteVolume(name) {
 }
 
 // Prune volumes
-async function _pruneVolumes() {
+async function _pruneVolumes(button) {
     if (!await _ctx.modal.confirm('Prune Volumes', 'Remove all unused Docker volumes (named + anonymous)? All data in them will be lost.\n\nVolumes still referenced by any container — including stopped ones — are kept.')) return;
-    try {
+    await _runTrackedAction(button, {
+        title: 'Pruning volumes',
+        detail: 'Removing volumes not referenced by any container',
+        failurePrefix: 'Volume prune failed',
+    }, async () => {
         const r = await apiFetch('/api/volumes/prune', { method: 'POST' });
         if (!r.ok) {
             const d = await r.json().catch(() => ({}));
             throw new Error(d.detail || `HTTP ${r.status}`);
         }
         const data = await r.json();
-        addNotification('success', data.message || 'Volumes pruned successfully');
-        _loadVolumesTab();
-    } catch (e) {
-        addNotification('error', `Prune failed: ${e.message}`);
-    }
+        return data.message || 'Unused volumes pruned successfully';
+    }, _loadVolumesTab);
 }
 
 // ── Package entry point ──────────────────────────────────────────────────────
