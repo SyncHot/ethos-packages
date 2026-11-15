@@ -1142,24 +1142,33 @@ function _syncTreeSelection(proj, tab) {
     row.scrollIntoView({ block: 'nearest' });
 }
 
-/** Window title + taskbar label: ``Code Editor — project ●`` while dirty. */
+/** Unsaved indicator: the EthOS host owns the window title and taskbar label,
+ *  so the editor reports dirty state in its own status bar instead. */
 function _updateWindowTitle(ref) {
     const winEl = ref && ref.closest ? ref.closest('.app-window') : null;
     if (!winEl) return;
     const content = winEl.querySelector('.ed-content');
-    const proj = content ? content.querySelector('.ed-proj') : null;
-    const single = content ? _states.get(content) : null;
-    const path = proj ? proj.dataset.root : (single?.path || '');
-    const name = path ? _nameOf(path) : '';
+    if (!content) return;
+    const proj = content.querySelector('.ed-proj');
+    const single = _states.get(content);
     const dirty = proj
         ? (proj.__tabs || []).some(t => t.dirty)
         : !!(single && single.dirty);
-    const title = (name ? `Code Editor — ${name}` : 'Code Editor') + (dirty ? ' ●' : '');
-    const titleEl = winEl.querySelector('.window-title-text');
-    if (titleEl) titleEl.textContent = title;
-    const entry = openWindows.get(winEl.id);
-    if (entry) entry.title = title;
-    try { renderTaskbar(); } catch {}
+    const bar = content.querySelector('[data-testid="ed-statusbar"] .ed-sb-left');
+    if (!bar) return;
+    let dot = bar.querySelector('[data-testid="ed-dirty"]');
+    if (!dirty) {
+        if (dot) dot.remove();
+        return;
+    }
+    if (!dot) {
+        dot = document.createElement('span');
+        dot.className = 'ed-sb-item';
+        dot.setAttribute('data-testid', 'ed-dirty');
+        dot.title = 'Unsaved changes';
+        bar.appendChild(dot);
+    }
+    dot.textContent = '● Unsaved';
 }
 
 /** Language choices for the status-bar picker. */
@@ -3438,6 +3447,20 @@ function _termSetView(st, view) {
 }
 
 function _termTheme() {
+    if (!document.documentElement.classList.contains('dark')) {
+        // VS Code Light+ terminal palette
+        return {
+            background: '#ffffff',
+            foreground: '#333333',
+            cursor: '#1f2430',
+            selectionBackground: '#b3d4fc',
+            black: '#000000', red: '#cd3131', green: '#00bc00', yellow: '#949800',
+            blue: '#0451a5', magenta: '#bc05bc', cyan: '#0598bc', white: '#555555',
+            brightBlack: '#666666', brightRed: '#cd3131', brightGreen: '#14ce14',
+            brightYellow: '#b5ba00', brightBlue: '#0451a5', brightMagenta: '#bc05bc',
+            brightCyan: '#0598bc', brightWhite: '#a5a5a5',
+        };
+    }
     return {
         background: '#1E1E1E',
         foreground: '#CCCCCC',
@@ -3449,6 +3472,21 @@ function _termTheme() {
         brightYellow: '#F5F543', brightBlue: '#3B75FF', brightMagenta: '#B4009E',
         brightCyan: '#61D6D6', brightWhite: '#FFFFFF',
     };
+}
+
+// xterm keeps its palette in JS, so it needs an explicit update when the
+// topbar toggle flips `<html class="light|dark">` at runtime.
+const _termInstances = new Set();
+let _termThemeObserver = null;
+function _watchThemeChanges() {
+    if (_termThemeObserver) return;
+    _termThemeObserver = new MutationObserver(() => {
+        if (!document.body) return;
+        for (const term of _termInstances) {
+            try { term.options.theme = _termTheme(); } catch (_) { /* disposed */ }
+        }
+    });
+    _termThemeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 }
 
 function _termTargetLabel(target, serverUser = '') {
@@ -3511,6 +3549,8 @@ function _termAddSession(st) {
     const fit = new window.FitAddon.FitAddon();
     term.loadAddon(fit);
     term.open(container);
+    _termInstances.add(term);
+    _watchThemeChanges();
     term.attachCustomKeyEventHandler((ev) => {
         // Ctrl/Cmd+V: xterm's default handling sends \x16 to the PTY and cancels the keydown,
         // suppressing the browser's native paste event — so clipboard text never reaches
@@ -3560,6 +3600,7 @@ function _termKillSession(st, sess) {
     if (sess.ro) { try { sess.ro.disconnect(); } catch {} }
     sess.paneEl.remove();
     st.sessions = st.sessions.filter(s => s !== sess);
+    _termInstances.delete(sess.term);
     if (!st.sessions.length) {
         st.cwd = '';
         _termShowCwd(st);
