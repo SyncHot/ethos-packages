@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "id": "ethos-docker",
+  "name": "Docker Manager",
+  "version": "1.0.0",
+  "description": "Engine status, containers, images, volumes and Compose projects in one place: start, stop, restart, inspect logs, prune and install Docker Engine on the NAS. The engine helper and the /api/docker endpoints stay in EthOS because the package runtime depends on them; this package is the desktop app.",
+  "icon": "🐳",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/icon.svg",
+  "category": "tools",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js"
+  },
+  "changelog": "1.0.0: first release. The Docker Manager desktop app moves out of the core install; the Docker Engine helper, the compose runtime and the /api/docker endpoints stay in EthOS because every container package depends on them.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/frontend/app.js",
+      "sha256": "49da52556d9f897485321667c4d724343a6ef5820493428bc27c4c9d112e87ba",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/icon.svg",
+      "sha256": "2e82ffe8e89b0215afea4ffa47f1a5de9e489df1e84f11c9d7cad5f11ba5c534",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}

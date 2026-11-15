@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-shares",
   "name": "Samba Shares",
-  "version": "1.1.0",
-  "description": "Create and manage SMB shares for Windows, macOS and Linux clients: pick a folder, set who may read or write, and see the Samba service state. Needs the Samba host package — EthOS probes for it and tells you the exact install command instead of showing a dead toggle. Share definitions are written by EthOS itself (the only process with the narrow sudoers rule for smb.conf), so this package ships the desktop app only.",
+  "version": "1.2.0",
+  "description": "Create and manage SMB shares for Windows, macOS and Linux clients: pick a folder, set who may read or write, and see the Samba service state. Declares the Samba host package, so EthOS installs it with this package and removes it again when nothing else needs it. Share definitions are written by EthOS itself (the only process with the narrow sudoers rule for smb.conf), so this package ships the desktop app only.",
   "icon": "📁",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/icon.svg",
   "category": "storage",
@@ -15,7 +15,7 @@
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.1.0: declares the Samba host requirement. If smbd/testparm are missing the app now shows a banner with the exact install command and disables \"+ Add Share\" instead of failing with a raw error.\n1.0.0: first release. The Samba Shares desktop app moves out of the core install; share configuration and the Samba service keep living in EthOS.",
+  "changelog": "1.2.0: Samba is now installed automatically with this package (root helper ethos-system-deps) and removed on uninstall when no other package declares it.\n1.1.0: declares the Samba host requirement; the app shows a banner with the exact install command and disables \"+ Add Share\" when Samba is missing.\n1.0.0: first release. The Samba Shares desktop app moves out of the core install.",
   "system_requires": [
     "samba"
   ],

@@ -69,6 +69,43 @@ repo.pub            publisher public key (private key never committed)
   `snapshots`, …) are rejected.
 - **Never ship a package-local notification UI.** Use `ctx.notifications.{toast,emit,open}` — one
   global Notification Center, see “Notifications (mandatory)” below.
+- **Declare host software in `system_requires`** — never install it yourself. See
+  “Host dependencies (mandatory)” below.
+
+## Host dependencies (mandatory)
+
+A package never runs `apt`, never bundles OS binaries and never asks the operator to install
+something by hand. It **declares** what it needs and EthOS owns the lifecycle:
+
+```json
+{ "system_requires": ["samba"] }
+```
+
+- **Allowed ids are a closed registry** in EthOS (`backend/services/system_deps.py`): today
+  `docker` and `samba`. Anything else is rejected at manifest validation, so an id EthOS does not
+  know is not “extra safety” — it breaks the install.
+- **Lifecycle guarantees** (EthOS side, do not reimplement):
+  - install/update probes the host and installs a missing requirement through a root-owned helper —
+    `ethos-system-deps <install|remove> <id>` (one exact sudoers rule per `(action, id)` pair) or
+    `ethos-docker-install` for the engine;
+  - what EthOS installed is recorded in `<DATA_DIR>/packages/system_deps.json`;
+  - uninstall removes a requirement **only** when EthOS installed it *and* no remaining installed
+    package declares it (refcount). Software the operator installed by hand is never touched.
+  - `docker` is never auto-removed: it is shared infrastructure for every compose package.
+- **Do not emulate it.** No lifecycle scripts, no `sudo apt` in a service, no “run this command in
+  a terminal” as the only plan. If a package needs privileged host work that policy forbids in a
+  container (`/var/run/docker.sock`, `smb.conf`, file operations through `path_scope`), ship the
+  **UI only** and let the core API keep the privilege — `ethos-shares` and `ethos-docker` are the
+  reference packages.
+- **Adding a new host tool is an EthOS release, not a manifest change.** Register it in
+  `backend/services/system_deps.py`, add the apt mapping to `deploy/ethos-system-deps`, add the id
+  to `SYSTEM_DEPS_IDS` in `setup_scripts/setup_service.sh`, publish EthOS, then declare the id here.
+  `tests/test_system_deps_helper.py` in the EthOS repo checks the three stay in sync.
+- **Degrade visibly.** Read the preflight (`GET /api/packages/catalog/{id}` → `system_status`, or the
+  core endpoint your app uses, e.g. `/api/shares/status` → `samba_installed`) and disable the actions
+  that need the missing tool with a banner naming it. A dead button is a review blocker.
+- **Never instruct the user to `purge`.** Removal keeps config (`apt-get remove`, not `purge`); a
+  package must not depend on the host tool's data being deleted.
 
 ## Native package UI shell (mandatory)
 

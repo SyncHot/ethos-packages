@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-15T08:55:50+00:00",
+  "generated_at": "2026-11-15T09:07:25+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -119,6 +119,28 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-cleaner/manifest.json",
       "manifest_sha256": "7c73c00ad6d744f5ca5c8f5e522d6ddbeced77869ab1346a15d032ce5b25812e",
       "size_bytes": 27087
+    },
+    {
+      "id": "ethos-docker",
+      "name": "Docker Manager",
+      "version": "1.0.0",
+      "description": "Engine status, containers, images, volumes and Compose projects in one place: start, stop, restart, inspect logs, prune and install Docker Engine on the NAS. The engine helper and the /api/docker endpoints stay in EthOS because the package runtime depends on them; this package is the desktop app.",
+      "icon": "🐳",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/icon.svg",
+      "category": "tools",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "files",
+      "capabilities": [],
+      "system_requires": [],
+      "screenshots": [],
+      "changelog": "1.0.0: first release. The Docker Manager desktop app moves out of the core install; the Docker Engine helper, the compose runtime and the /api/docker endpoints stay in EthOS because every container package depends on them.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-docker/manifest.json",
+      "manifest_sha256": "7b8a5cb2dc4e3f8ddd2b349d3eb24c5f9beb014e764008e8cec7baca9a181599",
+      "size_bytes": 56980
     },
     {
       "id": "ethos-editor",
@@ -279,8 +301,8 @@
     {
       "id": "ethos-shares",
       "name": "Samba Shares",
-      "version": "1.1.0",
-      "description": "Create and manage SMB shares for Windows, macOS and Linux clients: pick a folder, set who may read or write, and see the Samba service state. Needs the Samba host package — EthOS probes for it and tells you the exact install command instead of showing a dead toggle. Share definitions are written by EthOS itself (the only process with the narrow sudoers rule for smb.conf), so this package ships the desktop app only.",
+      "version": "1.2.0",
+      "description": "Create and manage SMB shares for Windows, macOS and Linux clients: pick a folder, set who may read or write, and see the Samba service state. Declares the Samba host package, so EthOS installs it with this package and removes it again when nothing else needs it. Share definitions are written by EthOS itself (the only process with the narrow sudoers rule for smb.conf), so this package ships the desktop app only.",
       "icon": "📁",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/icon.svg",
       "category": "storage",
@@ -295,9 +317,9 @@
         "samba"
       ],
       "screenshots": [],
-      "changelog": "1.1.0: declares the Samba host requirement. If smbd/testparm are missing the app now shows a banner with the exact install command and disables \"+ Add Share\" instead of failing with a raw error.\n1.0.0: first release. The Samba Shares desktop app moves out of the core install; share configuration and the Samba service keep living in EthOS.",
+      "changelog": "1.2.0: Samba is now installed automatically with this package (root helper ethos-system-deps) and removed on uninstall when no other package declares it.\n1.1.0: declares the Samba host requirement; the app shows a banner with the exact install command and disables \"+ Add Share\" when Samba is missing.\n1.0.0: first release. The Samba Shares desktop app moves out of the core install.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/manifest.json",
-      "manifest_sha256": "4d2b22f85e5de82e07c86a246371dbe8e173eb08ad4c89a075ef3858e494b41c",
+      "manifest_sha256": "3cb424988960f9d14139ed87e17ff4334ff0aa8d7da622c966441eee8eaab7e7",
       "size_bytes": 25027
     },
     {
