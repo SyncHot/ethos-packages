@@ -1,0 +1,34 @@
+{
+  "schema": 2,
+  "id": "ethos-surveillance",
+  "name": "Surveillance Station",
+  "version": "1.0.0",
+  "description": "Watch your IP cameras from EthOS: MJPEG live grid, per-camera motion detection with event thumbnails, snapshots and MP4 recordings. The camera service stays in EthOS (ffmpeg, motion threads, path-scoped recordings) so recordings keep running headless; this package ships the desktop app.",
+  "icon": "📹",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/icon.svg",
+  "category": "security",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js"
+  },
+  "changelog": "1.0.0: first release. The Surveillance desktop app moves out of the core install; cameras, motion detection and recordings stay in EthOS, so recording continues even without this package.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/frontend/app.js",
+      "sha256": "84ca1ffa4e9ab9e7a1a87df94c0bfa18152c1b42e9654768e6750fda8e4ab5f0",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/icon.svg",
+      "sha256": "2fe57036864b7544e5c11655ac17fb605f2f3afc1e5e4fdb162cefdbc377d18a",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}
