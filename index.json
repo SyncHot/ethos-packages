@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-17T18:38:01+00:00",
+  "generated_at": "2026-11-17T18:49:25+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -55,7 +55,7 @@
     {
       "id": "download-manager",
       "name": "EthOS Download Manager",
-      "version": "1.0.9",
+      "version": "1.0.10",
       "description": "HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window.",
       "icon": "⬇️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/icon.svg",
@@ -71,10 +71,10 @@
         "archive-tools"
       ],
       "screenshots": [],
-      "changelog": "1.0.9: transient failures retry automatically with exponential backoff (the row shows retry n/max in …), a Retry failed toolbar action re-queues every error, Settings gained retry count/delay and the duplicate policy (rename/skip/overwrite), and re-adding the same URL now says Already in the list; requires EthOS 2.3.8. 1.0.8: packages expand with Show parts — each part keeps Resume/Delete/Details. 1.0.7: multi-part archives group into one JDownloader-style package row; requires EthOS 2.3.6. 1.0.6: declares the optional archive-tools host requirement, so EthOS installs bsdtar (libarchive-tools) for .7z/.rar extraction of downloaded archives; requires EthOS 2.3.5. 1.0.5: bulk Clear failed — removes every errored download record and its leftover .part data (finished files and destination folders stay); requires EthOS 2.3.4. 1.0.4: Package Center icon redrawn on the 256 px grid; requires EthOS 2.0. 1.0.3: queue ordering works everywhere — whole waiting/paused rows are draggable, ↑/↓ buttons reorder without dragging, a Queue order sort shows the real start order, and a bug that hid the action buttons on every row after the first is fixed; adds Pause all / Resume all / Clear completed and the auto-download-debrid toggle. 1.0.2: matches the shared package shell — a persistent Download button in the window header, a ready/attention status card, numbered add form (source · destination · torrents), table-based categories/RSS/watch folders and a Package panel; the 2 s poll no longer clears the quick-add field. 1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
+      "changelog": "1.0.10: archives unpack themselves after the download when Extract archives after download is on — multi-part packages wait for every part and start at the first volume, Delete archives after a successful extraction is a separate switch, finished rows and packages gain an Extract / Extract again action and show Extracting… / Extracted / Extract failed; requires EthOS 2.3.9. 1.0.9: transient failures retry automatically with exponential backoff (the row shows retry n/max in …), a Retry failed toolbar action re-queues every error, Settings gained retry count/delay and the duplicate policy (rename/skip/overwrite), and re-adding the same URL now says Already in the list; requires EthOS 2.3.8. 1.0.8: packages expand with Show parts — each part keeps Resume/Delete/Details. 1.0.7: multi-part archives group into one JDownloader-style package row; requires EthOS 2.3.6. 1.0.6: declares the optional archive-tools host requirement, so EthOS installs bsdtar (libarchive-tools) for .7z/.rar extraction of downloaded archives; requires EthOS 2.3.5. 1.0.5: bulk Clear failed — removes every errored download record and its leftover .part data (finished files and destination folders stay); requires EthOS 2.3.4. 1.0.4: Package Center icon redrawn on the 256 px grid; requires EthOS 2.0. 1.0.3: queue ordering works everywhere — whole waiting/paused rows are draggable, ↑/↓ buttons reorder without dragging, a Queue order sort shows the real start order, and a bug that hid the action buttons on every row after the first is fixed; adds Pause all / Resume all / Clear completed and the auto-download-debrid toggle. 1.0.2: matches the shared package shell — a persistent Download button in the window header, a ready/attention status card, numbered add form (source · destination · torrents), table-based categories/RSS/watch folders and a Package panel; the 2 s poll no longer clears the quick-add field. 1.0.1: debrid keys can be verified without re-typing them (the backend uses the saved key for a masked value), provider errors are shown verbatim (e.g. Real-Debrid bad_token, AllDebrid auth errors, TorBox /user/me), and admin-only saves explain the 403. 1.0.0: first release — live queue with drag-and-drop ordering, pause/resume/reset/delete, add via URL, magnet or .torrent, categories, a daily start window, global/per-task speed limits, debrid provider setup, qBittorrent key management, RSS rules and watch folders.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/download-manager/manifest.json",
-      "manifest_sha256": "a85369acbdd603faecc7b1dbc294ddd790cf37aad0ca7e57264d03aead0cfd59",
-      "size_bytes": 87106
+      "manifest_sha256": "66213b17d4de59d8f1ebe4f7c7a2a9efef7253c64bceff124c40d7984eeb59a6",
+      "size_bytes": 89672
     },
     {
       "id": "ethos-antivirus",
@@ -325,8 +325,8 @@
     {
       "id": "ethos-shares",
       "name": "Samba Shares",
-      "version": "1.2.1",
-      "description": "Create and manage SMB shares for Windows, macOS and Linux clients: pick a folder, set who may read or write, and see the Samba service state. Declares the Samba host package, so EthOS installs it with this package and removes it again when nothing else needs it. Share definitions are written by EthOS itself (the only process with the narrow sudoers rule for smb.conf), so this package ships the desktop app only.",
+      "version": "1.3.0",
+      "description": "Manage SMB shares, per-user and group access rules, and Samba credentials for existing Linux accounts. Includes permission masks, service status, and safe folder selection. Samba account changes use a narrow EthOS helper; this package ships the desktop app only.",
       "icon": "📁",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/icon.svg",
       "category": "storage",
@@ -341,10 +341,10 @@
         "samba"
       ],
       "screenshots": [],
-      "changelog": "1.2.1: the window is readable in the light theme (no more white-on-white title and rows), Refresh works in a package window, and Browse… uses the EthOS folder picker. 1.2.0: Samba is now installed automatically with this package (root helper ethos-system-deps) and removed on uninstall when no other package declares it.\n1.1.0: declares the Samba host requirement; the app shows a banner with the exact install command and disables \"+ Add Share\" when Samba is missing.\n1.0.0: first release. The Samba Shares desktop app moves out of the core install.",
+      "changelog": "1.3.0: complete native window with permission masks, structured user/group ACLs, and Samba password management for existing Linux accounts. Failed service reloads restore the prior config and show an error.\n1.2.1: light theme, package-window refresh, and EthOS folder picker. 1.2.0: Samba host dependency managed through the root helper.\n1.1.0: missing-dependency state. 1.0.0: first release.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/manifest.json",
-      "manifest_sha256": "28231474252d80cabbdb4ce8fa46474ffafb46b7c644e836e1d94d468854bfa6",
-      "size_bytes": 25878
+      "manifest_sha256": "c7158eeea5785bf8056e766e0ca30d4ff7e555c9b550a0e3e6296f21df13fde3",
+      "size_bytes": 31237
     },
     {
       "id": "ethos-sticky-notes",
