@@ -458,6 +458,12 @@ export async function render(container, ctx) {
             ? fmtEta((task.size - task.downloaded) / task.speed) : '—';
         const canPause = ACTIVE.has(task.status);
         const canResume = task.status === 'paused' || task.status === 'error';
+        const retryAt = Number(task.retry_at || 0);
+        const retryMax = Number(state.config?.retry_max ?? 3);
+        const retrying = task.status === 'waiting' && retryAt > Date.now() / 1000;
+        const retryInfo = retrying
+            ? ` · <span class="dm-danger">retry ${Number(task.retry_count || 1)}/${retryMax} in ${fmtEta(retryAt - Date.now() / 1000)}</span>`
+            : (task.retry_count ? ` · ${task.retry_count} retr${Number(task.retry_count) === 1 ? 'y' : 'ies'} used` : '');
         const actions = compact ? '' : `<td class="actions"><div class="dm-row end">
                 ${canPause ? `<button class="dm-btn small" type="button" data-action="pause" data-id="${escAttr(task.id)}" data-testid="dm-pause-${escAttr(task.id)}">Pause</button>` : ''}
                 ${canResume ? `<button class="dm-btn small" type="button" data-action="resume" data-id="${escAttr(task.id)}" data-testid="dm-resume-${escAttr(task.id)}">Resume</button>` : ''}
@@ -476,7 +482,7 @@ export async function render(container, ctx) {
                     ${task.category ? `<span class="dm-tag">${escHtml(task.category)}</span>` : ''}
                 </div>
                 <div class="dm-bar ${task.status === 'completed' ? 'is-done' : task.status === 'error' ? 'is-error' : ''}"><i style="width:${percent}%"></i></div>
-                <div class="dm-meta">${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${task.error ? ` · <span class="dm-danger">${escHtml(task.error)}</span>` : ''}</div>
+                <div class="dm-meta">${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${retryInfo}${task.error ? ` · <span class="dm-danger">${escHtml(task.error)}</span>` : ''}</div>
             </td>
             <td class="path" title="${escAttr(task.path || '')}">${escHtml(task.path || '—')}</td>
             <td class="num">${fmtTime(task.created_at)}</td>
@@ -490,6 +496,8 @@ export async function render(container, ctx) {
         const parts = group.tasks.length;
         const expanded = !compact && state.expanded.has(group.key);
         const firstError = group.tasks.find((t) => t.error)?.error || '';
+        const retrying = group.tasks.filter((t) => t.status === 'waiting'
+            && Number(t.retry_at || 0) > Date.now() / 1000).length;
         const canResume = group.tasks.some((t) => t.status === 'paused' || t.status === 'error');
         const canPause = group.tasks.some((t) => ACTIVE.has(t.status));
         const key = escAttr(group.key);
@@ -509,7 +517,7 @@ export async function render(container, ctx) {
                     ${group.failed ? `<span class="dm-tag is-bad">${group.failed} failed</span>` : ''}
                 </div>
                 <div class="dm-bar ${group.status === 'completed' ? 'is-done' : group.status === 'error' ? 'is-error' : ''}"><i style="width:${percent}%"></i></div>
-                <div class="dm-meta">${group.done}/${parts} done · ${percent}% · ${fmtBytes(group.downloaded)} / ${fmtBytes(group.size)} · ${fmtSpeed(group.speed)}${firstError ? ` · <span class="dm-danger">${escHtml(firstError)}</span>` : ''}</div>
+                <div class="dm-meta">${group.done}/${parts} done · ${percent}% · ${fmtBytes(group.downloaded)} / ${fmtBytes(group.size)} · ${fmtSpeed(group.speed)}${retrying ? ` · ${retrying} retrying` : ''}${firstError ? ` · <span class="dm-danger">${escHtml(firstError)}</span>` : ''}</div>
             </td>
             <td class="path" title="${escAttr(taskFolder(group.tasks[0]))}">${escHtml(taskFolder(group.tasks[0]))}</td>
             <td class="num">${fmtTime(group.newest)}</td>
@@ -540,6 +548,7 @@ export async function render(container, ctx) {
                     <button class="dm-btn" type="button" data-action="resume-all" data-testid="dm-resume-all">Resume all</button>
                     <button class="dm-btn" type="button" data-action="clear-completed" data-testid="dm-clear-completed">Clear completed</button>
                     <button class="dm-btn" type="button" data-action="clear-failed" data-testid="dm-clear-failed">Clear failed</button>
+                    <button class="dm-btn" type="button" data-action="retry-failed" data-testid="dm-retry-failed">Retry failed</button>
                 </div>
             </div>
             <div class="dm-tabs">
@@ -695,6 +704,14 @@ export async function render(container, ctx) {
                         <input class="dm-input" id="dm-set-concurrent" type="number" min="1" max="16" value="${Number(cfg.max_concurrent || 3)}"></div>
                     <div class="dm-field"><label class="dm-checkline"><input type="checkbox" id="dm-set-schedule" ${sched.enabled ? 'checked' : ''}> Only start inside a daily window</label></div>
                     <div class="dm-field"><label class="dm-checkline"><input type="checkbox" id="dm-set-auto-debrid" ${cfg.auto_download_debrid !== false ? 'checked' : ''}> Pull cached debrid files to the NAS automatically</label></div>
+                    <div class="dm-field"><label class="dm-checkline"><input type="checkbox" id="dm-set-auto-retry" ${cfg.auto_retry !== false ? 'checked' : ''}> Retry transient failures with backoff</label></div>
+                    <div class="dm-field"><label for="dm-set-retry-max">Retries per download</label><input class="dm-input" id="dm-set-retry-max" type="number" min="0" max="10" value="${Number(cfg.retry_max ?? 3)}"></div>
+                    <div class="dm-field"><label for="dm-set-retry-delay">Base retry delay (s)</label><input class="dm-input" id="dm-set-retry-delay" type="number" min="10" max="3600" value="${Number(cfg.retry_delay || 60)}"></div>
+                    <div class="dm-field"><label for="dm-set-dup">If the file already exists</label>
+                        <select class="dm-input" id="dm-set-dup">
+                            ${[['rename', 'Keep both (rename)'], ['skip', 'Skip'], ['overwrite', 'Overwrite']]
+                                .map(([value, label]) => `<option value="${value}"${(cfg.duplicate_policy || 'rename') === value ? ' selected' : ''}>${label}</option>`).join('')}
+                        </select></div>
                     <div class="dm-field"><label for="dm-set-start">Window start</label><input class="dm-input" id="dm-set-start" type="time" value="${escAttr(sched.start || '01:00')}"></div>
                     <div class="dm-field"><label for="dm-set-end">Window end</label><input class="dm-input" id="dm-set-end" type="time" value="${escAttr(sched.end || '06:00')}"></div>
                     <div class="dm-field"><label for="dm-set-global">Global speed limit (KB/s, 0 = ∞)</label><input class="dm-input" id="dm-set-global" type="number" min="0" value="${Math.round(Number(limits.global_bps || 0) / 1024)}"></div>
@@ -859,10 +876,11 @@ export async function render(container, ctx) {
         const url = (input?.value || state.quickUrl).trim();
         if (!url) return notify('Paste a URL or magnet link', 'error');
         try {
-            await postJson('/tasks', { url });
+            const task = await postJson('/tasks', { url });
             state.quickUrl = '';
             if (input) input.value = '';
-            notify('Download started', 'success');
+            notify(task?.duplicate ? 'Already in the list' : 'Download started',
+                task?.duplicate ? 'info' : 'success');
             await refresh();
         } catch (error) { notify(error.message || 'Could not start the download', 'error'); }
     }
@@ -874,8 +892,9 @@ export async function render(container, ctx) {
             folder: form.querySelector('[name="folder"]').value.trim() || null,
             category: form.querySelector('[name="category"]').value || null };
         try {
-            await postJson('/tasks', body);
-            notify('Download started', 'success');
+            const task = await postJson('/tasks', body);
+            notify(task?.duplicate ? 'Already in the list' : 'Download started',
+                task?.duplicate ? 'info' : 'success');
             form.reset();
             state.view = 'downloads';
             await refresh();
@@ -920,6 +939,10 @@ export async function render(container, ctx) {
             download_dir: dir,
             max_concurrent: concurrent,
             auto_download_debrid: Boolean($('#dm-set-auto-debrid')?.checked),
+            auto_retry: Boolean($('#dm-set-auto-retry')?.checked),
+            retry_max: Number($('#dm-set-retry-max')?.value || 0),
+            retry_delay: Number($('#dm-set-retry-delay')?.value || 60),
+            duplicate_policy: $('#dm-set-dup')?.value || 'rename',
             schedule: { enabled: scheduled, start, end },
             speed_limit: { global_bps: globalKb * 1024, per_task_bps: taskKb * 1024 },
         };
@@ -1120,6 +1143,12 @@ export async function render(container, ctx) {
         await bulkAction('/tasks/clear-failed', 'Removed');
     }
 
+    async function retryFailed() {
+        const failed = state.tasks.filter((t) => t.status === 'error').length;
+        if (!failed) return notify('No failed downloads to retry', 'info');
+        await bulkAction('/tasks/retry-failed', 'Re-queued');
+    }
+
     // ── Package actions ────────────────────────────────────────────────────
     const packageTasks = (key) => state.tasks
         .filter((t) => t.package_key === key)
@@ -1180,6 +1209,7 @@ export async function render(container, ctx) {
             if (name === 'resume-all') { bulkAction('/tasks/resume-all', 'Resumed'); return; }
             if (name === 'clear-completed') { clearCompleted(); return; }
             if (name === 'clear-failed') { clearFailed(); return; }
+            if (name === 'retry-failed') { retryFailed(); return; }
             if (name === 'pkg-resume' || name === 'pkg-pause' || name === 'pkg-delete' || name === 'pkg-details') {
                 if (name === 'pkg-details') packageDetails(key);
                 else packageAction(name.slice(4), key);
