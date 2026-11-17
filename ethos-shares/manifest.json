@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-shares",
   "name": "Samba Shares",
-  "version": "1.2.1",
-  "description": "Create and manage SMB shares for Windows, macOS and Linux clients: pick a folder, set who may read or write, and see the Samba service state. Declares the Samba host package, so EthOS installs it with this package and removes it again when nothing else needs it. Share definitions are written by EthOS itself (the only process with the narrow sudoers rule for smb.conf), so this package ships the desktop app only.",
+  "version": "1.3.0",
+  "description": "Manage SMB shares, per-user and group access rules, and Samba credentials for existing Linux accounts. Includes permission masks, service status, and safe folder selection. Samba account changes use a narrow EthOS helper; this package ships the desktop app only.",
   "icon": "📁",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/icon.svg",
   "category": "storage",
@@ -14,18 +14,18 @@
   "min_ethos_version": "2.0.0",
   "ui": {
     "mode": "native",
-    "entry": "frontend/app.js"
+    "entry": "frontend/app-shell.js"
   },
-  "changelog": "1.2.1: the window is readable in the light theme (no more white-on-white title and rows), Refresh works in a package window, and Browse… uses the EthOS folder picker. 1.2.0: Samba is now installed automatically with this package (root helper ethos-system-deps) and removed on uninstall when no other package declares it.\n1.1.0: declares the Samba host requirement; the app shows a banner with the exact install command and disables \"+ Add Share\" when Samba is missing.\n1.0.0: first release. The Samba Shares desktop app moves out of the core install.",
+  "changelog": "1.3.0: complete native window with permission masks, structured user/group ACLs, and Samba password management for existing Linux accounts. Failed service reloads restore the prior config and show an error.\n1.2.1: light theme, package-window refresh, and EthOS folder picker. 1.2.0: Samba host dependency managed through the root helper.\n1.1.0: missing-dependency state. 1.0.0: first release.",
   "system_requires": [
     "samba"
   ],
   "compose": null,
   "files": [
     {
-      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/frontend/app.js",
-      "sha256": "1817ca9bc4b09ce0e7ad590f372dde320046402c39bd10ffd0f05e4c9f1eef20",
-      "path": "frontend/app.js",
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-shares/frontend/app-shell.js",
+      "sha256": "cdd985c5bae9ee4954d66a459d62826bcfca2623c14c7e2d70158ba936642d9c",
+      "path": "frontend/app-shell.js",
       "mode": 420
     },
     {

@@ -201,6 +201,7 @@ const STATUS = {
     completed: ['Completed', 'is-ok'], error: ['Error', 'is-bad'], canceled: ['Canceled', ''],
 };
 const ACTIVE = new Set(['waiting', 'downloading', 'debrid_downloading']);
+const ARCHIVE_NAME_RE = /\.(zip|rar|7z|tar|tgz|tbz|txz|gz|bz2|xz|zst|lz4)(\.html)?$/i;
 const DEBRID_FIELD = { realdebrid: 'realdebrid_api_token', alldebrid: 'alldebrid_api_key', torbox: 'torbox_api_key' };
 const PROVIDER_LABEL = { realdebrid: 'Real-Debrid', alldebrid: 'AllDebrid', torbox: 'TorBox' };
 
@@ -458,6 +459,11 @@ export async function render(container, ctx) {
             ? fmtEta((task.size - task.downloaded) / task.speed) : '—';
         const canPause = ACTIVE.has(task.status);
         const canResume = task.status === 'paused' || task.status === 'error';
+        const canExtract = task.status === 'completed' && ARCHIVE_NAME_RE.test(String(task.name || ''));
+        const extractInfo = task.extract_state === 'running'
+            ? ' · <span class="dm-danger">extracting…</span>'
+            : task.extract_state === 'done' ? ' · extracted'
+            : task.extract_state === 'error' ? ` · <span class="dm-danger">extract failed: ${escHtml(task.extract_error || '')}</span>` : '';
         const retryAt = Number(task.retry_at || 0);
         const retryMax = Number(state.config?.retry_max ?? 3);
         const retrying = task.status === 'waiting' && retryAt > Date.now() / 1000;
@@ -467,6 +473,7 @@ export async function render(container, ctx) {
         const actions = compact ? '' : `<td class="actions"><div class="dm-row end">
                 ${canPause ? `<button class="dm-btn small" type="button" data-action="pause" data-id="${escAttr(task.id)}" data-testid="dm-pause-${escAttr(task.id)}">Pause</button>` : ''}
                 ${canResume ? `<button class="dm-btn small" type="button" data-action="resume" data-id="${escAttr(task.id)}" data-testid="dm-resume-${escAttr(task.id)}">Resume</button>` : ''}
+                ${canExtract && task.extract_state !== 'running' ? `<button class="dm-btn small" type="button" data-action="extract" data-id="${escAttr(task.id)}" data-testid="dm-extract-${escAttr(task.id)}">${task.extract_state === 'done' ? 'Extract again' : 'Extract'}</button>` : ''}
                 ${orderable ? `<button class="dm-btn small" type="button" data-action="move-up" data-id="${escAttr(task.id)}" title="Start earlier" aria-label="Move ${escAttr(task.name)} earlier" data-testid="dm-up-${escAttr(task.id)}">↑</button>
                     <button class="dm-btn small" type="button" data-action="move-down" data-id="${escAttr(task.id)}" title="Start later" aria-label="Move ${escAttr(task.name)} later" data-testid="dm-down-${escAttr(task.id)}">↓</button>` : ''}
                 <button class="dm-btn small" type="button" data-action="details" data-id="${escAttr(task.id)}" data-testid="dm-details-${escAttr(task.id)}">Details</button>
@@ -482,7 +489,7 @@ export async function render(container, ctx) {
                     ${task.category ? `<span class="dm-tag">${escHtml(task.category)}</span>` : ''}
                 </div>
                 <div class="dm-bar ${task.status === 'completed' ? 'is-done' : task.status === 'error' ? 'is-error' : ''}"><i style="width:${percent}%"></i></div>
-                <div class="dm-meta">${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${retryInfo}${task.error ? ` · <span class="dm-danger">${escHtml(task.error)}</span>` : ''}</div>
+                <div class="dm-meta">${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${retryInfo}${extractInfo}${task.error ? ` · <span class="dm-danger">${escHtml(task.error)}</span>` : ''}</div>
             </td>
             <td class="path" title="${escAttr(task.path || '')}">${escHtml(task.path || '—')}</td>
             <td class="num">${fmtTime(task.created_at)}</td>
@@ -498,12 +505,16 @@ export async function render(container, ctx) {
         const firstError = group.tasks.find((t) => t.error)?.error || '';
         const retrying = group.tasks.filter((t) => t.status === 'waiting'
             && Number(t.retry_at || 0) > Date.now() / 1000).length;
+        const extractState = group.tasks.map((t) => t.extract_state).find(Boolean) || '';
+        const canExtract = group.status === 'completed' && extractState !== 'running'
+            && group.tasks.some((t) => ARCHIVE_NAME_RE.test(String(t.name || '')));
         const canResume = group.tasks.some((t) => t.status === 'paused' || t.status === 'error');
         const canPause = group.tasks.some((t) => ACTIVE.has(t.status));
         const key = escAttr(group.key);
         const actions = compact ? '' : `<td class="actions"><div class="dm-row end">
                 ${canResume ? `<button class="dm-btn small" type="button" data-action="pkg-resume" data-key="${key}" data-testid="dm-pkg-resume-${key}">Resume</button>` : ''}
                 ${canPause ? `<button class="dm-btn small" type="button" data-action="pkg-pause" data-key="${key}" data-testid="dm-pkg-pause-${key}">Pause</button>` : ''}
+                ${canExtract ? `<button class="dm-btn small" type="button" data-action="pkg-extract" data-key="${key}" data-testid="dm-pkg-extract-${key}">${extractState === 'done' ? 'Extract again' : 'Extract'}</button>` : ''}
                 <button class="dm-btn small" type="button" data-action="pkg-toggle" data-key="${key}" aria-expanded="${expanded}" data-testid="dm-pkg-toggle-${key}">${expanded ? 'Hide parts' : 'Show parts'}</button>
                 <button class="dm-btn small" type="button" data-action="pkg-details" data-key="${key}" data-testid="dm-pkg-details-${key}">Details</button>
                 <button class="dm-btn small danger" type="button" data-action="pkg-delete" data-key="${key}" data-testid="dm-pkg-delete-${key}">Delete</button>
@@ -515,6 +526,9 @@ export async function render(container, ctx) {
                     <span class="dm-tag ${tone}">${escHtml(label)}</span>
                     <span class="dm-tag is-info">${parts} parts</span>
                     ${group.failed ? `<span class="dm-tag is-bad">${group.failed} failed</span>` : ''}
+                    ${extractState === 'running' ? '<span class="dm-tag is-info">Extracting…</span>' : ''}
+                    ${extractState === 'done' ? '<span class="dm-tag is-ok">Extracted</span>' : ''}
+                    ${extractState === 'error' ? '<span class="dm-tag is-bad">Extract failed</span>' : ''}
                 </div>
                 <div class="dm-bar ${group.status === 'completed' ? 'is-done' : group.status === 'error' ? 'is-error' : ''}"><i style="width:${percent}%"></i></div>
                 <div class="dm-meta">${group.done}/${parts} done · ${percent}% · ${fmtBytes(group.downloaded)} / ${fmtBytes(group.size)} · ${fmtSpeed(group.speed)}${retrying ? ` · ${retrying} retrying` : ''}${firstError ? ` · <span class="dm-danger">${escHtml(firstError)}</span>` : ''}</div>
@@ -712,6 +726,8 @@ export async function render(container, ctx) {
                             ${[['rename', 'Keep both (rename)'], ['skip', 'Skip'], ['overwrite', 'Overwrite']]
                                 .map(([value, label]) => `<option value="${value}"${(cfg.duplicate_policy || 'rename') === value ? ' selected' : ''}>${label}</option>`).join('')}
                         </select></div>
+                    <div class="dm-field"><label class="dm-checkline"><input type="checkbox" id="dm-set-auto-extract" ${cfg.auto_extract ? 'checked' : ''}> Extract archives after download</label></div>
+                    <div class="dm-field"><label class="dm-checkline"><input type="checkbox" id="dm-set-auto-extract-delete" ${cfg.auto_extract_delete ? 'checked' : ''}> Delete archives after a successful extraction</label></div>
                     <div class="dm-field"><label for="dm-set-start">Window start</label><input class="dm-input" id="dm-set-start" type="time" value="${escAttr(sched.start || '01:00')}"></div>
                     <div class="dm-field"><label for="dm-set-end">Window end</label><input class="dm-input" id="dm-set-end" type="time" value="${escAttr(sched.end || '06:00')}"></div>
                     <div class="dm-field"><label for="dm-set-global">Global speed limit (KB/s, 0 = ∞)</label><input class="dm-input" id="dm-set-global" type="number" min="0" value="${Math.round(Number(limits.global_bps || 0) / 1024)}"></div>
@@ -859,9 +875,10 @@ export async function render(container, ctx) {
             if (action === 'pause') await postJson(`/tasks/${encodeURIComponent(id)}/pause`);
             else if (action === 'resume') await postJson(`/tasks/${encodeURIComponent(id)}/resume`);
             else if (action === 'reset') await postJson(`/tasks/${encodeURIComponent(id)}/reset`);
+            else if (action === 'extract') await postJson(`/tasks/${encodeURIComponent(id)}/extract`);
             else if (action === 'delete') await api(`/tasks/${encodeURIComponent(id)}/cancel?delete_file=true`, { method: 'POST' });
             job?.finish?.('done', { percent: 100 });
-            notify(action === 'delete' ? 'Download deleted' : action === 'reset' ? 'Download reset' : action === 'pause' ? 'Paused' : 'Resumed', 'success');
+            notify(action === 'delete' ? 'Download deleted' : action === 'reset' ? 'Download reset' : action === 'extract' ? 'Extracting archive' : action === 'pause' ? 'Paused' : 'Resumed', 'success');
             await refresh(true);
         } catch (error) {
             job?.finish?.('failed', { detail: error.message });
@@ -943,6 +960,8 @@ export async function render(container, ctx) {
             retry_max: Number($('#dm-set-retry-max')?.value || 0),
             retry_delay: Number($('#dm-set-retry-delay')?.value || 60),
             duplicate_policy: $('#dm-set-dup')?.value || 'rename',
+            auto_extract: Boolean($('#dm-set-auto-extract')?.checked),
+            auto_extract_delete: Boolean($('#dm-set-auto-extract-delete')?.checked),
             schedule: { enabled: scheduled, start, end },
             speed_limit: { global_bps: globalKb * 1024, per_task_bps: taskKb * 1024 },
         };
@@ -1183,9 +1202,10 @@ export async function render(container, ctx) {
         try {
             if (action === 'resume') await postJson(`/packages/${encodeURIComponent(key)}/resume`);
             else if (action === 'pause') await postJson(`/packages/${encodeURIComponent(key)}/pause`);
+            else if (action === 'extract') await postJson(`/packages/${encodeURIComponent(key)}/extract`);
             else if (action === 'delete') await api(`/packages/${encodeURIComponent(key)}/cancel?delete_file=true`, { method: 'POST' });
             job?.finish?.('done', { percent: 100 });
-            notify(action === 'delete' ? 'Package deleted' : action === 'pause' ? 'Package paused' : 'Package resumed', 'success');
+            notify(action === 'delete' ? 'Package deleted' : action === 'pause' ? 'Package paused' : action === 'extract' ? 'Extracting archive' : 'Package resumed', 'success');
             await refresh(true);
         } catch (error) {
             job?.finish?.('failed', { detail: error.message });
@@ -1210,7 +1230,7 @@ export async function render(container, ctx) {
             if (name === 'clear-completed') { clearCompleted(); return; }
             if (name === 'clear-failed') { clearFailed(); return; }
             if (name === 'retry-failed') { retryFailed(); return; }
-            if (name === 'pkg-resume' || name === 'pkg-pause' || name === 'pkg-delete' || name === 'pkg-details') {
+            if (name === 'pkg-resume' || name === 'pkg-pause' || name === 'pkg-delete' || name === 'pkg-details' || name === 'pkg-extract') {
                 if (name === 'pkg-details') packageDetails(key);
                 else packageAction(name.slice(4), key);
                 return;
@@ -1224,7 +1244,7 @@ export async function render(container, ctx) {
             if (name === 'move-up') { moveTask(id, -1); return; }
             if (name === 'move-down') { moveTask(id, 1); return; }
             if (name === 'quick-add') { quickAdd(); return; }
-            if (name === 'pause' || name === 'resume' || name === 'reset' || name === 'delete' || name === 'details') { taskAction(name, id); return; }
+            if (name === 'pause' || name === 'resume' || name === 'reset' || name === 'delete' || name === 'details' || name === 'extract') { taskAction(name, id); return; }
             if (name === 'pick-folder') { pickFolder(target || id); return; }
             if (name === 'upload-torrents') { uploadTorrents(); return; }
             if (name === 'verify-debrid') { verifyDebrid(); return; }

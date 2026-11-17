@@ -20,7 +20,7 @@ jobs:
       - name: Check native modules parse as ES modules
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq nodejs
-          for f in */frontend/app.js; do
+          for f in */frontend/*.js; do
             echo "→ $f"
             node --input-type=module --check < "$f"
           done
