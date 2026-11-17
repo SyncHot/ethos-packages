@@ -199,6 +199,7 @@ const STATUS = {
     waiting: ['Waiting', ''], downloading: ['Downloading', 'is-ok'],
     debrid_downloading: ['Debrid', 'is-ok'], paused: ['Paused', 'is-warn'],
     completed: ['Completed', 'is-ok'], error: ['Error', 'is-bad'], canceled: ['Canceled', ''],
+    skipped: ['Skipped', 'is-warn'],
 };
 const ACTIVE = new Set(['waiting', 'downloading', 'debrid_downloading']);
 const ARCHIVE_NAME_RE = /\.(zip|rar|7z|tar|tgz|tbz|txz|gz|bz2|xz|zst|lz4)(\.html)?$/i;
@@ -335,7 +336,7 @@ export async function render(container, ctx) {
     // destination; parts of one archive render as a single row with aggregate
     // status and package-level actions (JDownloader-style).
     const packageStatus = (tasks) => {
-        const order = ['downloading', 'debrid_downloading', 'waiting', 'error', 'paused', 'completed', 'canceled'];
+        const order = ['downloading', 'debrid_downloading', 'waiting', 'error', 'paused', 'completed', 'canceled', 'skipped'];
         return order.find((status) => tasks.some((t) => t.status === status)) || tasks[0]?.status || 'waiting';
     };
     const buildGroups = (tasks) => {
@@ -360,6 +361,8 @@ export async function render(container, ctx) {
             group.progress = group.size > 0 ? Math.min(1, group.downloaded / group.size) : 0;
             group.done = group.tasks.filter((t) => t.status === 'completed').length;
             group.failed = group.tasks.filter((t) => t.status === 'error').length;
+            // Skipped parts stay visible but never block the package.
+            group.skipped = group.tasks.filter((t) => t.status === 'skipped').length;
         }
         return groups;
     };
@@ -459,6 +462,8 @@ export async function render(container, ctx) {
             ? fmtEta((task.size - task.downloaded) / task.speed) : '—';
         const canPause = ACTIVE.has(task.status);
         const canResume = task.status === 'paused' || task.status === 'error';
+        const canSkip = task.status !== 'completed' && task.status !== 'skipped';
+        const canUnskip = task.status === 'skipped';
         const canExtract = task.status === 'completed' && ARCHIVE_NAME_RE.test(String(task.name || ''));
         const extractInfo = task.extract_state === 'running'
             ? ' · <span class="dm-danger">extracting…</span>'
@@ -480,6 +485,8 @@ export async function render(container, ctx) {
                 ${orderable ? `<button class="dm-btn small" type="button" data-action="move-up" data-id="${escAttr(task.id)}" title="Start earlier" aria-label="Move ${escAttr(task.name)} earlier" data-testid="dm-up-${escAttr(task.id)}">↑</button>
                     <button class="dm-btn small" type="button" data-action="move-down" data-id="${escAttr(task.id)}" title="Start later" aria-label="Move ${escAttr(task.name)} later" data-testid="dm-down-${escAttr(task.id)}">↓</button>` : ''}
                 <button class="dm-btn small" type="button" data-action="details" data-id="${escAttr(task.id)}" data-testid="dm-details-${escAttr(task.id)}">Details</button>
+                ${canSkip ? `<button class="dm-btn small" type="button" data-action="skip" data-id="${escAttr(task.id)}" title="Exclude this file from the package" data-testid="dm-skip-${escAttr(task.id)}">Skip</button>` : ''}
+                ${canUnskip ? `<button class="dm-btn small" type="button" data-action="unskip" data-id="${escAttr(task.id)}" data-testid="dm-unskip-${escAttr(task.id)}">Unskip</button>` : ''}
                 ${task.status === 'paused' ? `<button class="dm-btn small" type="button" data-action="reset" data-id="${escAttr(task.id)}" data-testid="dm-reset-${escAttr(task.id)}">Reset</button>` : ''}
                 <button class="dm-btn small danger" type="button" data-action="delete" data-id="${escAttr(task.id)}" data-testid="dm-delete-${escAttr(task.id)}">Delete</button>
             </div></td>`;
@@ -509,7 +516,8 @@ export async function render(container, ctx) {
         const retrying = group.tasks.filter((t) => t.status === 'waiting'
             && Number(t.retry_at || 0) > Date.now() / 1000).length;
         const extractState = group.tasks.map((t) => t.extract_state).find(Boolean) || '';
-        const canExtract = group.status === 'completed' && extractState !== 'running'
+        const canExtract = group.tasks.length > 1 && group.tasks.every((t) => t.status === 'completed')
+            && extractState !== 'running'
             && group.tasks.some((t) => ARCHIVE_NAME_RE.test(String(t.name || '')));
         const canResume = group.tasks.some((t) => t.status === 'paused' || t.status === 'error');
         const canPause = group.tasks.some((t) => ACTIVE.has(t.status));
@@ -529,6 +537,7 @@ export async function render(container, ctx) {
                     <span class="dm-tag ${tone}">${escHtml(label)}</span>
                     <span class="dm-tag is-info">${parts} parts</span>
                     ${group.failed ? `<span class="dm-tag is-bad">${group.failed} failed</span>` : ''}
+                    ${group.skipped ? `<span class="dm-tag is-warn">${group.skipped} skipped</span>` : ''}
                     ${extractState === 'running' ? '<span class="dm-tag is-info">Extracting…</span>' : ''}
                     ${extractState === 'done' ? '<span class="dm-tag is-ok">Extracted</span>' : ''}
                     ${extractState === 'error' ? '<span class="dm-tag is-bad">Extract failed</span>' : ''}
@@ -882,9 +891,11 @@ export async function render(container, ctx) {
             else if (action === 'resume') await postJson(`/tasks/${encodeURIComponent(id)}/resume`);
             else if (action === 'reset') await postJson(`/tasks/${encodeURIComponent(id)}/reset`);
             else if (action === 'extract') await postJson(`/tasks/${encodeURIComponent(id)}/extract`);
+            else if (action === 'skip') await postJson(`/tasks/${encodeURIComponent(id)}/skip`);
+            else if (action === 'unskip') await postJson(`/tasks/${encodeURIComponent(id)}/unskip`);
             else if (action === 'delete') await api(`/tasks/${encodeURIComponent(id)}/cancel?delete_file=true`, { method: 'POST' });
             job?.finish?.('done', { percent: 100 });
-            notify(action === 'delete' ? 'Download deleted' : action === 'reset' ? 'Download reset' : action === 'extract' ? 'Extracting archive' : action === 'pause' ? 'Paused' : 'Resumed', 'success');
+            notify(action === 'delete' ? 'Download deleted' : action === 'reset' ? 'Download reset' : action === 'extract' ? 'Extracting archive' : action === 'skip' ? 'Skipped' : action === 'unskip' ? 'Back in the queue' : action === 'pause' ? 'Paused' : 'Resumed', 'success');
             await refresh(true);
         } catch (error) {
             job?.finish?.('failed', { detail: error.message });
@@ -1253,7 +1264,8 @@ export async function render(container, ctx) {
             if (name === 'move-up') { moveTask(id, -1); return; }
             if (name === 'move-down') { moveTask(id, 1); return; }
             if (name === 'quick-add') { quickAdd(); return; }
-            if (name === 'pause' || name === 'resume' || name === 'reset' || name === 'delete' || name === 'details' || name === 'extract') { taskAction(name, id); return; }
+            if (name === 'pause' || name === 'resume' || name === 'reset' || name === 'delete' || name === 'details' || name === 'extract'
+                || name === 'skip' || name === 'unskip') { taskAction(name, id); return; }
             if (name === 'pick-folder') { pickFolder(target || id); return; }
             if (name === 'upload-torrents') { uploadTorrents(); return; }
             if (name === 'verify-debrid') { verifyDebrid(); return; }
