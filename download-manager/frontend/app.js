@@ -460,6 +460,7 @@ export async function render(container, ctx) {
                     <button class="dm-btn" type="button" data-action="pause-all" data-testid="dm-pause-all">Pause all</button>
                     <button class="dm-btn" type="button" data-action="resume-all" data-testid="dm-resume-all">Resume all</button>
                     <button class="dm-btn" type="button" data-action="clear-completed" data-testid="dm-clear-completed">Clear completed</button>
+                    <button class="dm-btn" type="button" data-action="clear-failed" data-testid="dm-clear-failed">Clear failed</button>
                 </div>
             </div>
             <div class="dm-tabs">
@@ -1026,6 +1027,15 @@ export async function render(container, ctx) {
         await bulkAction('/tasks/clear-completed', 'Removed');
     }
 
+    async function clearFailed() {
+        const failed = state.tasks.filter((t) => t.status === 'error').length;
+        if (!failed) return notify('No failed downloads to clear', 'info');
+        const ok = await confirmDialog('Clear failed downloads?',
+            `${failed} failed record(s) will be removed. Leftover .part files are deleted; anything already downloaded and the destination folders stay on disk.`, 'Clear');
+        if (!ok) return;
+        await bulkAction('/tasks/clear-failed', 'Removed');
+    }
+
     // ── Events ─────────────────────────────────────────────────────────────
     function rowFromEvent(event) {
         return event.target?.closest?.('tr[data-task-id]') || null;
@@ -1039,6 +1049,7 @@ export async function render(container, ctx) {
             if (name === 'pause-all') { bulkAction('/tasks/pause-all', 'Paused'); return; }
             if (name === 'resume-all') { bulkAction('/tasks/resume-all', 'Resumed'); return; }
             if (name === 'clear-completed') { clearCompleted(); return; }
+            if (name === 'clear-failed') { clearFailed(); return; }
             if (name === 'move-up') { moveTask(id, -1); return; }
             if (name === 'move-down') { moveTask(id, 1); return; }
             if (name === 'quick-add') { quickAdd(); return; }
