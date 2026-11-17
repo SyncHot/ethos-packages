@@ -470,6 +470,9 @@ export async function render(container, ctx) {
         const retryInfo = retrying
             ? ` · <span class="dm-danger">retry ${Number(task.retry_count || 1)}/${retryMax} in ${fmtEta(retryAt - Date.now() / 1000)}</span>`
             : (task.retry_count ? ` · ${task.retry_count} retr${Number(task.retry_count) === 1 ? 'y' : 'ies'} used` : '');
+        const mirrorCount = Number(task.mirror_count || 1);
+        const mirrorInfo = mirrorCount > 1
+            ? ` · <span${Number(task.mirror_index || 0) > 0 ? ' class="dm-danger"' : ''}>mirror ${Number(task.mirror_index || 0) + 1}/${mirrorCount}</span>` : '';
         const actions = compact ? '' : `<td class="actions"><div class="dm-row end">
                 ${canPause ? `<button class="dm-btn small" type="button" data-action="pause" data-id="${escAttr(task.id)}" data-testid="dm-pause-${escAttr(task.id)}">Pause</button>` : ''}
                 ${canResume ? `<button class="dm-btn small" type="button" data-action="resume" data-id="${escAttr(task.id)}" data-testid="dm-resume-${escAttr(task.id)}">Resume</button>` : ''}
@@ -489,7 +492,7 @@ export async function render(container, ctx) {
                     ${task.category ? `<span class="dm-tag">${escHtml(task.category)}</span>` : ''}
                 </div>
                 <div class="dm-bar ${task.status === 'completed' ? 'is-done' : task.status === 'error' ? 'is-error' : ''}"><i style="width:${percent}%"></i></div>
-                <div class="dm-meta">${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${retryInfo}${extractInfo}${task.error ? ` · <span class="dm-danger">${escHtml(task.error)}</span>` : ''}</div>
+                <div class="dm-meta">${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${retryInfo}${mirrorInfo}${extractInfo}${task.error ? ` · <span class="dm-danger">${escHtml(task.error)}</span>` : ''}</div>
             </td>
             <td class="path" title="${escAttr(task.path || '')}">${escHtml(task.path || '—')}</td>
             <td class="num">${fmtTime(task.created_at)}</td>
@@ -634,6 +637,9 @@ export async function render(container, ctx) {
                 <p class="dm-muted">A single URL: HTTP(S), a magnet link or a premium hoster link.</p>
                 <div class="dm-field full"><label for="dm-add-url">URL or magnet</label>
                     <input class="dm-input" id="dm-add-url" name="url" placeholder="https://example.com/file.iso or magnet:?xt=urn:btih:…" required data-testid="dm-add-url"></div>
+                <div class="dm-field full"><label for="dm-add-mirrors">Alternative URLs (optional)</label>
+                    <textarea class="dm-input" id="dm-add-mirrors" name="mirrors" rows="2" placeholder="One mirror per line — tried in order when the first source fails" data-testid="dm-add-mirrors"></textarea>
+                    <p class="dm-hint">Same file on another hoster (direct link or premium link). A mirror restarts the transfer from zero with its own retry budget.</p></div>
                 <div class="dm-fields">
                     <div class="dm-field"><label for="dm-add-name">Display name (optional)</label>
                         <input class="dm-input" id="dm-add-name" name="name" maxlength="255"></div>
@@ -905,9 +911,12 @@ export async function render(container, ctx) {
     async function submitAdd(form) {
         const url = form.querySelector('[name="url"]').value.trim();
         if (!url) return notify('URL is required', 'error');
+        const mirrors = (form.querySelector('[name="mirrors"]')?.value || '')
+            .split(/\r?\n/).map((line) => line.trim()).filter(Boolean).slice(0, 10);
         const body = { url, name: form.querySelector('[name="name"]').value.trim() || null,
             folder: form.querySelector('[name="folder"]').value.trim() || null,
-            category: form.querySelector('[name="category"]').value || null };
+            category: form.querySelector('[name="category"]').value || null,
+            ...(mirrors.length ? { mirrors } : {}) };
         try {
             const task = await postJson('/tasks', body);
             notify(task?.duplicate ? 'Already in the list' : 'Download started',
