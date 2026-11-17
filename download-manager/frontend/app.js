@@ -233,7 +233,7 @@ export async function render(container, ctx) {
     const state = {
         view: 'overview', tasks: [], config: null, filter: 'all', search: '',
         sort: 'newest', dragId: '', timer: null, fatal: '', busy: false, loaded: false,
-        quickUrl: '',
+        quickUrl: '', expanded: new Set(),
     };
 
     const style = document.createElement('style');
@@ -488,6 +488,7 @@ export async function render(container, ctx) {
         const [label, tone] = STATUS[group.status] || [group.status, ''];
         const percent = Math.round((group.progress || 0) * 100);
         const parts = group.tasks.length;
+        const expanded = !compact && state.expanded.has(group.key);
         const firstError = group.tasks.find((t) => t.error)?.error || '';
         const canResume = group.tasks.some((t) => t.status === 'paused' || t.status === 'error');
         const canPause = group.tasks.some((t) => ACTIVE.has(t.status));
@@ -495,6 +496,7 @@ export async function render(container, ctx) {
         const actions = compact ? '' : `<td class="actions"><div class="dm-row end">
                 ${canResume ? `<button class="dm-btn small" type="button" data-action="pkg-resume" data-key="${key}" data-testid="dm-pkg-resume-${key}">Resume</button>` : ''}
                 ${canPause ? `<button class="dm-btn small" type="button" data-action="pkg-pause" data-key="${key}" data-testid="dm-pkg-pause-${key}">Pause</button>` : ''}
+                <button class="dm-btn small" type="button" data-action="pkg-toggle" data-key="${key}" aria-expanded="${expanded}" data-testid="dm-pkg-toggle-${key}">${expanded ? 'Hide parts' : 'Show parts'}</button>
                 <button class="dm-btn small" type="button" data-action="pkg-details" data-key="${key}" data-testid="dm-pkg-details-${key}">Details</button>
                 <button class="dm-btn small danger" type="button" data-action="pkg-delete" data-key="${key}" data-testid="dm-pkg-delete-${key}">Delete</button>
             </div></td>`;
@@ -545,7 +547,12 @@ export async function render(container, ctx) {
             </div>
             ${groups.length ? `<div class="dm-scroll"><table class="dm-table">
                 <thead><tr><th></th><th>Download</th><th>Destination</th><th style="text-align:right">Added</th><th></th></tr></thead>
-                <tbody>${groups.map((group) => (group.tasks.length > 1 ? packageRow(group) : taskRow(group.tasks[0]))).join('')}</tbody>
+                <tbody>${groups.map((group) => {
+                    if (group.tasks.length === 1) return taskRow(group.tasks[0]);
+                    const rows = [packageRow(group)];
+                    if (state.expanded.has(group.key)) rows.push(...group.tasks.map((task) => taskRow(task)));
+                    return rows.join('');
+                }).join('')}</tbody>
             </table></div>` : `<div class="dm-empty"><strong>Nothing here</strong>No downloads match this view — start one with the Download button.</div>`}
         </section>`;
     };
@@ -1178,6 +1185,12 @@ export async function render(container, ctx) {
                 else packageAction(name.slice(4), key);
                 return;
             }
+            if (name === 'pkg-toggle') {
+                if (state.expanded.has(key)) state.expanded.delete(key);
+                else state.expanded.add(key);
+                renderView();
+                return;
+            }
             if (name === 'move-up') { moveTask(id, -1); return; }
             if (name === 'move-down') { moveTask(id, 1); return; }
             if (name === 'quick-add') { quickAdd(); return; }
@@ -1232,15 +1245,23 @@ export async function render(container, ctx) {
         const needle = state.search.trim().toLowerCase();
         const matchTask = (task) => [task?.name, task?.url, task?.category]
             .map((v) => String(v || '').toLowerCase()).join(' ').includes(needle);
+        const packageNameMatches = new Map();
+        for (const task of state.tasks) {
+            if (!task.package_key) continue;
+            const name = String(task.package || task.name || '').toLowerCase();
+            packageNameMatches.set(task.package_key,
+                packageNameMatches.get(task.package_key) === true || name.includes(needle));
+        }
         for (const row of root.querySelectorAll('tbody tr[data-task-id], tbody tr[data-package-key]')) {
             if (row.dataset.packageKey) {
                 const tasks = state.tasks.filter((t) => t.package_key === row.dataset.packageKey);
-                const name = String(tasks[0]?.package || tasks[0]?.name || '').toLowerCase();
-                row.hidden = Boolean(needle) && !name.includes(needle) && !tasks.some(matchTask);
+                const nameMatch = packageNameMatches.get(row.dataset.packageKey) === true;
+                row.hidden = Boolean(needle) && !nameMatch && !tasks.some(matchTask);
                 continue;
             }
             const task = state.tasks.find((t) => t.id === row.dataset.taskId);
-            row.hidden = Boolean(needle) && !matchTask(task);
+            const nameMatch = task?.package_key ? packageNameMatches.get(task.package_key) === true : false;
+            row.hidden = Boolean(needle) && !nameMatch && !matchTask(task);
         }
     }
 
