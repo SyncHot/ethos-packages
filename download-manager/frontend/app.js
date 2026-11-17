@@ -329,28 +329,70 @@ export async function render(container, ctx) {
     const queueOrder = () => state.tasks
         .filter((t) => t.status === 'waiting')
         .sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.created_at - b.created_at);
-    // Waiting tasks first in real pump order, everything else newest-first.
-    const queueRank = (task) => (task.status === 'waiting'
-        ? (Number(task.queue_position) || 998)
-        : 1000 + ({ downloading: 0, debrid_downloading: 0, paused: 1, error: 2, completed: 3, canceled: 4 }[task.status] ?? 9));
-    const visibleTasks = () => {
-        let tasks = state.tasks.slice();
-        if (state.filter !== 'all') tasks = tasks.filter((t) => groupOf(t) === state.filter);
+    // ── Packages (multi-part archives) ─────────────────────────────────────
+    // The API derives `package_key`/`package`/`part` from the filename and the
+    // destination; parts of one archive render as a single row with aggregate
+    // status and package-level actions (JDownloader-style).
+    const packageStatus = (tasks) => {
+        const order = ['downloading', 'debrid_downloading', 'waiting', 'error', 'paused', 'completed', 'canceled'];
+        return order.find((status) => tasks.some((t) => t.status === status)) || tasks[0]?.status || 'waiting';
+    };
+    const buildGroups = (tasks) => {
+        const map = new Map();
+        for (const task of tasks) {
+            const key = task.package_key ? `pkg:${task.package_key}` : `task:${task.id}`;
+            let group = map.get(key);
+            if (!group) {
+                group = { key: task.package_key || '', name: task.package || task.name, tasks: [], newest: 0 };
+                map.set(key, group);
+            }
+            group.tasks.push(task);
+            group.newest = Math.max(group.newest, Number(task.created_at) || 0);
+        }
+        const groups = [...map.values()];
+        for (const group of groups) {
+            group.tasks.sort((a, b) => (a.part || 0) - (b.part || 0) || (a.created_at || 0) - (b.created_at || 0));
+            group.status = group.tasks.length > 1 ? packageStatus(group.tasks) : group.tasks[0].status;
+            group.size = group.tasks.reduce((sum, t) => sum + Number(t.size || 0), 0);
+            group.downloaded = group.tasks.reduce((sum, t) => sum + Number(t.downloaded || 0), 0);
+            group.speed = group.tasks.reduce((sum, t) => sum + Number(t.speed || 0), 0);
+            group.progress = group.size > 0 ? Math.min(1, group.downloaded / group.size) : 0;
+            group.done = group.tasks.filter((t) => t.status === 'completed').length;
+            group.failed = group.tasks.filter((t) => t.status === 'error').length;
+        }
+        return groups;
+    };
+    const filterBucket = (group) => groupOf({ status: group.status });
+    const groupQueueRank = (group) => {
+        const waiting = group.tasks.filter((t) => t.status === 'waiting');
+        if (waiting.length) return Math.min(...waiting.map((t) => Number(t.queue_position) || 998));
+        return 1000 + ({ downloading: 0, debrid_downloading: 0, paused: 1, error: 2, completed: 3, canceled: 4 }[group.status] ?? 9);
+    };
+    const visibleGroups = () => {
         const needle = state.search.trim().toLowerCase();
+        let groups = buildGroups(state.tasks);
+        if (state.filter !== 'all') groups = groups.filter((group) => filterBucket(group) === state.filter);
         if (needle) {
-            tasks = tasks.filter((t) => [t.name, t.url, t.category].some((v) => String(v || '').toLowerCase().includes(needle)));
+            groups = groups.filter((group) => String(group.name).toLowerCase().includes(needle)
+                || group.tasks.some((t) => [t.name, t.url, t.category].some((v) => String(v || '').toLowerCase().includes(needle))));
         }
         const rank = { downloading: 0, debrid_downloading: 0, waiting: 1, paused: 2, error: 3, completed: 4, canceled: 5 };
         const cmp = {
-            newest: (a, b) => b.created_at - a.created_at,
-            oldest: (a, b) => a.created_at - b.created_at,
+            newest: (a, b) => b.newest - a.newest,
+            oldest: (a, b) => a.newest - b.newest,
             name: (a, b) => String(a.name).localeCompare(String(b.name)),
             size: (a, b) => (b.size || 0) - (a.size || 0),
             progress: (a, b) => (b.progress || 0) - (a.progress || 0),
             status: (a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9),
-            queue: (a, b) => (queueRank(a) - queueRank(b)) || (b.created_at - a.created_at),
+            queue: (a, b) => (groupQueueRank(a) - groupQueueRank(b)) || (b.newest - a.newest),
         };
-        return tasks.sort(cmp[state.sort] || cmp.newest);
+        return groups.sort(cmp[state.sort] || cmp.newest);
+    };
+    const taskFolder = (task) => {
+        const path = String(task.path || '');
+        if (!path) return '—';
+        if (task.kind === 'http') return path.substring(0, path.lastIndexOf('/')) || '/';
+        return path;
     };
 
     // ── Data ───────────────────────────────────────────────────────────────
@@ -442,10 +484,45 @@ export async function render(container, ctx) {
         </tr>`;
     };
 
+    const packageRow = (group, compact = false) => {
+        const [label, tone] = STATUS[group.status] || [group.status, ''];
+        const percent = Math.round((group.progress || 0) * 100);
+        const parts = group.tasks.length;
+        const firstError = group.tasks.find((t) => t.error)?.error || '';
+        const canResume = group.tasks.some((t) => t.status === 'paused' || t.status === 'error');
+        const canPause = group.tasks.some((t) => ACTIVE.has(t.status));
+        const key = escAttr(group.key);
+        const actions = compact ? '' : `<td class="actions"><div class="dm-row end">
+                ${canResume ? `<button class="dm-btn small" type="button" data-action="pkg-resume" data-key="${key}" data-testid="dm-pkg-resume-${key}">Resume</button>` : ''}
+                ${canPause ? `<button class="dm-btn small" type="button" data-action="pkg-pause" data-key="${key}" data-testid="dm-pkg-pause-${key}">Pause</button>` : ''}
+                <button class="dm-btn small" type="button" data-action="pkg-details" data-key="${key}" data-testid="dm-pkg-details-${key}">Details</button>
+                <button class="dm-btn small danger" type="button" data-action="pkg-delete" data-key="${key}" data-testid="dm-pkg-delete-${key}">Delete</button>
+            </div></td>`;
+        return `<tr data-package-key="${key}" data-status="${escAttr(group.status)}" data-testid="dm-package-${key}">
+            <td class="dm-handle"><span title="Multi-part package">📦</span></td>
+            <td>
+                <div class="dm-name">${escHtml(group.name)}
+                    <span class="dm-tag ${tone}">${escHtml(label)}</span>
+                    <span class="dm-tag is-info">${parts} parts</span>
+                    ${group.failed ? `<span class="dm-tag is-bad">${group.failed} failed</span>` : ''}
+                </div>
+                <div class="dm-bar ${group.status === 'completed' ? 'is-done' : group.status === 'error' ? 'is-error' : ''}"><i style="width:${percent}%"></i></div>
+                <div class="dm-meta">${group.done}/${parts} done · ${percent}% · ${fmtBytes(group.downloaded)} / ${fmtBytes(group.size)} · ${fmtSpeed(group.speed)}${firstError ? ` · <span class="dm-danger">${escHtml(firstError)}</span>` : ''}</div>
+            </td>
+            <td class="path" title="${escAttr(taskFolder(group.tasks[0]))}">${escHtml(taskFolder(group.tasks[0]))}</td>
+            <td class="num">${fmtTime(group.newest)}</td>
+            ${actions}
+        </tr>`;
+    };
+
     const tasksPanel = () => {
-        const tasks = visibleTasks();
-        const counts = { all: state.tasks.length, active: 0, completed: 0, paused: 0, errors: 0 };
-        for (const task of state.tasks) { const group = groupOf(task); if (group in counts) counts[group]++; }
+        const groups = visibleGroups();
+        const counts = { all: 0, active: 0, completed: 0, paused: 0, errors: 0 };
+        for (const group of buildGroups(state.tasks)) {
+            counts.all += 1;
+            const bucket = filterBucket(group);
+            if (bucket !== 'all') counts[bucket] += 1;
+        }
         const tabs = [['all', 'All'], ['active', 'Active'], ['completed', 'Completed'], ['paused', 'Paused'], ['errors', 'Errors']];
         return `<section class="dm-panel">
             <div class="dm-toolbar">
@@ -466,9 +543,9 @@ export async function render(container, ctx) {
             <div class="dm-tabs">
                 ${tabs.map(([id, label]) => `<button class="dm-tab${state.filter === id ? ' is-active' : ''}" type="button" data-filter="${id}" data-testid="dm-filter-${id}">${label} ${counts[id]}</button>`).join('')}
             </div>
-            ${tasks.length ? `<div class="dm-scroll"><table class="dm-table">
+            ${groups.length ? `<div class="dm-scroll"><table class="dm-table">
                 <thead><tr><th></th><th>Download</th><th>Destination</th><th style="text-align:right">Added</th><th></th></tr></thead>
-                <tbody>${tasks.map((task) => taskRow(task)).join('')}</tbody>
+                <tbody>${groups.map((group) => (group.tasks.length > 1 ? packageRow(group) : taskRow(group.tasks[0]))).join('')}</tbody>
             </table></div>` : `<div class="dm-empty"><strong>Nothing here</strong>No downloads match this view — start one with the Download button.</div>`}
         </section>`;
     };
@@ -479,7 +556,7 @@ export async function render(container, ctx) {
         const failures = state.tasks.filter((t) => t.status === 'error').length;
         const speed = state.tasks.reduce((sum, t) => sum + (ACTIVE.has(t.status) ? Number(t.speed || 0) : 0), 0);
         const provider = state.config?.debrid?.provider || '';
-        const recent = state.tasks.slice().sort((a, b) => b.created_at - a.created_at).slice(0, 5);
+        const recent = buildGroups(state.tasks).sort((a, b) => b.newest - a.newest).slice(0, 5);
         const readyText = failures
             ? `${failures} download(s) stopped with an error — open Downloads to read the message and retry.`
             : active.length
@@ -509,7 +586,7 @@ export async function render(container, ctx) {
                 </div>
                 ${recent.length ? `<div class="dm-scroll"><table class="dm-table">
                     <thead><tr><th></th><th>Download</th><th>Destination</th><th style="text-align:right">Added</th></tr></thead>
-                    <tbody>${recent.map((task) => taskRow(task, true)).join('')}</tbody>
+                    <tbody>${recent.map((group) => (group.tasks.length > 1 ? packageRow(group, true) : taskRow(group.tasks[0], true))).join('')}</tbody>
                 </table></div>` : '<div class="dm-empty"><strong>No downloads yet</strong>Start one above and it will show up here.</div>'}
             </section>
             <section class="dm-panel">
@@ -1036,6 +1113,52 @@ export async function render(container, ctx) {
         await bulkAction('/tasks/clear-failed', 'Removed');
     }
 
+    // ── Package actions ────────────────────────────────────────────────────
+    const packageTasks = (key) => state.tasks
+        .filter((t) => t.package_key === key)
+        .sort((a, b) => (a.part || 0) - (b.part || 0) || (a.created_at || 0) - (b.created_at || 0));
+
+    async function packageDetails(key) {
+        const tasks = packageTasks(key);
+        if (!tasks.length) return;
+        const name = tasks[0].package || tasks[0].name;
+        const lines = tasks.map((t) => {
+            const stateLabel = STATUS[t.status]?.[0] || t.status;
+            const part = t.part ? `part ${String(t.part).padStart(2, '0')}` : 'file';
+            return `${part} — ${stateLabel}: ${t.name}${t.error ? `\n    ${t.error}` : ''}`;
+        });
+        if (ctx.modal?.alert) await ctx.modal.alert(`${name} (${tasks.length} parts)`, lines.join('\n'));
+        else notify(`${name} — ${tasks.length} parts`, 'info');
+    }
+
+    async function packageAction(action, key) {
+        const tasks = packageTasks(key);
+        if (!tasks.length) return;
+        if (action === 'delete') {
+            const name = tasks[0].package || tasks[0].name;
+            const ok = await confirmDialog('Delete package?',
+                `${tasks.length} download(s) from "${name}" and their files will be removed.`, 'Delete');
+            if (!ok) return;
+        }
+        const job = action === 'delete' && ctx.progress?.startTask
+            ? ctx.progress.startTask({ title: `Deleting ${tasks.length} downloads`, detail: 'Working…' })
+            : null;
+        state.busy = true;
+        try {
+            if (action === 'resume') await postJson(`/packages/${encodeURIComponent(key)}/resume`);
+            else if (action === 'pause') await postJson(`/packages/${encodeURIComponent(key)}/pause`);
+            else if (action === 'delete') await api(`/packages/${encodeURIComponent(key)}/cancel?delete_file=true`, { method: 'POST' });
+            job?.finish?.('done', { percent: 100 });
+            notify(action === 'delete' ? 'Package deleted' : action === 'pause' ? 'Package paused' : 'Package resumed', 'success');
+            await refresh(true);
+        } catch (error) {
+            job?.finish?.('failed', { detail: error.message });
+            notify(error.message || 'Action failed', 'error');
+        } finally {
+            state.busy = false;
+        }
+    }
+
     // ── Events ─────────────────────────────────────────────────────────────
     function rowFromEvent(event) {
         return event.target?.closest?.('tr[data-task-id]') || null;
@@ -1044,12 +1167,17 @@ export async function render(container, ctx) {
     function onClick(event) {
         const action = event.target.closest('[data-action]');
         if (action) {
-            const { action: name, id, target, index } = action.dataset;
+            const { action: name, id, key, target, index } = action.dataset;
             if (name === 'refresh' || name === 'retry') { refresh(); return; }
             if (name === 'pause-all') { bulkAction('/tasks/pause-all', 'Paused'); return; }
             if (name === 'resume-all') { bulkAction('/tasks/resume-all', 'Resumed'); return; }
             if (name === 'clear-completed') { clearCompleted(); return; }
             if (name === 'clear-failed') { clearFailed(); return; }
+            if (name === 'pkg-resume' || name === 'pkg-pause' || name === 'pkg-delete' || name === 'pkg-details') {
+                if (name === 'pkg-details') packageDetails(key);
+                else packageAction(name.slice(4), key);
+                return;
+            }
             if (name === 'move-up') { moveTask(id, -1); return; }
             if (name === 'move-down') { moveTask(id, 1); return; }
             if (name === 'quick-add') { quickAdd(); return; }
@@ -1101,12 +1229,18 @@ export async function render(container, ctx) {
         if (event.target.id === 'dm-quick-url') { state.quickUrl = event.target.value; return; }
         if (event.target.dataset.role !== 'search') return;
         state.search = event.target.value;
-        const rows = root.querySelectorAll('tbody tr[data-task-id]');
         const needle = state.search.trim().toLowerCase();
-        for (const row of rows) {
+        const matchTask = (task) => [task?.name, task?.url, task?.category]
+            .map((v) => String(v || '').toLowerCase()).join(' ').includes(needle);
+        for (const row of root.querySelectorAll('tbody tr[data-task-id], tbody tr[data-package-key]')) {
+            if (row.dataset.packageKey) {
+                const tasks = state.tasks.filter((t) => t.package_key === row.dataset.packageKey);
+                const name = String(tasks[0]?.package || tasks[0]?.name || '').toLowerCase();
+                row.hidden = Boolean(needle) && !name.includes(needle) && !tasks.some(matchTask);
+                continue;
+            }
             const task = state.tasks.find((t) => t.id === row.dataset.taskId);
-            const haystack = [task?.name, task?.url, task?.category].map((v) => String(v || '').toLowerCase()).join(' ');
-            row.hidden = Boolean(needle) && !haystack.includes(needle);
+            row.hidden = Boolean(needle) && !matchTask(task);
         }
     }
 
