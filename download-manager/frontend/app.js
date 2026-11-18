@@ -128,6 +128,7 @@ const STYLE = `
 .dm-btn:focus-visible, .dm-input:focus-visible, .dm-root select:focus-visible { outline: 2px solid var(--dm-accent); outline-offset: 2px; }
 .dm-input { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--dm-border); border-radius: 9px; background: var(--dm-input-bg); color: var(--dm-text); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .dm-input.dm-search { flex: 0 0 200px; min-width: 150px; }
+.dm-root select.dm-mini { flex: 0 0 auto; padding: 3px 6px; font-size: 10px; min-width: 96px; }
 .dm-root select { padding: 8px 10px; border: 1px solid var(--dm-border); border-radius: 9px; background: var(--dm-input-bg); color: var(--dm-text); font-size: 11px; }
 .dm-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
 .dm-tab { padding: 5px 11px; border: 1px solid var(--dm-border); border-radius: 999px; background: var(--dm-surface); color: var(--dm-muted); font-size: 10px; font-weight: 600; cursor: pointer; }
@@ -204,6 +205,11 @@ const STATUS = {
 const ACTIVE = new Set(['waiting', 'downloading', 'debrid_downloading']);
 const ARCHIVE_NAME_RE = /\.(zip|rar|7z|tar|tgz|tbz|txz|gz|bz2|xz|zst|lz4)(\.html)?$/i;
 const DEBRID_FIELD = { realdebrid: 'realdebrid_api_token', alldebrid: 'alldebrid_api_key', torbox: 'torbox_api_key' };
+// Presets for the per-package bandwidth cap (bytes/s); 0 = follow the global limit.
+const PACKAGE_LIMITS = [
+    [0, 'Limit: off'], [1048576, '1 MB/s'], [2097152, '2 MB/s'], [5242880, '5 MB/s'],
+    [10485760, '10 MB/s'], [20971520, '20 MB/s'], [52428800, '50 MB/s'],
+];
 const PROVIDER_LABEL = { realdebrid: 'Real-Debrid', alldebrid: 'AllDebrid', torbox: 'TorBox' };
 
 export async function render(container, ctx) {
@@ -507,9 +513,18 @@ export async function render(container, ctx) {
         </tr>`;
     };
 
+    const packageLimit = async (key, bps) => {
+        try {
+            await postJson(`/packages/${encodeURIComponent(key)}/limit`, { bps: Number(bps) || 0 });
+            notify(bps > 0 ? `Package limited to ${fmtSpeed(bps)}` : 'Package limit removed', 'success');
+            await refresh(true);
+        } catch (error) { notify(error.message || 'Could not set the package limit', 'error'); }
+    };
+
     const packageRow = (group, compact = false) => {
         const [label, tone] = STATUS[group.status] || [group.status, ''];
         const percent = Math.round((group.progress || 0) * 100);
+        const pkgLimit = Number((state.config?.package_limits || {})[group.key] || 0);
         const parts = group.tasks.length;
         const expanded = !compact && state.expanded.has(group.key);
         const firstError = group.tasks.find((t) => t.error)?.error || '';
@@ -526,6 +541,11 @@ export async function render(container, ctx) {
                 ${canResume ? `<button class="dm-btn small" type="button" data-action="pkg-resume" data-key="${key}" data-testid="dm-pkg-resume-${key}">Resume</button>` : ''}
                 ${canPause ? `<button class="dm-btn small" type="button" data-action="pkg-pause" data-key="${key}" data-testid="dm-pkg-pause-${key}">Pause</button>` : ''}
                 ${canExtract ? `<button class="dm-btn small" type="button" data-action="pkg-extract" data-key="${key}" data-testid="dm-pkg-extract-${key}">${extractState === 'done' ? 'Extract again' : 'Extract'}</button>` : ''}
+                ${compact ? '' : `<select class="dm-input dm-mini" data-action="pkg-limit" data-key="${key}" aria-label="Package speed limit" title="Shared bandwidth limit for every part" data-testid="dm-pkg-limit-${key}">
+                    ${PACKAGE_LIMITS.map(([bps, text]) => `<option value="${bps}"${pkgLimit === bps ? ' selected' : ''}>${text}</option>`).join('')}
+                    ${pkgLimit && !PACKAGE_LIMITS.some(([bps]) => bps === pkgLimit)
+                        ? `<option value="${pkgLimit}" selected>${fmtSpeed(pkgLimit)}</option>` : ''}
+                </select>`}
                 <button class="dm-btn small" type="button" data-action="pkg-toggle" data-key="${key}" aria-expanded="${expanded}" data-testid="dm-pkg-toggle-${key}">${expanded ? 'Hide parts' : 'Show parts'}</button>
                 <button class="dm-btn small" type="button" data-action="pkg-details" data-key="${key}" data-testid="dm-pkg-details-${key}">Details</button>
                 <button class="dm-btn small danger" type="button" data-action="pkg-delete" data-key="${key}" data-testid="dm-pkg-delete-${key}">Delete</button>
@@ -1302,6 +1322,10 @@ export async function render(container, ctx) {
 
     function onChange(event) {
         if (event.target.dataset.role === 'sort') { state.sort = event.target.value; renderView(); return; }
+        if (event.target.dataset.action === 'pkg-limit') {
+            void packageLimit(event.target.dataset.key, Number(event.target.value));
+            return;
+        }
         // A masked key belongs to the previous provider; make the user paste the new one.
         if (event.target.id === 'dm-set-provider') {
             const keyInput = $('#dm-set-key');
