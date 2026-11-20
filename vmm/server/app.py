@@ -6,7 +6,9 @@ Two listeners, deliberately separated:
   way in is EthOS's authenticated ``/api/packages/vmm/proxy/`` endpoint.
 * ``0.0.0.0:8094`` — browser console: the noVNC page, its static assets and the
   ticket-gated WebSocket bridge. Nothing else answers on this port, so a LAN
-  client can never reach the API or a VM without a signed ticket.
+  client can never reach the API or a VM without a signed ticket. Docker maps
+  this container port to a free host port; the VM window looks the mapping up
+  through the core container list, so no fixed host port is ever reserved.
 """
 
 import hashlib

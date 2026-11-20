@@ -17,8 +17,10 @@ services:
       # /api/packages/vmm/proxy/ endpoint.
       - "127.0.0.1:8095:8095"
       # Browser console: noVNC page + WebSocket bridge, every request needs a
-      # signed 120 s ticket. This port carries no API.
-      - "8094:8094"
+      # signed 120 s ticket. Only the container port is fixed — Docker assigns a
+      # free host port, so the package can never collide with another service
+      # (the VM window discovers the mapping through /api/containers).
+      - "8094"
     volumes:
       - vmm-data:/data
       - ./server:/app:ro

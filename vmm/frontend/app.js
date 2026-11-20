@@ -2,8 +2,10 @@
 // Contract: export function render(container, ctx). Every API call goes through
 // ctx.proxy(), so the control plane stays bound to the NAS loopback.
 //
-// The browser console is a separate, ticket-gated page on port 8094: EthOS's
-// proxy forwards GET/POST only, so the VNC WebSocket cannot travel through it.
+// The browser console is a separate, ticket-gated page: EthOS's proxy forwards
+// only GET/POST, so the noVNC WebSocket cannot travel through it. Docker maps the
+// container's port 8094 to a free host port and the window discovers that port
+// through /api/containers, so the package never squats a fixed host port.
 
 const STYLE = `
 .vmm-root {
@@ -570,19 +572,39 @@ export function render(container, ctx) {
         }
     }
 
+    /**
+     * Docker assigns the console host port (the manifest publishes only the
+     * container port), so ask the core which host port currently maps to 8094.
+     * `/api/containers` renders the mapping as "hostPort→containerPort/proto".
+     */
+    async function consoleHostPort(fallback) {
+        try {
+            const res = await _ctx.apiFetch('/api/containers');
+            if (!res.ok) return fallback;
+            const data = await res.json();
+            const box = (data.containers || []).find(c => c.name === 'ethos-vmm');
+            for (const part of String(box?.ports || '').split(',')) {
+                const match = part.match(/(\d+)\s*→\s*8094(?:\/\w+)?/);
+                if (match) return Number(match[1]);
+            }
+        } catch (_) { /* fall back to the container port */ }
+        return fallback;
+    }
+
     async function openConsole(vmId, name) {
         try {
             const ticket = await api('api/console/ticket', { vm: vmId });
             const host = location.hostname;
             const scheme = location.protocol === 'https:' ? 'https' : 'http';
-            const url = `${scheme}://${host}:${ticket.port}${ticket.url}`;
+            const port = await consoleHostPort(ticket.port);
+            const url = `${scheme}://${host}:${port}${ticket.url}`;
             consoleFrame.src = url;
             $('[data-console-title]').textContent = `${name} — console`;
             const link = $('[data-console-link]');
             link.href = url;
             link.hidden = false;
             $('[data-console-note]').textContent = location.protocol === 'https:'
-                ? 'Console uses http on port ' + ticket.port + '; if the frame stays empty, open it in a tab.'
+                ? 'Console uses http on a Docker-assigned port (' + port + '); if the frame stays empty, open it in a tab.'
                 : '';
             consoleEl.hidden = false;
         } catch (err) {
