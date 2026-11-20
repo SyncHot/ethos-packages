@@ -625,18 +625,30 @@ export function render(container, ctx) {
         try {
             const ticket = await api('api/console/ticket', { vm: vmId });
             const host = location.hostname;
-            const scheme = location.protocol === 'https:' ? 'https' : 'http';
             const port = await consoleHostPort(ticket.port);
-            const url = `${scheme}://${host}:${port}${ticket.url}`;
-            consoleFrame.src = url;
+            // The console is served by the package container on a
+            // Docker-assigned port over plain http. Inside an https page a
+            // browser drops that iframe as mixed content without a single
+            // request, which looks exactly like "the console is blank" — so on
+            // https we open a real tab (top-level navigation is allowed) and
+            // explain why.
+            const securePage = location.protocol === 'https:';
+            const url = `http://${host}:${port}${ticket.url}`;
             $('[data-console-title]').textContent = `${name} — console`;
             const link = $('[data-console-link]');
             link.href = url;
             link.hidden = false;
-            $('[data-console-note]').textContent = location.protocol === 'https:'
-                ? 'Console uses http on a Docker-assigned port (' + port + '); if the frame stays empty, open it in a tab.'
-                : '';
             consoleEl.hidden = false;
+            if (securePage) {
+                consoleFrame.removeAttribute('src');
+                const opened = window.open(url, '_blank', 'noopener');
+                $('[data-console-note]').textContent = opened
+                    ? `Opened in a new tab — the console runs on http://${host}:${port}, which this https page cannot embed.`
+                    : `Open the console in a new tab: the browser blocked the pop-up, use the link above (http://${host}:${port}).`;
+                return;
+            }
+            consoleFrame.src = url;
+            $('[data-console-note]').textContent = '';
         } catch (err) {
             say(failure(err), 'error');
         }
