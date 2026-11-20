@@ -239,7 +239,7 @@ export function render(container, ctx) {
                     </div>
                     <div class="vmm-panel" data-form-panel hidden style="margin-top:12px;">
                         <div class="vmm-toolbar">
-                            <div><h2>New machine</h2><p>The disk is created on the share you pick.</p></div>
+                            <div><h2 data-form-title>New machine</h2><p data-form-hint>The disk is created on the share you pick.</p></div>
                         </div>
                         <form data-create-form>
                             <div class="vmm-two">
@@ -247,7 +247,7 @@ export function render(container, ctx) {
                                     <label for="vmm-name">Name</label>
                                     <input class="vmm-input" id="vmm-name" name="name" placeholder="Windows 11" maxlength="60" required>
                                 </div>
-                                <div class="vmm-field">
+                                <div class="vmm-field" data-install-field>
                                     <label for="vmm-disk">Disk size (GB)</label>
                                     <input class="vmm-input" id="vmm-disk" name="disk_gb" type="number" min="1" max="4096" value="40">
                                 </div>
@@ -262,7 +262,7 @@ export function render(container, ctx) {
                                     <input class="vmm-input" id="vmm-ram" name="memory_mb" type="number" min="128" step="128" value="2048">
                                 </div>
                             </div>
-                            <div class="vmm-field">
+                            <div class="vmm-field" data-install-field>
                                 <label for="vmm-root">Storage location</label>
                                 <div class="vmm-row">
                                     <input class="vmm-input" id="vmm-root" name="root" placeholder="/vmhost/mnt/..." spellcheck="false">
@@ -270,7 +270,7 @@ export function render(container, ctx) {
                                 </div>
                                 <small>An <code>ethos-vm/</code> folder is created inside it.</small>
                             </div>
-                            <div class="vmm-field">
+                            <div class="vmm-field" data-install-field>
                                 <label for="vmm-iso">Installer ISO or system image (optional)</label>
                                 <div class="vmm-row">
                                     <select class="vmm-input" id="vmm-iso" name="iso"><option value="">None (boot the disk)</option></select>
@@ -279,7 +279,7 @@ export function render(container, ctx) {
                                 <small data-iso-hint>Pick a folder to list .iso installers or .img/.img.xz/.qcow2 images, or paste a path.</small>
                             </div>
                             <div class="vmm-two">
-                                <div class="vmm-field">
+                                <div class="vmm-field" data-install-field>
                                     <label for="vmm-firmware">Firmware</label>
                                     <select class="vmm-input" id="vmm-firmware" name="firmware">
                                         <option value="bios">Legacy BIOS</option>
@@ -300,7 +300,7 @@ export function render(container, ctx) {
                             <p class="vmm-status" data-form-error></p>
                             <div class="vmm-actions">
                                 <button class="vmm-btn" type="button" data-action="toggle-form">Cancel</button>
-                                <button class="vmm-btn primary" type="submit">Create machine</button>
+                                <button class="vmm-btn primary" type="submit" data-form-submit>Create machine</button>
                             </div>
                         </form>
                     </div>
@@ -360,6 +360,8 @@ export function render(container, ctx) {
         storagePath: '/vmhost',
         busy: '',
         timer: 0,
+        // vm id being edited in the form ('' = create mode)
+        editing: '',
     };
 
     // ── plumbing ────────────────────────────────────────────────────────────
@@ -372,10 +374,10 @@ export function render(container, ctx) {
         statusEl.className = 'vmm-status' + (kind ? ` ${kind}` : '');
     }
 
-    async function api(path, body) {
+    async function api(path, body, method = 'POST') {
         if (body === undefined) return ctx.proxy(path);
         return ctx.proxy(path, {
-            method: 'POST',
+            method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
@@ -497,6 +499,7 @@ export function render(container, ctx) {
                 <div class="vmm-mono">${esc(vm.mac || '')}</div>
                 <div class="vmm-actions">
                     <button class="vmm-btn" type="button" data-action="console" data-vm-id="${esc(vm.id)}"${running ? '' : ' disabled'}>Console</button>
+                    <button class="vmm-btn" type="button" data-action="edit" data-vm-id="${esc(vm.id)}"${running ? ' disabled title="Stop the machine to change its resources or port forwards"' : ''}>Edit</button>
                     ${running || paused
                         ? `<button class="vmm-btn" type="button" data-action="shutdown" data-vm-id="${esc(vm.id)}">Shut down</button>
                            <button class="vmm-btn danger" type="button" data-action="stop" data-vm-id="${esc(vm.id)}">Force stop</button>`
@@ -710,10 +713,77 @@ export function render(container, ctx) {
         consoleFrame.src = 'about:blank';
     }
 
-    async function createVm(form) {
+    /**
+     * Fill the form for a new machine (vm === null) or an edit.
+     *
+     * In edit mode the install-time fields (share, image, disk size, firmware)
+     * are hidden: writing them a second time would re-create or re-format the
+     * guest's disk, which is how people lose a machine.
+     */
+    function prepareForm(vm) {
+        state.editing = vm ? vm.id : '';
+        const form = $('[data-create-form]');
+        if (form) form.reset();
+        formError.textContent = '';
+        const title = $('[data-form-title]');
+        const hint = $('[data-form-hint]');
+        const submit = $('[data-form-submit]');
+        if (title) title.textContent = vm ? `Edit ${vm.name}` : 'New machine';
+        if (hint) {
+            hint.textContent = vm
+                ? 'Resources and port forwards change on the next start.'
+                : 'The disk is created on the share you pick.';
+        }
+        if (submit) submit.textContent = vm ? 'Save changes' : 'Create machine';
+        $$('[data-install-field]').forEach((field) => { field.hidden = Boolean(vm); });
+        if (vm) {
+            $('#vmm-name').value = vm.name || '';
+            $('#vmm-cpu').value = vm.vcpu || 1;
+            $('#vmm-ram').value = vm.memory_mb || 2048;
+            $('#vmm-forwards').value = (vm.forwards || []).map((item) => item.guest).join(', ');
+            const autostart = $('#vmm-autostart');
+            if (autostart) autostart.checked = Boolean(vm.autostart);
+        }
+    }
+
+    async function saveVm(form) {
+        formError.textContent = '';
+        const values = new FormData(form);
+        const base = {
+            name: String(values.get('name') || '').trim(),
+            vcpu: Number(values.get('vcpu') || 1),
+            memory_mb: Number(values.get('memory_mb') || 2048),
+            autostart: values.get('autostart') === 'on',
+        };
+        if (!base.name) {
+            formError.textContent = 'A name is required.';
+            return;
+        }
+        if (state.editing) {
+            try {
+                say('Saving…');
+                const result = await api(
+                    `api/vms/${encodeURIComponent(state.editing)}`,
+                    { ...base, guest_ports: String(values.get('guest_ports') || '').trim() },
+                    'PATCH');
+                notify(`${result.item.name} updated`, 'success');
+                prepareForm(null);
+                formPanel.hidden = true;
+                say('');
+                await refresh(true);
+            } catch (err) {
+                formError.textContent = failure(err);
+            }
+            return;
+        }
+        await createVm(form, base);
+    }
+
+    async function createVm(form, base = null) {
         formError.textContent = '';
         const values = new FormData(form);
         const payload = {
+            ...(base || {}),
             name: String(values.get('name') || '').trim(),
             vcpu: Number(values.get('vcpu') || 1),
             memory_mb: Number(values.get('memory_mb') || 2048),
@@ -733,7 +803,7 @@ export function render(container, ctx) {
             say('Creating the disk…');
             const result = await api('api/vms', payload);
             notify(`${result.item.name} created`, 'success');
-            form.reset();
+            prepareForm(null);
             formPanel.hidden = true;
             say('');
             await refresh(true);
@@ -761,8 +831,18 @@ export function render(container, ctx) {
         const vmId = button.dataset.vmId;
         const vm = state.vms.find((item) => item.id === vmId);
         if (action === 'toggle-form') {
-            formPanel.hidden = !formPanel.hidden;
-            if (!formPanel.hidden) $('#vmm-name').focus();
+            if (!formPanel.hidden) {
+                formPanel.hidden = true;
+                return;
+            }
+            prepareForm(null);
+            formPanel.hidden = false;
+            $('#vmm-name').focus();
+        } else if (action === 'edit') {
+            prepareForm(vm);
+            formPanel.hidden = false;
+            $('#vmm-name').focus();
+            formPanel.scrollIntoView({ block: 'nearest' });
         } else if (action === 'refresh') {
             refresh();
             if (state.tab === 'storage') loadStorage(state.storagePath);
@@ -794,7 +874,7 @@ export function render(container, ctx) {
 
     $('[data-create-form]').addEventListener('submit', (event) => {
         event.preventDefault();
-        createVm(event.currentTarget);
+        saveVm(event.currentTarget);
     });
 
     // Poll while the window is visible; stop polling once it is gone.

@@ -266,6 +266,84 @@ class Engine:
             self._save(vms)
             return self.describe(record)
 
+    def update(self, vm_id: str, payload: dict) -> dict:
+        """Edit a machine: name, vCPU, memory, autostart and forwarded ports.
+
+        Disks, firmware and the install medium are deliberately not editable:
+        changing them on an installed guest is how people lose a VM. Hardware and
+        forwards need a QEMU restart, so they are refused while the machine runs
+        (a silent restart that kills a running guest is worse than a message).
+        """
+        with self.lock:
+            vms = self._load()
+            vm = self._find(vms, vm_id)
+            config = dict(vm.get("config") or {})
+            running = self.status(vm) == "running"
+
+            if "name" in payload:
+                name = str(payload.get("name") or "").strip()[:MAX_NAME]
+                if not name:
+                    raise EngineError("Name is required", 400)
+                vm["name"] = name
+            if "autostart" in payload:
+                vm["autostart"] = payload.get("autostart") is not False
+
+            needs_restart = False
+            if "vcpu" in payload or "memory_mb" in payload:
+                cores = os.cpu_count() or 1
+                try:
+                    vcpu = int(payload.get("vcpu", config.get("vcpu") or 1))
+                    memory_mb = int(payload.get("memory_mb", config.get("memory_mb") or 1024))
+                except (TypeError, ValueError) as exc:
+                    raise EngineError("vcpu and memory_mb must be numbers", 400) from exc
+                if not 1 <= vcpu <= min(qemu.MAX_VCPU, cores):
+                    raise EngineError(f"vcpu must be between 1 and {min(qemu.MAX_VCPU, cores)}", 400)
+                if not qemu.MIN_MEMORY_MB <= memory_mb <= MAX_MEMORY_MB:
+                    raise EngineError(
+                        f"memory_mb must be between {qemu.MIN_MEMORY_MB} and {MAX_MEMORY_MB}", 400)
+                config["vcpu"] = vcpu
+                config["memory_mb"] = memory_mb
+                needs_restart = True
+
+            if "guest_ports" in payload:
+                guest_ports = _guest_ports(payload.get("guest_ports"))
+                # Keep the host port a guest already owns: the link people bookmarked
+                # must survive an edit that does not touch that port.
+                own = {int(item["guest"]): int(item["host"])
+                       for item in qemu.forwards_of(config)}
+                used = {
+                    int(item["host"])
+                    for other in vms if other.get("id") != vm_id
+                    for item in qemu.forwards_of(other.get("config") or {})
+                }
+                forwards = []
+                for guest in guest_ports:
+                    host = own.get(guest)
+                    if host is None:
+                        # `used` deliberately excludes this VM's own ports (they may
+                        # be dropped), so the ports assigned *in this edit* have to
+                        # be excluded too or one address could serve two guests.
+                        taken = used | {item["host"] for item in forwards}
+                        free = qemu.forward_hosts_available(taken)
+                        if not free:
+                            raise EngineError(
+                                "No free host port left for guest port forwarding", 409)
+                        host = free[0]
+                    forwards.append({"host": host, "guest": guest})
+                nics = list(config.get("nics") or [{"model": "virtio", "mac": _mac()}])
+                nics[0] = {**nics[0], "forwards": forwards}
+                config["nics"] = nics
+                needs_restart = True
+
+            if needs_restart and running:
+                raise EngineError(
+                    "Stop the machine before changing its resources or port forwards", 409)
+
+            vm["config"] = config
+            vm["updated_at"] = _now()
+            self._save(vms)
+            return self.describe(vm)
+
     def delete(self, vm_id: str, *, keep_disks: bool = False) -> None:
         with self.lock:
             vms = self._load()

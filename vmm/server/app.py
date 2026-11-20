@@ -147,6 +147,9 @@ class ApiHandler(_Base):
     def do_DELETE(self):  # noqa: N802
         self._dispatch("DELETE")
 
+    def do_PATCH(self):  # noqa: N802
+        self._dispatch("PATCH")
+
     def _dispatch(self, method: str) -> None:
         parsed = urlsplit(self.path)
         path = parsed.path.rstrip("/") or "/"
@@ -188,6 +191,8 @@ class ApiHandler(_Base):
             vm_id = parts[0]
             if len(parts) == 1 and method == "GET":
                 return {"item": ENGINE.get(vm_id)}, 200
+            if len(parts) == 1 and method == "PATCH":
+                return {"item": ENGINE.update(vm_id, self.read_json())}, 200
             if len(parts) == 1 and method == "DELETE":
                 keep = (query.get("keep_disks") or ["0"])[0] in ("1", "true", "yes")
                 ENGINE.delete(vm_id, keep_disks=keep)
