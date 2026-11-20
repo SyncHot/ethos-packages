@@ -34,3 +34,28 @@ That means the image produced by the EthOS OS release
 a share under `/mnt` or `/media`, pick it in **Installer ISO or system image**,
 choose **UEFI** firmware (the image boots through GRUB EFI) and start the VM.
 The first boot runs the EthOS OS first-boot wizard and grows the partition.
+
+## Reach the guest (port forwarding)
+
+Every VM sits behind its own QEMU user-mode NAT — deliberately, so a guest cannot
+talk to the NAS or the LAN on its own. The catch is that nothing can reach *into*
+it either, so a guest with a web UI is console-only until you forward a port.
+
+Put the guest's port in **Forward guest ports** when you create the machine (up
+to three, comma separated). The engine pairs it with a published host port and
+the machine card gets a link:
+
+```
+guest 9000  →  http://this-nas:18190/
+```
+
+| Guest port | Typical use |
+|---|---|
+| `9000` | EthOS OS — the whole NAS UI, including the first-run setup wizard |
+| `80`, `443` | a web appliance or a WordPress VM |
+| `22` | SSH into the guest |
+
+Ports come from the range `18190-18194` (docker-compose publishes it 1:1, keep it
+in sync with `FORWARD_HOST_RANGE` in `server/qemu.py`). A forward is bound when
+the machine starts — change it by recreating the VM.
+

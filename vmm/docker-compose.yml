@@ -21,6 +21,12 @@ services:
       # free host port, so the package can never collide with another service
       # (the VM window discovers the mapping through /api/containers).
       - "8094"
+      # Guest port forwards: QEMU hostfwd binds these *container* ports onto a
+      # port inside the VM, and compose publishes the same range 1:1, so
+      # http://<nas>:18190 can reach a guest's :9000. The range stays below the
+      # ephemeral range (32768+) so Docker's dynamic console mapping cannot
+      # collide with it. Keep it in sync with FORWARD_HOST_RANGE in server/qemu.py.
+      - "18190-18194:18190-18194"
     volumes:
       - vmm-data:/data
       - ./server:/app:ro

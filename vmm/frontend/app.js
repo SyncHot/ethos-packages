@@ -170,6 +170,25 @@ function esc(value) {
     }[ch]));
 }
 
+/**
+ * "Reach the guest" links for forwarded ports.
+ *
+ * A VM runs behind QEMU user networking: without a forward nothing on the NAS
+ * can open its web UI. The engine pairs each guest port with a container port
+ * that compose publishes 1:1, so the address is simply <this NAS>:<host port>.
+ */
+function forwardLinks(vm) {
+    const forwards = Array.isArray(vm.forwards) ? vm.forwards : [];
+    if (!forwards.length) return '';
+    const host = location.hostname;
+    const links = forwards.map((item) => {
+        const url = `http://${host}:${item.host}/`;
+        return `<a class="vmm-btn" href="${esc(url)}" target="_blank" rel="noopener">`
+            + `:${esc(item.host)} → guest ${esc(item.guest)}</a>`;
+    }).join('');
+    return `<div class="vmm-row" data-forwards>${links}</div>`;
+}
+
 function gb(bytes) {
     if (!bytes) return '—';
     return `${(bytes / (1024 ** 3)).toFixed(bytes > 1024 ** 3 ? 1 : 0)} GB`;
@@ -271,6 +290,12 @@ export function render(container, ctx) {
                                     <input type="checkbox" name="autostart" checked id="vmm-autostart">
                                     <label for="vmm-autostart">Start with EthOS<small>Also restarts after an update.</small></label>
                                 </div>
+                            </div>
+                            <div class="vmm-field">
+                                <label for="vmm-forwards">Forward guest ports (optional)</label>
+                                <input class="vmm-input" id="vmm-forwards" name="guest_ports"
+                                       placeholder="9000" spellcheck="false" inputmode="numeric">
+                                <small data-forwards-hint>Comma separated. The guest sits behind its own NAT, so this is how you reach its web UI: port 9000 of an EthOS OS image becomes <code>http://this-nas:18190</code>.</small>
                             </div>
                             <p class="vmm-status" data-form-error></p>
                             <div class="vmm-actions">
@@ -468,6 +493,7 @@ export function render(container, ctx) {
                     <div><span>Disk</span><br><strong>${esc(disk.size_gb || '—')} GB</strong></div>
                     <div><span>Firmware</span><br><strong>${esc(vm.firmware)}</strong></div>
                 </div>
+                ${forwardLinks(vm)}
                 <div class="vmm-mono">${esc(vm.mac || '')}</div>
                 <div class="vmm-actions">
                     <button class="vmm-btn" type="button" data-action="console" data-vm-id="${esc(vm.id)}"${running ? '' : ' disabled'}>Console</button>
@@ -696,6 +722,8 @@ export function render(container, ctx) {
             iso: String(values.get('iso') || ''),
             firmware: String(values.get('firmware') || 'bios'),
             autostart: values.get('autostart') === 'on',
+            // "9000, 8080" — the engine validates and assigns the host side.
+            guest_ports: String(values.get('guest_ports') || '').trim(),
         };
         if (!payload.name) {
             formError.textContent = 'A name is required.';

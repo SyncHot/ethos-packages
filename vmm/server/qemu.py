@@ -22,6 +22,29 @@ VNC_BASE = 5901
 VNC_MAX = 5999
 VNC_HOST = "127.0.0.1"
 
+# Guest port forwards. QEMU user networking puts the guest behind SLIRP, so
+# nothing on the NAS can reach the guest's web UI without `hostfwd`. The host
+# side is a *container* port taken from this range, and docker-compose publishes
+# exactly the same range 1:1 — the engine never talks to the Docker daemon to
+# open a port, and the range sits below the ephemeral range (32768+) so Docker's
+# own dynamic mappings cannot steal one.
+FORWARD_HOST_RANGE = (18190, 18194)
+MAX_FORWARDS_PER_VM = 3
+
+
+def forward_hosts_available(used: set[int]) -> list[int]:
+    """Free host ports from FORWARD_HOST_RANGE, in order."""
+    first, last = FORWARD_HOST_RANGE
+    return [port for port in range(first, last + 1) if port not in used]
+
+
+def forwards_of(config: dict) -> list[dict]:
+    """Port forwards declared on the first NIC (always a list of dicts)."""
+    nics = config.get("nics") or []
+    if not nics:
+        return []
+    return [dict(item) for item in (nics[0].get("forwards") or [])]
+
 
 def kvm_available() -> bool:
     """True only when the device exists *and* this process may use it."""
@@ -78,8 +101,17 @@ def build_argv(vm: dict, *, accel: str, qmp_path: str, pid_path: str,
     for item in media:
         argv += ["-drive", f"file={item['path']},media=cdrom,readonly=on"]
     for index, nic in enumerate(config.get("nics") or []):
+        options = f"user,id=net{index}"
+        # Guest port forwards ("open http://nas:18190" for the guest's :9000).
+        # QEMU user networking has no other way in: the guest sits behind SLIRP
+        # and nothing on the host can reach it without hostfwd. The host side is
+        # a container port from FORWARD_HOST_RANGE, which docker-compose
+        # publishes 1:1, so the engine never needs to touch the daemon.
+        if index == 0:
+            for forward in nic.get("forwards") or []:
+                options += f",hostfwd=tcp:0.0.0.0:{int(forward['host'])}-:{int(forward['guest'])}"
         argv += [
-            "-netdev", f"user,id=net{index}",
+            "-netdev", options,
             "-device", f"virtio-net-pci,netdev=net{index},mac={nic['mac']}",
         ]
     # Daemonize so the VM survives an engine restart inside the container; the

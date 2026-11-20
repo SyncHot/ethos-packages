@@ -8,6 +8,7 @@ by the compose file) and never passes user input to a shell.
 import json
 import math
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -78,6 +79,35 @@ def _next_vnc(used: set[int]) -> int:
     raise EngineError("No free console port", 409)
 
 
+def _guest_ports(value) -> list[int]:
+    """Parse the `guest_ports` field: a list, or "9000, 8080".
+
+    An empty value means "no forwards" — a VM that only needs the console does
+    not have to claim a host port.
+    """
+    if value in (None, "", [], ()):
+        return []
+    if isinstance(value, str):
+        value = [part for part in re.split(r"[,\s]+", value.strip()) if part]
+    if not isinstance(value, (list, tuple)):
+        raise EngineError("guest_ports must be a list of port numbers", 400)
+    ports: list[int] = []
+    for item in value:
+        try:
+            port = int(item)
+        except (TypeError, ValueError):
+            raise EngineError(f"Guest port {item!r} is not a number", 400) from None
+        if not 1 <= port <= 65535:
+            raise EngineError("Guest ports must be between 1 and 65535", 400)
+        if port in ports:
+            raise EngineError(f"Guest port {port} is listed twice", 400)
+        ports.append(port)
+    if len(ports) > qemu.MAX_FORWARDS_PER_VM:
+        raise EngineError(
+            f"At most {qemu.MAX_FORWARDS_PER_VM} guest ports can be forwarded", 400)
+    return ports
+
+
 class Engine:
     def __init__(self) -> None:
         self.lock = threading.RLock()
@@ -124,6 +154,7 @@ class Engine:
             "disks": config.get("disks") or [],
             "media": config.get("media") or [],
             "mac": (config.get("nics") or [{}])[0].get("mac", ""),
+            "forwards": qemu.forwards_of(config),
             "vnc_port": runtime["vnc_port"],
             "accel": qemu.accelerator(),
         }
@@ -193,6 +224,23 @@ class Engine:
                 disk_gb = max(1, math.ceil(info.get("virtual_size", 0) / 2 ** 30) or disk_gb)
 
             used = {self.runtime(vm)["vnc_port"] for vm in vms}
+            # Guest port forwards: the guest is behind QEMU user networking, so
+            # without hostfwd its web UI is unreachable from the NAS. Each one
+            # claims a container port that compose publishes 1:1.
+            guest_ports = _guest_ports(payload.get("guest_ports"))
+            used_hosts = {
+                int(item["host"])
+                for vm in vms for item in qemu.forwards_of((vm.get("config") or {}))
+            }
+            available = qemu.forward_hosts_available(used_hosts)
+            if len(available) < len(guest_ports):
+                raise EngineError(
+                    "No free host port left for guest port forwarding — remove a VM or "
+                    "drop a forward", 409)
+            forwards = [
+                {"host": host, "guest": guest}
+                for host, guest in zip(available, guest_ports)
+            ]
             record = {
                 "id": vm_id,
                 "name": name,
@@ -209,7 +257,7 @@ class Engine:
                         "bus": "virtio", "size_gb": disk_gb,
                     }],
                     "media": media,
-                    "nics": [{"model": "virtio", "mac": _mac(), "forwards": []}],
+                    "nics": [{"model": "virtio", "mac": _mac(), "forwards": forwards}],
                     "display": {"type": "vnc", "port": _next_vnc(used)},
                     "boot_order": ["disk", "cdrom"],
                 },
