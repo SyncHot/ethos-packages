@@ -616,7 +616,10 @@ export function render(container, ctx) {
     async function consoleHostPort() {
         for (let attempt = 0; attempt < 3; attempt += 1) {
             try {
-                const res = await _ctx.apiFetch('/api/containers');
+                // `ctx` is render()'s parameter — there is no `_ctx` in this
+                // module. The old name threw a ReferenceError that the catch
+                // swallowed, so the console silently kept the container port.
+                const res = await ctx.apiFetch('/api/containers');
                 if (res.ok) {
                     const data = await res.json();
                     const box = (data.containers || []).find(c => c.name === 'ethos-vmm');
