@@ -98,6 +98,7 @@ const STYLE = `
     font-size: 11px; background: var(--vmm-surface); border: 1px solid var(--vmm-border);
 }
 .vmm-pill.running { color: var(--vmm-green); background: var(--vmm-green-soft); border-color: transparent; }
+.vmm-pill.starting { color: var(--vmm-amber); background: var(--vmm-amber-soft); border-color: transparent; }
 .vmm-pill.stopped { color: var(--vmm-muted); }
 .vmm-pill.paused { color: var(--vmm-amber); background: var(--vmm-amber-soft); border-color: transparent; }
 .vmm-pill.error { color: var(--vmm-red); background: var(--vmm-red-soft); border-color: transparent; }
@@ -402,11 +403,15 @@ export function render(container, ctx) {
             renderAll();
             if (!quiet) say('');
         } catch (err) {
-            const health = err && (err.detail || err.message) || '';
-            healthEl.className = 'vmm-pill error';
-            healthEl.textContent = 'Engine unavailable';
-            if (/provisioning|503/i.test(String(health))) {
-                say('The engine is installing QEMU for the first time. This takes one to three minutes.', '');
+            const health = String((err && (err.detail || err.message)) || '');
+            // The first start installs QEMU and noVNC inside the container; until
+            // the API listens, the EthOS proxy reports 503 / a reset connection.
+            // That is a normal startup state, not a failure.
+            const starting = /provisioning|starting|503|connection reset|connection refused|timed out|unavailable/i.test(health);
+            healthEl.className = `vmm-pill ${starting ? 'starting' : 'error'}`;
+            healthEl.textContent = starting ? 'Starting engine…' : 'Engine unavailable';
+            if (starting) {
+                say('The engine is starting. The first run installs QEMU and noVNC — this can take a few minutes; the window refreshes automatically.', '');
             } else {
                 say(failure(err), 'error');
             }
