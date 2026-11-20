@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-20T13:08:15+00:00",
+  "generated_at": "2026-11-20T13:08:52+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -480,7 +480,7 @@
       "screenshots": [],
       "changelog": "1.1.0: forward guest ports. A VM runs behind its own NAT, so its web UI was unreachable from the NAS — the only way in was the console. Add a guest port when you create a machine (9000 for an EthOS OS image, 80 for a web appliance) and the card shows a link like http://<this-nas>:18190 → guest 9000. Up to three ports per machine; they come from a published range (18190-18194) and are handed out once, so an address never moves. 1.0.9: Console links point at the right port again. The window asked EthOS for the console's published host port through a variable that does not exist (`_ctx` instead of `ctx`), the error was swallowed by a try/catch, and every link fell back to the container port 8094 — on the NAS that number belongs to another service, so Console opened a dead or foreign page. The lookup now uses `ctx`, retries while Docker republishes the mapping, and refuses to build a URL out of the container port: if the port is not published yet it says so instead of opening a broken link. 1.0.8: the console opens in a new tab when EthOS is served over https — browsers drop an http iframe inside an https page as mixed content, which looked like a blank console with no error. On http (LAN) the console still embeds, and the panel says which mode it used. 1.0.7: picking a bootable image (.img/.img.xz/.qcow2) now pre-selects UEFI firmware and explains why, so an EthOS OS image boots on the first try. 1.0.6: boot a ready-made image, not just an installer — pick a .img/.img.xz/.qcow2 file (for example the EthOS OS release) and it becomes the VM's disk, decompressed and converted to qcow2 in one step, with a free-space check up front. .iso installers still attach as CD-ROM. 1.0.5: the window shows a calm “Starting engine…” state while the first-run QEMU/noVNC installation is still running, instead of a connection-reset error. 1.0.4: the console no longer reserves host port 8094 — Docker maps the container port to a free host port and the window discovers it, so the package starts even when another service already uses 8094. 1.0.3: requires EthOS 2.0. 1.0.2: the console overlay no longer covers the window — it is hidden until you press Console, so the machine list and the create form are always visible. 1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/manifest.json",
-      "manifest_sha256": "f6970215e2b38f2eb76a3887078acb6bf7b8358d19e6bf548192a3abea478def",
+      "manifest_sha256": "366595a35dbdd51897fe9ace22a384bc896285b297d6342cbd78231e8ad950d1",
       "size_bytes": 98524
     }
   ]
