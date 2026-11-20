@@ -606,44 +606,66 @@ export function render(container, ctx) {
      * Docker assigns the console host port (the manifest publishes only the
      * container port), so ask the core which host port currently maps to 8094.
      * `/api/containers` renders the mapping as "hostPort→containerPort/proto".
+     *
+     * Returns 0 when the mapping is not visible yet. Falling back to the
+     * container port is never an option: 8094 only exists inside the package
+     * container, so on the NAS that number belongs to whatever else listens
+     * there (a reverse proxy, another service) and the "console" opens a dead
+     * or foreign page. Better to say "not ready" than to hand out a wrong URL.
      */
-    async function consoleHostPort(fallback) {
-        try {
-            const res = await _ctx.apiFetch('/api/containers');
-            if (!res.ok) return fallback;
-            const data = await res.json();
-            const box = (data.containers || []).find(c => c.name === 'ethos-vmm');
-            for (const part of String(box?.ports || '').split(',')) {
-                const match = part.match(/(\d+)\s*→\s*8094(?:\/\w+)?/);
-                if (match) return Number(match[1]);
-            }
-        } catch (_) { /* fall back to the container port */ }
-        return fallback;
+    async function consoleHostPort() {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+                const res = await _ctx.apiFetch('/api/containers');
+                if (res.ok) {
+                    const data = await res.json();
+                    const box = (data.containers || []).find(c => c.name === 'ethos-vmm');
+                    for (const part of String(box?.ports || '').split(',')) {
+                        const match = part.match(/(\d+)\s*→\s*8094(?:\/\w+)?/);
+                        // A mapping whose host side is 8094 is the container
+                        // port echoed back, not a published host port.
+                        if (match && Number(match[1]) !== 8094) return Number(match[1]);
+                    }
+                }
+            } catch (_) { /* Docker may still be republishing the port */ }
+            // A package update recreates the container: the first listing right
+            // after it can come back without ports.
+            await new Promise(resolve => setTimeout(resolve, 700));
+        }
+        return 0;
     }
 
     async function openConsole(vmId, name) {
         try {
             const ticket = await api('api/console/ticket', { vm: vmId });
+            $('[data-console-title]').textContent = `${name} — console`;
+            consoleEl.hidden = false;
+            const port = await consoleHostPort();
+            const link = $('[data-console-link]');
+            if (!port) {
+                link.hidden = true;
+                consoleFrame.removeAttribute('src');
+                $('[data-console-note]').textContent =
+                    'EthOS cannot see the console port yet — Docker is still republishing it. Press Console again in a few seconds.';
+                return;
+            }
             const host = location.hostname;
-            const port = await consoleHostPort(ticket.port);
             // The console is served by the package container on a
             // Docker-assigned port over plain http. Inside an https page a
             // browser drops that iframe as mixed content without a single
             // request, which looks exactly like "the console is blank" — so on
             // https we open a real tab (top-level navigation is allowed) and
-            // explain why.
+            // explain why. The ticket lives two minutes: this URL is for
+            // opening, not for bookmarking.
             const securePage = location.protocol === 'https:';
             const url = `http://${host}:${port}${ticket.url}`;
-            $('[data-console-title]').textContent = `${name} — console`;
-            const link = $('[data-console-link]');
             link.href = url;
             link.hidden = false;
-            consoleEl.hidden = false;
             if (securePage) {
                 consoleFrame.removeAttribute('src');
                 const opened = window.open(url, '_blank', 'noopener');
                 $('[data-console-note]').textContent = opened
-                    ? `Opened in a new tab — the console runs on http://${host}:${port}, which this https page cannot embed.`
+                    ? `Opened in a new tab — the console runs on http://${host}:${port}, which this https page cannot embed. Reopen it from here when it expires (links live two minutes).`
                     : `Open the console in a new tab: the browser blocked the pop-up, use the link above (http://${host}:${port}).`;
                 return;
             }
