@@ -26,7 +26,7 @@ The catalog currently contains twenty-one packages:
 | `ethos-video` 🎬 | 1.0.1 | native | Video Station: movies/series, search, My List, resume positions and an in-window player |
 | `ethos-welcome` 🌅 | 1.0.3 | window 8090 | Static welcome page served by nginx (the reference port UI; no EthOS login) |
 | `tic-tac-toe` ❌ | 2.1.1 | native | Two-player game inside an EthOS window; no container or port |
-| `vmm` 🖥️ | 1.0.3 | native | EthOS VM Manager — KVM virtual machines with a browser console, qcow2 disks on your shares and autostart; needs `/dev/kvm` (`capabilities: ["kvm"]`) |
+| `vmm` 🖥️ | 1.0.4 | native | EthOS VM Manager — KVM virtual machines with a browser console (Docker-assigned host port), qcow2 disks on your shares and autostart; needs `/dev/kvm` (`capabilities: ["kvm"]`) |
 
 All packages declare `min_ethos_version: "2.0.0"`. Every package ships a Package Center icon
 (`<package-id>/icon.svg`) referenced by `icon_url` in its manifest.
