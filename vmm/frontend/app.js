@@ -515,6 +515,7 @@ export function render(container, ctx) {
                     $('#vmm-iso').value = path;
                     $('[data-iso-hint]').textContent = `Selected: ${path}`;
                     say(`Image selected: ${path}`);
+                    applyImageDefaults();
                 }
             });
         });
@@ -522,6 +523,10 @@ export function render(container, ctx) {
         // Make the ISO dropdown reflect the folder that is on screen, so the
         // create form never needs a hand-typed path.
         const select = $('#vmm-iso');
+        if (!select.dataset.wired) {
+            select.dataset.wired = '1';
+            select.addEventListener('change', applyImageDefaults);
+        }
         // Installers (.iso) are mounted as CD-ROM; a bootable image (.img,
         // .img.xz, .qcow2) becomes the VM's disk — the EthOS OS release ships
         // the latter, so both have to show up here.
@@ -531,9 +536,25 @@ export function render(container, ctx) {
         select.innerHTML = '<option value="">None (boot the disk)</option>'
             + isos.map((entry) => `<option value="${esc(entry.path)}">${esc(entry.name)}</option>`).join('');
         if (isos.some((entry) => entry.path === current)) select.value = current;
+        applyImageDefaults();
         $('[data-iso-hint]').textContent = isos.length
             ? `${isos.length} image${isos.length === 1 ? '' : 's'} in this folder.`
             : 'No .iso/.img files here — copy an installer ISO or a system image first.';
+    }
+
+    // A bootable .img/.qcow2 is almost always a UEFI system (the EthOS OS image
+    // is), so pre-select UEFI and say why; an installer ISO keeps the user's
+    // choice, since BIOS installs are still common there.
+    function applyImageDefaults() {
+        const select = $('#vmm-iso');
+        const firmware = $('#vmm-firmware');
+        if (!select || !firmware) return;
+        const picked = String(select.value || '');
+        if (!/\.iso$/i.test(picked) && /\.(img|qcow2|raw)$|\.img\.(xz|gz)$/i.test(picked)) {
+            firmware.value = 'uefi';
+            $('[data-iso-hint]').textContent =
+                `System image: it becomes the disk. UEFI is pre-selected because this kind of image boots through EFI.`;
+        }
     }
 
     function renderAll() {
