@@ -88,6 +88,83 @@ def build_argv(vm: dict, *, accel: str, qmp_path: str, pid_path: str,
     return argv
 
 
+# An installer is attached as a CD-ROM; a *system image* becomes the disk.
+# The EthOS OS release ships `ethos-os-<ver>-<arch>-<variant>.img.xz`, which is a
+# preinstalled raw disk, not an ISO — booting it as CD-ROM can never work.
+SYSTEM_IMAGE_SUFFIXES = (".img", ".img.xz", ".img.gz", ".qcow2", ".raw")
+
+
+def image_kind(name: str) -> str:
+    """Classify a picked file: "iso", "disk", or "" when it is neither."""
+    lowered = name.lower()
+    if lowered.endswith(".iso"):
+        return "iso"
+    if any(lowered.endswith(suffix) for suffix in SYSTEM_IMAGE_SUFFIXES):
+        return "disk"
+    return ""
+
+
+def convert_argv(source: Path, destination: Path) -> list[str]:
+    """`qemu-img convert` argv for a raw system image (pure, for tests)."""
+    return ["qemu-img", "convert", "-f", "raw", "-O", "qcow2",
+            str(source), str(destination)]
+
+
+def _decompress(source: Path, target: Path) -> None:
+    """Stream an .xz/.gz image to `target` with the standard library.
+
+    The engine image does not ship the xz binary, and adding a build dependency
+    for one file format is not worth it — lzma and gzip are part of Python.
+    """
+    import gzip
+    import lzma
+
+    opener = lzma.open if source.name.lower().endswith(".xz") else gzip.open
+    with opener(source, "rb") as stream, target.open("wb") as out:
+        shutil.copyfileobj(stream, out, length=1024 * 1024)
+
+
+def import_disk(source: Path, destination: Path) -> None:
+    """Make `destination` a qcow2 copy of a bootable image.
+
+    Compressed images (`.img.xz`, `.img.gz`) are decompressed next to the target
+    first: qemu-img cannot read a compressed stream, and a temp copy in the same
+    directory means the disk never crosses filesystems. Free space is checked up
+    front so a 8 GiB image fails with a clear message instead of filling the
+    share.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    compressed = source.name.lower().endswith((".xz", ".gz"))
+    if not compressed:
+        _convert(source, destination)
+        return
+
+    free = shutil.disk_usage(destination.parent).free
+    estimate = max(source.stat().st_size * 3, 8 * 1024 ** 3)
+    if free < estimate:
+        raise RuntimeError(
+            f"not enough free space for the image: {free // 2 ** 30} GiB free, "
+            f"about {estimate // 2 ** 30} GiB needed")
+    temporary = destination.with_name(destination.name + ".raw.tmp")
+    try:
+        _decompress(source, temporary)
+        _convert(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _convert(source: Path, destination: Path) -> None:
+    binary = shutil.which("qemu-img")
+    if not binary:
+        raise RuntimeError("qemu-img is missing — the engine is still provisioning")
+    argv = convert_argv(source, destination)
+    argv[0] = binary
+    result = subprocess.run(argv, capture_output=True, text=True, timeout=3600,
+                            check=False)
+    if result.returncode != 0:
+        raise RuntimeError((result.stderr or "qemu-img convert failed").strip()[:300])
+
+
 def create_disk(path: Path, size_gb: int) -> None:
     """Create a sparse qcow2 disk; fails loudly instead of booting a broken VM."""
     path.parent.mkdir(parents=True, exist_ok=True)

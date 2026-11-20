@@ -21,6 +21,28 @@ def check(name, ok, detail=""):
 # ── qemu.build_argv ─────────────────────────────────────────────────────────
 import qemu  # noqa: E402
 
+# ── image classification ───────────────────────────────────────────────────
+CASES = [
+    ("win11.iso", "iso"),
+    ("ethos-os-0.1.0-amd64-nas.img", "disk"),
+    ("ethos-os-0.1.0-amd64-nas.img.xz", "disk"),
+    ("ethos-os-0.1.0-amd64-nas.img.gz", "disk"),
+    ("ubuntu.qcow2", "disk"),
+    ("disk.raw", "disk"),
+    ("notes.txt", ""),
+    ("README", ""),
+]
+for name, expected in CASES:
+    check(f"image_kind({name}) == {expected!r}", qemu.image_kind(name) == expected,
+          qemu.image_kind(name))
+
+convert = qemu.convert_argv(Path("/vmhost/mnt/os.img"), Path("/vmhost/mnt/disk0.qcow2"))
+check("convert argv keeps qcow2 output",
+      convert[:4] == ["qemu-img", "convert", "-f", "raw"]
+      and "qcow2" in convert and str(convert[-2]).endswith("os.img")
+      and str(convert[-1]).endswith("disk0.qcow2"), convert)
+
+
 VM = {
     "id": "vm-abc123",
     "name": "Windows 11",

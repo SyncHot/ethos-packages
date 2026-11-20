@@ -17,3 +17,20 @@ State (disk metadata, autostart flags) lives in the `vmm-data` volume; disks liv
 
 `frontend/app.js` exports `render(container, ctx)`; the server is stdlib Python. Bump `version`,
 prepend `changelog`, then rebuild/sign with `ethos-pack`.
+
+## Boot a ready-made image (EthOS OS, cloud images)
+
+An installer ISO is attached as a CD-ROM. A **system image** is different: it
+already contains an installed OS, so it replaces the VM's empty disk instead.
+
+| File | How it is used |
+|---|---|
+| `*.iso` | CD-ROM (install into the empty disk) |
+| `*.img`, `*.raw`, `*.qcow2` | becomes `disk0.qcow2` (converted) |
+| `*.img.xz`, `*.img.gz` | decompressed, then converted |
+
+That means the image produced by the EthOS OS release
+(`ethos-os-<version>-<arch>-<variant>.img.xz`) can be booted directly: copy it to
+a share under `/mnt` or `/media`, pick it in **Installer ISO or system image**,
+choose **UEFI** firmware (the image boots through GRUB EFI) and start the VM.
+The first boot runs the EthOS OS first-boot wizard and grows the partition.

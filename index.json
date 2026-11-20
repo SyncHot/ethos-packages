@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-20T11:46:42+00:00",
+  "generated_at": "2026-11-20T11:56:05+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -461,8 +461,8 @@
     {
       "id": "vmm",
       "name": "EthOS VM Manager",
-      "version": "1.0.5",
-      "description": "Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO, boot it, and use it from the browser console - no separate computer left running. Disks live on your own shares, VMs start again after a restart, and every VM is isolated in its own process.",
+      "version": "1.0.6",
+      "description": "Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO or boot a ready-made system image such as the EthOS OS release, use it from the browser console, and let it start again with EthOS.",
       "icon": "🖥️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/icon.svg",
       "category": "tools",
@@ -478,10 +478,10 @@
       ],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.5: the window shows a calm “Starting engine…” state while the first-run QEMU/noVNC installation is still running, instead of a connection-reset error. 1.0.4: the console no longer reserves host port 8094 — Docker maps the container port to a free host port and the window discovers it, so the package starts even when another service already uses 8094. 1.0.3: requires EthOS 2.0. 1.0.2: the console overlay no longer covers the window — it is hidden until you press Console, so the machine list and the create form are always visible. 1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
+      "changelog": "1.0.6: boot a ready-made image, not just an installer — pick a .img/.img.xz/.qcow2 file (for example the EthOS OS release) and it becomes the VM's disk, decompressed and converted to qcow2 in one step, with a free-space check up front. .iso installers still attach as CD-ROM. 1.0.5: the window shows a calm “Starting engine…” state while the first-run QEMU/noVNC installation is still running, instead of a connection-reset error. 1.0.4: the console no longer reserves host port 8094 — Docker maps the container port to a free host port and the window discovers it, so the package starts even when another service already uses 8094. 1.0.3: requires EthOS 2.0. 1.0.2: the console overlay no longer covers the window — it is hidden until you press Console, so the machine list and the create form are always visible. 1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/manifest.json",
-      "manifest_sha256": "8d46f8517194c31f9c065aae88bae887565e1b738c5aa3b6c2fa5004c32d6c7f",
-      "size_bytes": 85703
+      "manifest_sha256": "6a221cb2a8df5dd63577d529133941d3fd96e3172d29a5c8e9694d0c56fb3019",
+      "size_bytes": 89930
     }
   ]
 }

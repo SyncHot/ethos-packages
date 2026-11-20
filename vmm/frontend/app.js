@@ -252,12 +252,12 @@ export function render(container, ctx) {
                                 <small>An <code>ethos-vm/</code> folder is created inside it.</small>
                             </div>
                             <div class="vmm-field">
-                                <label for="vmm-iso">Installation ISO (optional)</label>
+                                <label for="vmm-iso">Installer ISO or system image (optional)</label>
                                 <div class="vmm-row">
                                     <select class="vmm-input" id="vmm-iso" name="iso"><option value="">None (boot the disk)</option></select>
                                     <button class="vmm-btn" type="button" data-action="pick-iso">Find ISOs…</button>
                                 </div>
-                                <small data-iso-hint>Pick a folder to list its .iso files, or paste a path.</small>
+                                <small data-iso-hint>Pick a folder to list .iso installers or .img/.img.xz/.qcow2 images, or paste a path.</small>
                             </div>
                             <div class="vmm-two">
                                 <div class="vmm-field">
@@ -514,7 +514,7 @@ export function render(container, ctx) {
                 } else {
                     $('#vmm-iso').value = path;
                     $('[data-iso-hint]').textContent = `Selected: ${path}`;
-                    say(`ISO selected: ${path}`);
+                    say(`Image selected: ${path}`);
                 }
             });
         });
@@ -522,14 +522,18 @@ export function render(container, ctx) {
         // Make the ISO dropdown reflect the folder that is on screen, so the
         // create form never needs a hand-typed path.
         const select = $('#vmm-iso');
-        const isos = entries.filter((entry) => !entry.dir && /\.iso$/i.test(entry.name));
+        // Installers (.iso) are mounted as CD-ROM; a bootable image (.img,
+        // .img.xz, .qcow2) becomes the VM's disk — the EthOS OS release ships
+        // the latter, so both have to show up here.
+        const isos = entries.filter((entry) => !entry.dir &&
+            (/\.(iso|img|qcow2|raw)$/i.test(entry.name) || /\.img\.(xz|gz)$/i.test(entry.name)));
         const current = select.value;
         select.innerHTML = '<option value="">None (boot the disk)</option>'
             + isos.map((entry) => `<option value="${esc(entry.path)}">${esc(entry.name)}</option>`).join('');
         if (isos.some((entry) => entry.path === current)) select.value = current;
         $('[data-iso-hint]').textContent = isos.length
-            ? `${isos.length} ISO file${isos.length === 1 ? '' : 's'} in this folder.`
-            : 'No .iso files here — copy an installer image to this folder first.';
+            ? `${isos.length} image${isos.length === 1 ? '' : 's'} in this folder.`
+            : 'No .iso/.img files here — copy an installer ISO or a system image first.';
     }
 
     function renderAll() {

@@ -6,6 +6,7 @@ by the compose file) and never passes user input to a shell.
 """
 
 import json
+import math
 import os
 import secrets
 import shutil
@@ -162,19 +163,34 @@ class Engine:
             firmware = "uefi" if str(payload.get("firmware") or "").lower() == "uefi" else "bios"
             iso_raw = str(payload.get("iso") or "").strip()
             media = []
+            system_image = None
             if iso_raw:
-                iso = safe_path(iso_raw)
-                if iso.suffix.lower() not in IMAGE_SUFFIXES:
-                    raise EngineError("ISO must be an .iso image", 400)
-                media.append({"path": str(iso), "bus": "sata"})
+                picked = safe_path(iso_raw)
+                kind = qemu.image_kind(picked.name)
+                if kind == "iso":
+                    media.append({"path": str(picked), "bus": "sata"})
+                elif kind == "disk":
+                    # A bootable disk image (e.g. the EthOS OS .img.xz release)
+                    # replaces the empty disk instead of being mounted as CD-ROM.
+                    system_image = picked
+                else:
+                    raise EngineError(
+                        "Attach an .iso installer or a bootable image "
+                        "(.img, .img.xz, .img.gz, .qcow2, .raw)", 400)
 
             vm_id = "vm-" + secrets.token_hex(3)
             directory = root / "ethos-vm" / vm_id
             disk_path = directory / "disk0.qcow2"
             try:
-                qemu.create_disk(disk_path, disk_gb)
+                if system_image is not None:
+                    qemu.import_disk(system_image, disk_path)
+                else:
+                    qemu.create_disk(disk_path, disk_gb)
             except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
-                raise EngineError(f"Could not create the disk: {exc}", 500) from exc
+                raise EngineError(f"Could not prepare the disk: {exc}", 500) from exc
+            if system_image is not None:
+                info = qemu.image_info(disk_path)
+                disk_gb = max(1, math.ceil(info.get("virtual_size", 0) / 2 ** 30) or disk_gb)
 
             used = {self.runtime(vm)["vnc_port"] for vm in vms}
             record = {
@@ -338,7 +354,8 @@ class Engine:
                     is_dir = item.is_dir()
                 except OSError:
                     continue
-                if not is_dir and item.suffix.lower() not in IMAGE_SUFFIXES:
+                if not is_dir and not qemu.image_kind(item.name) \
+                        and item.suffix.lower() not in IMAGE_SUFFIXES:
                     continue
                 entries.append({
                     "name": item.name,
