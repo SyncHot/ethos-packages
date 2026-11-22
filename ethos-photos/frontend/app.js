@@ -130,8 +130,9 @@ let _calMonth = '';         // 'YYYY-MM' currently shown on the calendar
 let _calDay = null;         // 'YYYY-MM-DD' | null — day picked for the item grid
 let _calDays = [];          // [{date,count,videos,images,samples}] from /calendar
 let _favView = false;       // Favorites view (starred items)
-let _albumView = null;      // album id being viewed | null
+let _albumView = null;      // album id being viewed | '@owner:id' for a shared album
 let _albums = [];           // [{id,name,count,created}] from /api/gallery/albums
+let _sharedAlbums = [];     // [{owner,id,name}] from /api/sharing/incoming?kind=album
 let _cameraView = null;      // camera string being viewed | null
 let _cameras = [];           // [{camera, count}] from /api/gallery/cameras
 let _dayNav = null;          // { prev: dateStr|null, next: dateStr|null } — day navigation in Calendar view
@@ -651,10 +652,35 @@ function _viewParams(extra = {}) {
     if (_cameraView) params.set('camera', _cameraView);
     if (_calendarView && _calDay) params.set('day', _calDay);
     if (_favView) params.set('fav', '1');
-    if (_albumView) params.set('album', _albumView);
+    if (_albumView) {
+        const shared = _sharedAlbumRef();
+        params.set('album', shared ? shared.id : _albumView);
+        if (shared) params.set('owner', shared.owner);
+    }
     if (_privateView) { params.set('view', 'private'); if (_psToken) params.set('ps', _psToken); }
     return params;
 }
+
+// Shared albums are identified by '@owner:albumId' so the existing _albumView
+// navigation (and its reset points) keeps working without a second state flag.
+function _sharedAlbumRef() {
+    const raw = String(_albumView || '');
+    if (!raw.startsWith('@')) return null;
+    const ix = raw.indexOf(':');
+    if (ix < 0) return null;
+    return { owner: raw.slice(1, ix), id: raw.slice(ix + 1) };
+}
+
+function _albumMeta() {
+    const shared = _sharedAlbumRef();
+    if (shared) {
+        return _sharedAlbums.find(x => x.owner === shared.owner && x.id === shared.id)
+            || { ...shared, name: shared.id };
+    }
+    return _albums.find(x => x.id === _albumView) || null;
+}
+
+function _isSharedAlbum() { return Boolean(_sharedAlbumRef()); }
 
 // Fetches are serialized through a promise chain: an in-flight request can
 // never make a newer view silently skip its fetch (the old code returned
@@ -788,9 +814,9 @@ function _renderShell() {
                             <button class="${_psViewMode === 'grid' ? 'on' : ''}" data-testid="ps-view-grid" onclick="_psSetViewMode('grid')" title="Grid view">${_svg('grid')}</button>
                             <button class="${_psViewMode === 'timeline' ? 'on' : ''}" data-testid="ps-view-timeline" onclick="_psSetViewMode('timeline')" title="Timeline — grouped by month">${_svg('timeline')}</button>
                         </div>
-                        <button class="ps-text-btn${_selectMode ? ' on' : ''}" data-testid="ps-select-btn" id="ps-select-btn" onclick="_psToggleSelectMode()" title="Click tiles to select multiple items (Ctrl/⌘+click works too)">
+                        ${_isSharedAlbum() ? '' : `<button class="ps-text-btn${_selectMode ? ' on' : ''}" data-testid="ps-select-btn" id="ps-select-btn" onclick="_psToggleSelectMode()" title="Click tiles to select multiple items (Ctrl/⌘+click works too)">
                             ${_svg('checkSquare')}<span>${_selectMode ? 'Selecting' : 'Select'}</span>
-                        </button>
+                        </button>`}
                         <button class="ps-icon-btn" data-testid="ps-settings-btn" id="ps-settings-btn" onclick="_psToggleSettings()" title="Library settings">${_svg('settings')}</button>
                         <span class="ps-pill ps-status-pill" data-testid="ps-status" id="ps-status"></span>
                     </div>
@@ -1004,8 +1030,20 @@ async function _renderSidebar() {
     html += _albums.map(a => _navRow(
         `ps-nav-album-${a.id}`, 'folder', a.name, a.count, _albumView === a.id,
         `_psNavAlbum(${_jsArg(a.id)})`, a.name,
-        `<button class="ps-nav-mini" data-testid="ps-album-del-${a.id}" onclick="_psAlbumDelete(${_jsArg(a.id)}, event)" title="Delete album (items stay on disk)">${_svg('close')}</button>`,
+        `<button class="ps-nav-mini" data-testid="ps-album-share-${a.id}" onclick="_psShareAlbum(${_jsArg(a.id)}, event)" title="Share album with other users">${_svg('share')}</button>`
+        + `<button class="ps-nav-mini" data-testid="ps-album-del-${a.id}" onclick="_psAlbumDelete(${_jsArg(a.id)}, event)" title="Delete album (items stay on disk)">${_svg('close')}</button>`,
     )).join('');
+    if (_sharedAlbums.length) {
+        html += `<div class="ps-nav-group" data-testid="ps-shared-albums-header">Shared with me</div>`;
+        html += _sharedAlbums.map(a => {
+            const ref = '@' + a.owner + ':' + a.id;
+            return _navRow(
+                `ps-nav-shared-album-${a.owner}-${a.id}`, 'share', a.name, null, _albumView === ref,
+                `_psNavAlbum(${_jsArg(ref)})`, `${a.owner} · ${a.name}`,
+                `<span class="ps-nav-mini" title="Read-only — shared by ${_escAttr(a.owner)}">${_svg('lock')}</span>`,
+            );
+        }).join('');
+    }
     html += `<div class="ps-nav-group" data-testid="ps-folders-header">Folders</div>`;
     html += _cfg.folders.map((f, i) => _navRow(
         `ps-nav-folder-${i}`, 'folder', f.name, _counts['f' + i], !_privateView && _currentFolder === f.path,
@@ -1032,8 +1070,9 @@ function _viewTitle() {
     if (_calendarView) return ['Calendar', 'Browse your photos by day'];
     if (_favView) return ['Favorites', 'Everything you starred'];
     if (_albumView) {
-        const a = _albums.find(x => x.id === _albumView);
-        return [a ? a.name : 'Album', 'Album'];
+        const a = _albumMeta();
+        const shared = _sharedAlbumRef();
+        return [a ? a.name : 'Album', shared ? `Shared by ${shared.owner}` : 'Album'];
     }
     if (_privateView) return ['Private', 'PIN-protected, encrypted at rest'];
     if (_cameraView) return [_cameraView, 'Photos from this camera'];
@@ -1191,8 +1230,9 @@ function _renderFacets() {
         ? `<button class="ps-chip" data-testid="ps-search-chip" onclick="_psClearSearch()" title="Clear search">${_svg('search')}<span>${_escHtml(_query)}</span>${_svg('close')}</button>`
         : '';
     if (_albumView) {
-        const a = _albums.find(x => x.id === _albumView);
-        el.innerHTML = `<button class="ps-chip" data-testid="ps-album-chip" onclick="_psNavAll()" title="Back to All Photos">${_svg('folder')}<span>${_escHtml(a ? a.name : 'Album')}</span>${_svg('close')}</button>${searchChip}`;
+        const a = _albumMeta();
+        const shared = _sharedAlbumRef();
+        el.innerHTML = `<button class="ps-chip" data-testid="ps-album-chip" onclick="_psNavAll()" title="Back to All Photos">${_svg(shared ? 'share' : 'folder')}<span>${_escHtml(a ? a.name : 'Album')}${shared ? ' · ' + _escHtml(shared.owner) : ''}</span>${_svg('close')}</button>${searchChip}`;
         el.style.display = 'flex';
         return;
     }
@@ -1372,6 +1412,7 @@ function _psNavFavorites() {
 
 function _psNavAlbum(id) {
     if (_albumView === id && !_query) return;
+    if (String(id).startsWith('@')) { _selectMode = false; _selected.clear(); }
     _albumView = id;
     _cameraView = null;
     _privateView = false;
@@ -1428,11 +1469,31 @@ async function _calPickDefaultMonth() {
 
 async function _loadAlbums() {
     try {
-        const r = await apiFetch('/api/gallery/albums');
+        const [r, sharedRes] = await Promise.all([
+            apiFetch('/api/gallery/albums'),
+            apiFetch('/api/sharing/incoming?kind=album').catch(() => null),
+        ]);
         if (!r.ok || !_active()) return;
         const d = await r.json();
         _albums = d.albums || [];
+        if (sharedRes && sharedRes.ok) {
+            const sd = await sharedRes.json().catch(() => ({}));
+            _sharedAlbums = (sd.grants || []).map(g => ({
+                owner: g.owner, id: g.resource, name: g.label || g.resource,
+            }));
+        } else {
+            _sharedAlbums = [];
+        }
     } catch (e) { /* keep the previous list */ }
+}
+
+async function _psShareAlbum(id, e) {
+    if (e && e.stopPropagation) e.stopPropagation();
+    const album = _albums.find(x => x.id === id);
+    if (!album || !_ctx?.share) return;
+    await _ctx.share.open({ kind: 'album', resource: id, label: album.name });
+    await _loadAlbums();
+    _renderSidebar();
 }
 
 async function _psAlbumCreate() {
@@ -1507,7 +1568,7 @@ async function _psAlbumCreateFromModal() {
 
 async function _psRemoveFromAlbum() {
     const paths = [..._selected];
-    if (!_albumView || !paths.length) return;
+    if (!_albumView || _isSharedAlbum() || !paths.length) return;
     const d = await apiFetch(`/api/gallery/albums/${_albumView}/remove`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paths }) }).then(r => r.json()).catch(() => null);
     if (!d || !d.ok) return;
     _selected.clear();
@@ -1860,6 +1921,10 @@ function _toggleSelectItem(i, e) {
 }
 
 function _psToggleSelectMode() {
+    if (_isSharedAlbum()) {
+        if (window.addNotification) window.addNotification('Shared albums are read-only', 'info');
+        return;
+    }
     _selectMode = !_selectMode;
     const btn = document.querySelector('[data-testid="ps-select-btn"]');
     if (btn) {
@@ -3183,7 +3248,12 @@ async function _initApp(openLightboxIndex) {
         return;
     }
     if (!_cfg.folders.length && !_currentFolder) {
-        _renderWelcome();
+        // A recipient with no library of their own still needs the sidebar:
+        // shared albums live there and are the only thing to browse.
+        await _loadAlbums();
+        if (!_active()) return;
+        if (_sharedAlbums.length) _renderShell();
+        else _renderWelcome();
     } else {
         _renderShell();
     }
@@ -3203,6 +3273,7 @@ function renderGallery(winBody) {
     _psViewMode = 'grid'; _monthMeta = {}; _lastMonthKey = null; _lastDayKey = null;
     _momentsView = false; _momentsExpanded = null; _momentsTotal = 0; _momentsHighlights = [];
     _calendarView = false; _calMonth = ''; _calDay = null; _calDays = []; _favView = false; _albumView = null; _albums = [];
+    _sharedAlbums = [];
     _cameraView = null; _cameras = []; _dayNav = null; _durationCache.clear();
     _lightboxIndex = -1; _fmCollection = null; _counts = {}; _currentFolder = '';
     _selectMode = false; _selected.clear(); _lastSelIdx = -1;
@@ -3262,6 +3333,7 @@ window._favToggle = _favToggle;
 window._psFavoriteSelected = _psFavoriteSelected;
 window._lbToggleFavorite = _lbToggleFavorite;
 window._psNavAlbum = _psNavAlbum;
+window._psShareAlbum = _psShareAlbum;
 window._psAlbumCreate = _psAlbumCreate;
 window._psAlbumDelete = _psAlbumDelete;
 window._psAddToAlbumModal = _psAddToAlbumModal;

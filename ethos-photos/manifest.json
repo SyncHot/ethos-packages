@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-photos",
   "name": "Photos",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Photos for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer. The gallery index stays in EthOS (the EthOS Photos Android app reads it too); this package ships the desktop app, so it can update on its own.",
   "icon": "📷",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/icon.svg",
@@ -11,17 +11,17 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
-  "min_ethos_version": "2.0.0",
+  "min_ethos_version": "2.13.3",
   "ui": {
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: Add folder uses the EthOS folder picker, and moving items to trash reports progress in the shared task panel. 1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
+  "changelog": "1.0.3: share albums with other EthOS accounts — a share action on every album, a “Shared with me” album section and a read-only shared view (requires EthOS 2.13.3). 1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: Add folder uses the EthOS folder picker, and moving items to trash reports progress in the shared task panel. 1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/frontend/app.js",
-      "sha256": "7ed879d209f78846a6f14755a75ee627d2fc8c10f66e4dacbe6331fcc87b3a6f",
+      "sha256": "6f3194a1901a829585a01896f368f6d7e282d43116abe689d2aee4fbaa63e732",
       "path": "frontend/app.js",
       "mode": 420
     },

@@ -31,7 +31,8 @@ const READ_THEMES = {
 
 const _state = {
     view: 'library',
-    library: { folders: [], books: [], progress: {}, settings: {}, stats: {} },
+    library: { folders: [], books: [], shared_roots: [], shared_books: [], progress: {}, settings: {}, stats: {} },
+    sharedFiles: [],
     query: '',
     format: 'all',
     sort: 'title',
@@ -680,7 +681,9 @@ ${summaryMarkup()}
 </section>
 ${!hasFolders ? `<section class="bk-panel"><div class="bk-startup info">No scan folder yet. Open <strong>Folders &amp; Scan</strong> and add the folder that holds your books.</div></section>` : ''}
 ${books.length ? `<section class="bk-grid" data-testid="books-grid">${books.map(cardMarkup).join('')}</section>`
-        : `<section class="bk-panel"><div class="bk-empty" data-testid="books-empty">${hasFolders ? 'No title matches this filter.' : 'Add a folder to build your library.'}</div></section>`}`;
+        : `<section class="bk-panel"><div class="bk-empty" data-testid="books-empty">${hasFolders ? 'No title matches this filter.' : 'Add a folder to build your library.'}</div></section>`}
+${((_state.library.shared_books || []).length || (_state.sharedFiles || []).length) ? `<section class="bk-panel"><div class="bk-toolbar"><div><h2>Shared with me</h2><p class="bk-hint">Read-only titles other accounts shared with you.</p></div></div>
+  <div class="bk-grid" data-testid="books-shared-grid">${[...(_state.library.shared_books || []), ...(_state.sharedFiles || [])].map(sharedCardMarkup).join('')}</div></section>` : ''}`;
 }
 
 function renderContinueView(host) {
@@ -764,11 +767,27 @@ function renderFoldersView(host) {
       <td class="num">${counts.get(folder.path) || 0}</td>
       <td>${folder.last_scan ? escHtml(String(folder.last_scan).replace('T', ' ').replace('+00:00', ' UTC')) : '<span class="bk-tag">never</span>'}</td>
       <td class="actions">
+        <button class="bk-btn small" type="button" data-share-folder="${escAttr(folder.path)}" data-testid="books-share-folder">Share</button>
         <button class="bk-btn small" type="button" data-scan-root="${escAttr(folder.path)}" data-testid="books-scan-folder">Scan</button>
         <button class="bk-btn small danger" type="button" data-remove-root="${escAttr(folder.path)}" data-testid="books-remove-folder">Remove</button>
       </td>
     </tr>`).join('')}</tbody>
   </table>` : '<div class="bk-empty" style="margin-top:12px" data-testid="books-folders-empty">No folders yet. Add one to start building the library.</div>'}
+</section>
+<section class="bk-panel" data-testid="books-shared-roots-panel">
+  <div class="bk-toolbar"><div><h2>Shared with me</h2><p class="bk-hint">Folders other accounts shared with you — scan them to read the titles here.</p></div></div>
+  ${(_state.library.shared_roots || []).length ? `<table class="bk-table" style="margin-top:10px" data-testid="books-shared-roots">
+    <thead><tr><th>Folder</th><th>Owner</th><th class="num">Titles</th><th class="actions"></th></tr></thead>
+    <tbody>${(_state.library.shared_roots || []).map((root) => `<tr>
+      <td class="path">${escHtml(root.path)}</td>
+      <td>${escHtml(root.owner || '')}</td>
+      <td class="num">${Number(root.count) || 0}</td>
+      <td class="actions">
+        <button class="bk-btn small" type="button" data-scan-shared="${escAttr(root.path)}" data-testid="books-scan-shared">Scan</button>
+        <button class="bk-btn small danger" type="button" data-remove-shared="${escAttr(root.path)}" data-testid="books-remove-shared">Remove</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>` : '<div class="bk-empty" style="margin-top:12px" data-testid="books-shared-empty">Nothing shared with you yet.</div>'}
 </section>
 <section class="bk-panel">
   <div class="bk-toolbar"><div><h2>What the scan picks up</h2><p class="bk-hint">${ALL_EXTS.map((ext) => `.${ext}`).join(' · ')}</p></div></div>
@@ -846,8 +865,8 @@ async function listDir(path) {
     return Array.isArray(data?.files) ? data.files : [];
 }
 
-async function scanRoots(roots) {
-    const folders = _state.library.folders || [];
+async function scanRoots(roots, { shared = false } = {}) {
+    const folders = shared ? (_state.library.shared_roots || []) : (_state.library.folders || []);
     const targets = (roots && roots.length ? roots : folders.map((folder) => folder.path)).slice();
     if (!targets.length) {
         setStatus('Add a folder first.', 'warn');
@@ -866,7 +885,7 @@ async function scanRoots(roots) {
     let removed = 0;
     try {
         for (const root of targets) {
-            const result = await scanOne(root, task);
+            const result = await scanOne(root, task, shared);
             added += result.added;
             updated += result.updated;
             removed += result.removed;
@@ -892,7 +911,7 @@ async function scanRoots(roots) {
     }
 }
 
-async function scanOne(root, task) {
+async function scanOne(root, task, shared = false) {
     const settings = _state.library.settings || {};
     const exts = new Set((settings.extensions || ALL_EXTS).map((ext) => String(ext).toLowerCase()));
     const found = [];
@@ -993,7 +1012,8 @@ async function scanOne(root, task) {
         });
     }
 
-    const known = (_state.library.books || []).filter((book) => under(book.path, root)).map((book) => book.path);
+    const sourceBooks = shared ? (_state.library.shared_books || []) : (_state.library.books || []);
+    const known = sourceBooks.filter((book) => under(book.path, root)).map((book) => book.path);
     const seen = new Set(entries.map((entry) => entry.path));
     const removedPaths = known.filter((path) => !seen.has(path));
 
@@ -1016,6 +1036,7 @@ async function scanOne(root, task) {
                 entries: batch,
                 removed: index === 0 ? removedPaths : [],
                 done: last,
+                shared: !!shared,
             },
         });
         added += Number(result.added) || 0;
@@ -1027,7 +1048,8 @@ async function scanOne(root, task) {
     }
 
     // Covers are uploaded after the entries exist; ids come from the scan reply.
-    const withCover = entries.filter((entry) => entry._cover && idByPath.has(entry.path)).slice(0, 400);
+    // Shared books skip covers: the service only stores covers for owned titles.
+    const withCover = shared ? [] : entries.filter((entry) => entry._cover && idByPath.has(entry.path)).slice(0, 400);
     for (const entry of withCover) {
         if (_state.scanCancel) break;
         try {
@@ -1039,7 +1061,7 @@ async function scanOne(root, task) {
 
     // PDFs have no embedded cover: render page one with the vendored pdf.js.
     const haveCover = new Set((_state.library.books || []).filter((book) => book.cover).map((book) => book.path));
-    const pdfs = entries.filter((entry) => entry.format === 'pdf' && idByPath.has(entry.path)
+    const pdfs = shared ? [] : entries.filter((entry) => entry.format === 'pdf' && idByPath.has(entry.path)
         && !haveCover.has(entry.path)).slice(0, 80);
     if (pdfs.length) {
         await loadVendors();
@@ -1841,6 +1863,8 @@ async function reloadLibrary() {
     _state.library = {
         folders: Array.isArray(data.folders) ? data.folders : [],
         books: Array.isArray(data.books) ? data.books : [],
+        shared_roots: Array.isArray(data.shared_roots) ? data.shared_roots : [],
+        shared_books: Array.isArray(data.shared_books) ? data.shared_books : [],
         progress: data.progress && typeof data.progress === 'object' ? data.progress : {},
         settings: data.settings || {},
         stats: data.stats || {},
@@ -1887,6 +1911,28 @@ function attachEvents(container) {
         if (scanBtn) { scanRoots([scanBtn.dataset.scanRoot]); return; }
         const removeBtn = event.target.closest('[data-remove-root]');
         if (removeBtn) { removeFolder(removeBtn.dataset.removeRoot); return; }
+        const sharedScan = event.target.closest('[data-scan-shared]');
+        if (sharedScan) { scanRoots([sharedScan.dataset.scanShared], { shared: true }); return; }
+        const sharedRemove = event.target.closest('[data-remove-shared]');
+        if (sharedRemove) { removeSharedRoot(sharedRemove.dataset.removeShared); return; }
+        const shareFolder = event.target.closest('[data-share-folder]');
+        if (shareFolder) {
+            if (_ctx.share) {
+                _ctx.share.open({ kind: 'path', resource: shareFolder.dataset.shareFolder })
+                    .then(() => syncSharedRoots());
+            } else {
+                setStatus('This EthOS version does not support user sharing.', 'warn');
+            }
+            return;
+        }
+        const openShared = event.target.closest('[data-open-shared]');
+        if (openShared) {
+            const path = openShared.dataset.openShared;
+            const book = [...(_state.library.shared_books || []), ...(_state.sharedFiles || [])]
+                .find((item) => item.path === path);
+            if (book) openBook(book);
+            return;
+        }
     });
 
     container.addEventListener('input', (event) => {
@@ -1937,6 +1983,7 @@ async function bootstrap() {
     setPill('Loading…', 'starting');
     try {
         await reloadLibrary();
+        await syncSharedRoots();
         const total = (_state.library.books || []).length;
         setPill('Ready', 'ready');
         setStatus(total ? `${total} title${total === 1 ? '' : 's'} in the library.` : 'No titles yet — add a folder to scan.');
@@ -1953,6 +2000,78 @@ async function bootstrap() {
         const host = document.querySelector('#bk-view');
         if (host) host.innerHTML = '<section class="bk-panel"><div class="bk-startup error">The Books service is not answering. Check <strong>Packages</strong> for its status and start it again.</div></section>';
     }
+}
+
+// ── Shared with me ──────────────────────────────────────────────────────────
+
+async function syncSharedRoots() {
+    let grants = [];
+    try {
+        const res = await _ctx.apiFetch('/api/sharing/incoming?kind=path');
+        if (res.ok) grants = (await res.json()).grants || [];
+    } catch { grants = []; }
+
+    const folders = [];
+    const files = [];
+    for (const grant of grants) {
+        try {
+            const res = await _ctx.apiFetch(`/api/files/stat?path=${encodeURIComponent(grant.resource)}`);
+            if (!res.ok) continue;
+            const info = await res.json();
+            if (info.is_dir) folders.push({ owner: grant.owner, path: grant.resource });
+            else if (ALL_EXTS.includes(extOf(info.name || grant.resource))) {
+                files.push({
+                    path: grant.resource,
+                    format: extOf(info.name || grant.resource),
+                    kind: AUDIO_EXTS.includes(extOf(info.name || grant.resource)) ? 'audiobook' : 'book',
+                    title: fileTitle(info.name || baseName(grant.resource)),
+                    owner: grant.owner,
+                    size: Number(info.size) || 0,
+                    modified: Number(info.modified) || 0,
+                });
+            }
+        } catch { /* revoked between list and stat */ }
+    }
+    _state.sharedFiles = files;
+
+    const current = JSON.stringify((_state.library.shared_roots || []).map((r) => [r.owner, r.path]));
+    const next = JSON.stringify(folders.map((r) => [r.owner, r.path]));
+    if (current !== next) {
+        try {
+            _state.library = await json('shared-roots', { method: 'PUT', body: { roots: folders } });
+        } catch (err) {
+            log.warn('could not sync shared roots', String(err?.detail || err?.message || err));
+        }
+    }
+    renderView();
+}
+
+async function removeSharedRoot(path) {
+    const ok = await _ctx.modal.confirm('Remove shared folder?', `Titles from ${path} leave this library view. The owner's files are untouched.`, {
+        confirmLabel: 'Remove', danger: true,
+    });
+    if (!ok) return;
+    const roots = (_state.library.shared_roots || []).filter((root) => root.path !== path)
+        .map((root) => ({ owner: root.owner, path: root.path }));
+    try {
+        _state.library = await json('shared-roots', { method: 'PUT', body: { roots } });
+        renderView();
+    } catch (err) {
+        setStatus(String(err?.detail || err?.message || err), 'error');
+    }
+}
+
+function sharedCardMarkup(book) {
+    const label = book.title || baseName(book.path);
+    const owner = book.shared_owner || book.owner || '';
+    return `<article class="bk-card" data-testid="books-shared-card">
+  <button class="bk-cover-btn" type="button" data-open-shared="${escAttr(book.path)}" data-testid="books-open-shared" title="${escAttr(label)}">
+    ${coverMarkup(book)}
+    <span class="bk-badge">${escHtml(String(book.format || '').toUpperCase() || 'BOOK')}</span>
+  </button>
+  <div class="bk-card-title">${escHtml(label)}</div>
+  <div class="bk-card-sub">${owner ? `Shared by ${escHtml(owner)}` : 'Shared with you'}</div>
+</article>`;
 }
 
 export async function render(container, ctx) {

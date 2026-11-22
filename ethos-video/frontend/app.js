@@ -119,6 +119,8 @@ class VideoStation {
             resume: {},
             list: new Set(),
             shared: [],
+            sharedVideos: [],
+            sharedAt: 0,
             library: null,
             libraryAt: 0,
             folder: null,
@@ -564,12 +566,34 @@ class VideoStation {
         }
     }
 
-    async loadShared() {
+    async loadShared(force = false) {
+        const s = this.state;
+        if (!force && s.sharedAt && Date.now() - s.sharedAt < 30_000) return;
         try {
             const data = await this.apiJson('/api/sharing/incoming?kind=path');
-            this.state.shared = data.grants || [];
+            s.shared = data.grants || [];
+            // Pull one level from each shared folder so the Home tab can show
+            // actual titles (not just a folder list). Deep folders stay
+            // reachable through the Shared tab / folder shelf.
+            const lists = await Promise.all(s.shared.slice(0, 8).map(async (grant) => {
+                try {
+                    const folder = await this.apiJson(`/api/videos/library?path=${encodeURIComponent(grant.resource)}`);
+                    return (folder.videos || []).map((video) => ({
+                        ...video,
+                        sharedOwner: grant.owner,
+                        sharedRoot: grant.resource,
+                    }));
+                } catch { return []; }
+            }));
+            const seen = new Set();
+            s.sharedVideos = lists.flat().filter((video) => {
+                if (seen.has(video.path)) return false;
+                seen.add(video.path);
+                return true;
+            }).slice(0, 36);
+            s.sharedAt = Date.now();
         } catch { /* older core or transient failure — keep the previous list */ }
-        if (this.state.mode === 'shared' || this.state.mode === 'settings') this.renderView();
+        if (['home', 'shared', 'settings'].includes(s.mode)) this.renderView();
     }
 
     async ensureLibrary(force = false) {
@@ -695,7 +719,9 @@ class VideoStation {
         const library = s.library?.videos || [];
         const movies = library.filter((v) => v.kind !== 'episode');
         const shows = this.groupShows(library);
-        const hero = cw[0] || recent[0] || movies[0] || library[0] || null;
+        const sharedVideos = s.sharedVideos || [];
+        const sharedFolders = s.shared || [];
+        const hero = cw[0] || recent[0] || movies[0] || library[0] || sharedVideos[0] || null;
         const continuePct = cw.length;
         const engine = s.status?.encoder === 'vaapi' ? 'VA-API' : s.status?.encoder === 'qsv' ? 'QuickSync'
             : s.status?.ffmpeg ? 'Software' : '—';
@@ -706,6 +732,13 @@ class VideoStation {
             <div class="vd-stat"><b>${this.esc(engine)}</b><span>Media engine</span></div>
         </div>`;
         if (!hero) {
+            if (sharedVideos.length || sharedFolders.length) {
+                return `<div class="vd-page" data-testid="vd-home-shared-only">
+                    ${this.sharedFolderShelfHtml()}
+                    ${this.shelfHtml('Shared with you', sharedVideos.slice(0, 18), 'shared')}
+                    <div style="height:50px"></div>
+                </div>`;
+            }
             return `<div class="vd-page">
                 <div class="vd-empty">
                     <b>Your cinema is empty</b>
@@ -717,6 +750,8 @@ class VideoStation {
         const genres = this.genreShelves(library);
         return `${this.heroHtml(hero, cw.length > 0)}
             ${stats}
+            ${this.sharedFolderShelfHtml()}
+            ${this.shelfHtml('Shared with you', sharedVideos.slice(0, 18), 'shared')}
             ${this.shelfHtml('Continue watching', cw, 'cw')}
             ${this.shelfHtml('Recently added', recent)}
             ${this.shelfHtml('Movies', this.sortItems(movies, 'date_desc').slice(0, 18))}
@@ -762,10 +797,25 @@ class VideoStation {
         </section>`;
     }
 
+    sharedFolderShelfHtml() {
+        const grants = this.state.shared || [];
+        if (!grants.length) return '';
+        return `<section class="vd-shelf" data-testid="vd-home-shared-folders">
+            <div class="vd-shelf-head"><h2>Shared folders</h2><span>${grants.length} folders</span></div>
+            <div class="vd-row">${grants.slice(0, 12).map((grant) => `<button class="vd-card" type="button"
+                data-action="open-shared" data-path="${this.attr(grant.resource)}" data-testid="vd-shared-folder-card">
+                <span class="vd-card-art" style="display:flex;align-items:center;justify-content:center">${svg('folder', 44)}</span>
+                <span class="vd-card-title">${this.esc(basename(grant.resource))}</span>
+                <span class="vd-card-sub">Shared by ${this.esc(grant.owner)}</span>
+            </button>`).join('')}</div>
+        </section>`;
+    }
+
     cardHtml(item, kind = '') {
         const tm = item.tmdb || {};
         const title = this.displayTitle(item);
-        const sub = [this.itemYear(item), item.quality, item.kind === 'episode' ? this.episodeLabel(item) : '']
+        const sub = [item.sharedOwner ? `Shared by ${item.sharedOwner}` : '', this.itemYear(item), item.quality,
+            item.kind === 'episode' ? this.episodeLabel(item) : '']
             .filter(Boolean).join(' · ');
         const resume = this.state.resume[item.path];
         const progress = resume && resume.duration ? pct(resume.time, resume.duration) : 0;
@@ -1104,12 +1154,13 @@ class VideoStation {
                             ${this.itemYear(item) ? `<span class="vd-tag">${this.esc(this.itemYear(item))}</span>` : ''}
                             ${item.quality ? `<span class="vd-tag">${this.esc(item.quality)}</span>` : ''}
                             ${item.kind === 'episode' ? `<span class="vd-tag">${this.esc(this.episodeLabel(item))}</span>` : ''}
+                            ${item.sharedOwner ? `<span class="vd-tag">Read-only · shared by ${this.esc(item.sharedOwner)}</span>` : ''}
                             ${(tm.genres || []).slice(0, 5).map((g) => `<span class="vd-tag">${this.esc(g)}</span>`).join('')}
                         </div>
                         ${tm.overview ? `<p class="vd-overview">${this.esc(tm.overview)}</p>` : ''}
                         <div class="vd-hero-actions">
                             <button class="vd-btn primary" type="button" data-action="play" data-path="${this.attr(item.path)}">${svg('play')} ${resume ? `Resume ${fmtTime(resume.time)}` : 'Play'}</button>
-                            <button class="vd-btn" type="button" data-action="toggle-list" data-path="${this.attr(item.path)}">${inList ? `${svg('check')} In My List` : `${svg('plus')} My List`}</button>
+                            ${item.sharedOwner ? '' : `<button class="vd-btn" type="button" data-action="toggle-list" data-path="${this.attr(item.path)}">${inList ? `${svg('check')} In My List` : `${svg('plus')} My List`}</button>`}
                             ${item.kind === 'episode' ? `<button class="vd-btn" type="button" data-action="show" data-show="${this.attr(item.show || '')}">${svg('tv')} Series</button>` : ''}
                             <button class="vd-btn" type="button" data-action="back">${svg('back')} Back</button>
                         </div>
@@ -2414,6 +2465,7 @@ class VideoStation {
         if (!path) return null;
         const videos = this.state.library?.videos || [];
         return videos.find((v) => v.path === path)
+            || (this.state.sharedVideos || []).find((v) => v.path === path)
             || (this.state.home.continue_watching || []).find((v) => v.path === path)
             || (this.state.home.recently_added || []).find((v) => v.path === path)
             || (this.state.folder?.videos || []).find((v) => v.path === path)

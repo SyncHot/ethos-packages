@@ -288,6 +288,10 @@ def _user_library(store: dict, user: str) -> dict:
         entry["folders"] = []
     if not isinstance(entry.get("books"), dict):
         entry["books"] = {}
+    if not isinstance(entry.get("shared_roots"), list):
+        entry["shared_roots"] = []
+    if not isinstance(entry.get("shared_books"), dict):
+        entry["shared_books"] = {}
     return entry
 
 
@@ -331,6 +335,8 @@ def _library_payload(user: str) -> dict:
         settings = _user_settings(_load(SETTINGS_FILE), user)
         books = sorted(library["books"].values(),
                        key=lambda b: (b.get("title") or "").lower())
+        shared_books = sorted(library.get("shared_books", {}).values(),
+                              key=lambda b: (b.get("title") or "").lower())
         stats = {
             "books": sum(1 for b in books if b.get("kind") == "book"),
             "audiobooks": sum(1 for b in books if b.get("kind") == "audiobook"),
@@ -340,6 +346,8 @@ def _library_payload(user: str) -> dict:
         return {
             "folders": library["folders"],
             "books": books,
+            "shared_roots": library.get("shared_roots", []),
+            "shared_books": shared_books,
             "progress": progress,
             "settings": settings,
             "stats": stats,
@@ -392,6 +400,51 @@ def _remove_cover(book_id: str) -> None:
             pass
 
 
+def set_shared_roots(user: str, payload: dict) -> dict:
+    """Replace the shared folders granted by the core sharing API.
+
+    The frontend refreshes this list from ``/api/sharing/incoming``; books under
+    a root that disappeared are pruned so a revoke also clears the metadata.
+    """
+    raw = payload.get("roots")
+    if not isinstance(raw, list):
+        raise ApiError("roots must be a list", 400)
+    if len(raw) > MAX_FOLDERS:
+        raise ApiError(f"Too many shared roots (max {MAX_FOLDERS})", 409)
+    with _LOCK:
+        store = _load(LIBRARY_FILE)
+        library = _user_library(store, user)
+        known = {r.get("path"): r for r in library.get("shared_roots", []) if isinstance(r, dict)}
+        roots = []
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            path = _clean_path(item.get("path"))
+            previous = known.get(path) or {}
+            roots.append({
+                "path": path,
+                "owner": _text(item.get("owner"), 64),
+                "added_at": previous.get("added_at") or _now(),
+                "last_scan": previous.get("last_scan") or "",
+                "count": int(previous.get("count") or 0),
+            })
+        library["shared_roots"] = roots
+        shared_books = library.setdefault("shared_books", {})
+        dropped = [bid for bid, book in shared_books.items()
+                   if not any(_under(str(book.get("path")), r["path"]) for r in roots)]
+        for bid in dropped:
+            shared_books.pop(bid, None)
+            _remove_cover(bid)
+        if dropped:
+            progress_store = _load(PROGRESS_FILE)
+            progress = _user_progress(progress_store, user)
+            for bid in dropped:
+                progress.pop(bid, None)
+            _save(PROGRESS_FILE, progress_store)
+        _save(LIBRARY_FILE, store)
+        return _library_payload(user)
+
+
 def scan(user: str, payload: dict) -> dict:
     root = _clean_path(payload.get("root"))
     entries = payload.get("entries")
@@ -399,12 +452,18 @@ def scan(user: str, payload: dict) -> dict:
     entries = entries[:MAX_SCAN_ENTRIES] if isinstance(entries, list) else []
     removed = removed[:MAX_SCAN_ENTRIES] if isinstance(removed, list) else []
     done = bool(payload.get("done"))
+    is_shared = bool(payload.get("shared"))
 
     with _LOCK:
         store = _load(LIBRARY_FILE)
         library = _user_library(store, user)
-        books = library["books"]
-        if not any(f.get("path") == root for f in library["folders"]):
+        shared_root = next((r for r in library.get("shared_roots", [])
+                            if r.get("path") == root), None) if is_shared else None
+        books = library["shared_books"] if is_shared else library["books"]
+        if is_shared:
+            if shared_root is None:
+                raise ApiError(f"{root} is not a shared folder", 409)
+        elif not any(f.get("path") == root for f in library["folders"]):
             raise ApiError(f"{root} is not a configured scan folder", 409)
 
         added = updated = 0
@@ -415,6 +474,10 @@ def scan(user: str, payload: dict) -> dict:
                 continue
             if not _under(fresh["path"], root):
                 continue
+            if is_shared:
+                fresh["shared"] = True
+                fresh["shared_root"] = root
+                fresh["shared_owner"] = (shared_root or {}).get("owner") or ""
             ids[fresh["path"]] = fresh["id"]
             current = books.get(fresh["id"])
             if not current:
@@ -446,8 +509,9 @@ def scan(user: str, payload: dict) -> dict:
                 dropped += 1
 
         if done:
-            for folder in library["folders"]:
-                if folder.get("path") == root:
+            targets = [shared_root] if is_shared else library["folders"]
+            for folder in targets:
+                if folder and folder.get("path") == root:
                     folder["last_scan"] = _now()
                     folder["count"] = sum(1 for b in books.values()
                                           if _under(str(b.get("path")), root))
@@ -512,7 +576,7 @@ def read_cover(user: str, book_id: str) -> tuple[bytes, str]:
 def save_progress(user: str, book_id: str, payload: dict) -> dict:
     with _LOCK:
         library = _user_library(_load(LIBRARY_FILE), user)
-        if book_id not in library["books"]:
+        if book_id not in library["books"] and book_id not in library.get("shared_books", {}):
             raise ApiError("book not found", 404)
         store = _load(PROGRESS_FILE)
         progress = _user_progress(store, user)
@@ -580,6 +644,8 @@ def _dispatch(method: str, route: str, user: str, payload: dict):
             return 200, _library_payload(user)
     elif rest == ["folders"] and method == "PUT":
         return 200, set_folders(user, payload)
+    elif rest == ["shared-roots"] and method == "PUT":
+        return 200, set_shared_roots(user, payload)
     elif rest == ["scan"] and method == "POST":
         return 200, scan(user, payload)
     elif rest == ["settings"]:

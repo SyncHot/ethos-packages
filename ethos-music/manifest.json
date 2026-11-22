@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-music",
   "name": "Music",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared with the EthOS Music Android app. The music API stays in EthOS so the phone keeps working; this package ships the desktop app. Install “Music Engine” for search, streaming and downloads.",
   "icon": "🎵",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/icon.svg",
@@ -11,7 +11,7 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
-  "min_ethos_version": "2.0.0",
+  "min_ethos_version": "2.13.3",
   "ui": {
     "mode": "native",
     "entry": "frontend/app.js"
@@ -19,12 +19,12 @@
   "requires": [
     "ethos-music-engine"
   ],
-  "changelog": "1.0.1: light and dark themes follow the EthOS toggle; feedback now goes to the global Notification Center instead of a package toast; downloads report progress in the shared task panel. 1.0.0: first release. The Music desktop app moves out of the core install; it requires the Music Engine package, which Package Center installs automatically. Your library, likes, playlists and podcast subscriptions stay in EthOS and remain shared with the Android app.",
+  "changelog": "1.0.2: share playlists with other accounts — a sharing card in Settings, a “Shared with me” section and read-only playlist playback (requires EthOS 2.13.3). 1.0.1: light and dark themes follow the EthOS toggle; feedback now goes to the global Notification Center instead of a package toast; downloads report progress in the shared task panel. 1.0.0: first release. The Music desktop app moves out of the core install; it requires the Music Engine package, which Package Center installs automatically. Your library, likes, playlists and podcast subscriptions stay in EthOS and remain shared with the Android app.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/frontend/app.js",
-      "sha256": "f9dc46bd57a771d660bb7e0eb1939f1ab55ab31f0a234df1be2b7a15e6f90209",
+      "sha256": "7a394562217878ab69d3b4e4e5327601bc129bd55b31e5be422178394c8feab8",
       "path": "frontend/app.js",
       "mode": 420
     },

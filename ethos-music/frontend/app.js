@@ -531,6 +531,7 @@ const engine = new Engine();
 // ── Library state (server-synced with the Android app) ───────────────
 const store = {
     liked: [], playlists: [], history: [], podcasts: { subscribed: [], episodes: {} },
+    sharedPlaylists: [],
     loaded: false,
 
     async load() {
@@ -542,6 +543,14 @@ const store = {
             this.podcasts = st.podcasts || { subscribed: [], episodes: {} };
             this.loaded = true;
         } catch (e) { /* offline — UI works with empty state */ }
+        await this.loadShared();
+    },
+
+    async loadShared() {
+        try {
+            const d = await apiJsonFetch('/api/sharing/incoming?kind=playlist');
+            this.sharedPlaylists = d.grants || [];
+        } catch (e) { this.sharedPlaylists = []; }
     },
 
     isLiked(t) { return this.liked.some(x => tkey(x) === tkey(t)); },
@@ -810,6 +819,7 @@ export function renderMusicPage(body) {
         searchFilter: 'all',
         searchError: false,
         searching: false,
+        sharedDetail: null,   // payload of /api/music/playlists/shared
     };
 
     const root = el('div', { class: 'em-root' });
@@ -835,6 +845,7 @@ export function renderMusicPage(body) {
         content.innerHTML = '';
         if (app.detail) {
             if (app.detail.type === 'playlist') content.appendChild(viewPlaylistDetail(app.detail.id));
+            else if (app.detail.type === 'shared-playlist') content.appendChild(viewSharedPlaylist(app.sharedDetail));
             else content.appendChild(viewPodcastDetail(app.detail.id));
         } else {
             [viewHome, viewSearch, viewPodcasts, viewRadio, viewLibrary, viewSettings][app.tab](content);
@@ -969,6 +980,21 @@ export function renderMusicPage(body) {
         const cover = pl.tracks.length ? coverImg(pl.tracks[0].thumb, pl.name) : defaultCover(pl.name);
         const card = el('div', { class: 'em-card' }, cover, el('div', { class: 'em-card-label' }, pl.name), el('div', { class: 'em-card-sub' }, `${pl.tracks.length} utworów`));
         card.addEventListener('click', () => openDetail({ type: 'playlist', id: pl.id }));
+        return card;
+    }
+
+    function sharedPlaylistCard(grant) {
+        const label = grant.label || grant.resource;
+        const card = el('div', { class: 'em-card' }, defaultCover(label),
+            el('div', { class: 'em-card-label' }, label),
+            el('div', { class: 'em-card-sub' }, `od ${grant.owner}`));
+        card.addEventListener('click', async () => {
+            try {
+                const data = await apiJsonFetch(`/api/music/playlists/shared?owner=${encodeURIComponent(grant.owner)}&id=${encodeURIComponent(grant.resource)}`);
+                app.sharedDetail = data;
+                openDetail({ type: 'shared-playlist', id: grant.resource, owner: grant.owner });
+            } catch (e) { toast('Nie udało się otworzyć udostępnionej playlisty'); }
+        });
         return card;
     }
 
@@ -1702,6 +1728,47 @@ export function renderMusicPage(body) {
             parent.appendChild(el('div', { style: 'color:var(--em-muted);font-size:13.5px;padding:18px 4px' },
                 'Jeszcze nie masz playlist. Stwórz pierwszą przyciskiem „+ Nowa playlista”.'));
         }
+        if (store.sharedPlaylists.length) {
+            parent.appendChild(el('h2', { class: 'em-h1', style: 'margin-top:22px;font-size:18px' }, 'Udostępnione Tobie'));
+            const sharedGrid = el('div', { class: 'em-grid' });
+            store.sharedPlaylists.forEach(grant => sharedGrid.appendChild(sharedPlaylistCard(grant)));
+            parent.appendChild(sharedGrid);
+        }
+    }
+
+    function viewSharedPlaylist(data) {
+        const wrap = el('div');
+        if (!data) { wrap.appendChild(el('div', { class: 'em-empty' }, 'Nie udało się wczytać playlisty.')); return wrap; }
+        const tracks = data.tracks || [];
+        const head = el('div', { class: 'em-detail-head' });
+        const backBtn = el('button', { class: 'em-iconbtn', style: 'align-self:flex-start;margin-bottom:auto', title: 'Wstecz' }, icon('close', 20));
+        backBtn.addEventListener('click', closeDetail);
+        head.appendChild(backBtn);
+        head.appendChild(el('div', { class: 'em-detail-cover', style: `display:flex;align-items:center;justify-content:center;color:#fff;background:${coverGradient(data.name || '')}` }, icon('note', 56)));
+        const info = el('div', { style: 'min-width:0' });
+        info.append(el('div', { class: 'em-detail-label' }, `Udostępniona · ${data.owner}`),
+            el('div', { class: 'em-detail-title' }, data.name || 'Playlista'),
+            el('div', { class: 'em-detail-meta' }, `${tracks.length} utworów · tylko odtwarzanie`));
+        head.appendChild(info);
+        wrap.appendChild(head);
+
+        const actions = el('div', { class: 'em-detail-actions' });
+        const playBtn = el('button', { class: 'em-playcircle', title: 'Odtwórz wszystkie' }, icon('play', 26));
+        playBtn.addEventListener('click', () => tracks.length && engine.playQueue(tracks, 0));
+        actions.appendChild(playBtn);
+        const shuffleBtn = el('button', { class: 'em-smcircle', title: 'Losowo' }, icon('shuffle', 18));
+        shuffleBtn.addEventListener('click', () => { if (!tracks.length) return; engine.shuffle = true; engine.playQueue(tracks, Math.floor(Math.random() * tracks.length)); });
+        actions.appendChild(shuffleBtn);
+        wrap.appendChild(actions);
+
+        if (!tracks.length) { wrap.appendChild(el('div', { class: 'em-empty' }, 'Ta playlista jest pusta.')); return wrap; }
+        tracks.forEach((t, i) => {
+            wrap.appendChild(trackRow(t, i + 1, () => engine.playQueue(tracks, i), [
+                { label: 'Odtwórz', act: () => engine.playQueue(tracks, i) },
+                { label: 'Dodaj do kolejki', act: () => { engine.addToQueue(t); toast('Dodano do kolejki'); } },
+            ]));
+        });
+        return wrap;
     }
 
     // ── Playlist detail (PlaylistDetailScreen.kt) ────────────────────
@@ -1815,6 +1882,38 @@ export function renderMusicPage(body) {
             el('h4', {}, 'Synchronizacja'),
             el('p', {}, 'Polubione utwory, playlisty, historia odtwarzania i subskrypcje podcastów są przechowywane na NAS i synchronizowane z aplikacją EthOS Music na telefonie.'));
         parent.appendChild(syncCard);
+
+        const sharingCard = el('div', { class: 'em-settings-card' },
+            el('h4', {}, 'Udostępnianie playlist'),
+            el('p', {}, 'Udostępnij playlistę innym kontom — odbiorcy mogą ją odtwarzać, ale nie zmieniać.'));
+        if (!store.playlists.length) {
+            sharingCard.appendChild(el('div', { style: 'color:var(--em-muted);font-size:13px' }, 'Brak playlist do udostępnienia.'));
+        }
+        store.playlists.forEach((pl) => {
+            const row = el('div', { class: 'em-settings-inputrow', style: 'margin-top:8px' },
+                el('span', { style: 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, pl.name));
+            const shareBtn = el('button', { class: 'em-btn ghost' }, 'Udostępnij');
+            shareBtn.addEventListener('click', async () => {
+                if (!_ctx.share) { toast('Ta wersja EthOS nie obsługuje udostępniania'); return; }
+                await _ctx.share.open({ kind: 'playlist', resource: pl.id, label: pl.name });
+                await store.loadShared();
+                renderApp();
+            });
+            row.appendChild(shareBtn);
+            sharingCard.appendChild(row);
+        });
+        if (store.sharedPlaylists.length) {
+            sharingCard.appendChild(el('h4', { style: 'margin-top:14px' }, 'Udostępnione Tobie'));
+            store.sharedPlaylists.forEach((grant) => {
+                const row = el('div', { class: 'em-settings-inputrow', style: 'margin-top:6px' },
+                    el('span', { style: 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, `${grant.label || grant.resource} · ${grant.owner}`));
+                const openBtn = el('button', { class: 'em-btn ghost' }, 'Otwórz');
+                openBtn.addEventListener('click', () => sharedPlaylistCard(grant).dispatchEvent(new MouseEvent('click')));
+                row.appendChild(openBtn);
+                sharingCard.appendChild(row);
+            });
+        }
+        parent.appendChild(sharingCard);
 
         try {
             const cfg = await apiJsonFetch('/api/music/config');
