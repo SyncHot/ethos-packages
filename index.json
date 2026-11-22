@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T18:40:20+00:00",
+  "generated_at": "2026-11-22T23:16:56+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -129,8 +129,8 @@
     {
       "id": "ethos-cleaner",
       "name": "Disk Cleaner",
-      "version": "1.0.1",
-      "description": "Find what is eating your disk: scans caches, thumbnails, logs, trash and old downloads, shows the biggest space users and lets you delete them safely. The scan and delete operations stay in EthOS, where they run through the file service's path scope, so this package ships the desktop app only.",
+      "version": "2.0.0",
+      "description": "Find what is eating your disk — folder sizes, biggest files, junk cleanup, EthOS caches and Docker leftovers — with recoverable deletes.",
       "icon": "🧹",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-cleaner/icon.svg",
       "category": "storage",
@@ -143,10 +143,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: light theme was white-on-white and is fixed; Browse… uses the EthOS folder picker; scans, deletes and journal vacuum report progress in the shared task panel; the Biggest files view parses again. 1.0.0: first release. The Disk Cleaner desktop app moves out of the core install; every delete still goes through EthOS's scoped file service.",
+      "changelog": "2.0.0: rebuilt on the shared EthOS shell with progress+cancel scans, a space map, trash-safe deletes, cache/Docker/journal cleanup and reclaim history. 1.0.1: light theme was white-on-white and is fixed; Browse… uses the EthOS folder picker; scans, deletes and journal vacuum report progress in the shared task panel; the Biggest files view parses again. 1.0.0: first release. The Disk Cleaner desktop app moves out of the core install; every delete still goes through EthOS's scoped file service.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-cleaner/manifest.json",
-      "manifest_sha256": "ff7ae936d748d22c2c0cac57d44af0655e685410b735aa2e2b7b64273e967e16",
-      "size_bytes": 29335
+      "manifest_sha256": "a8757315c660f865a0ab4a7b67cbd18d1c84ef4d463ab8409d08f565a2b16acc",
+      "size_bytes": 90153
     },
     {
       "id": "ethos-docker",

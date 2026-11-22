@@ -12,7 +12,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `download-manager` ⬇️ | 1.1.1 | native | HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window. |
 | `ethos-antivirus` 🛡️ | 2.1.6 | native | ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only… |
 | `ethos-books` 📚 | 1.2.1 | native | Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied… |
-| `ethos-cleaner` 🧹 | 1.0.1 | native | Find what is eating your disk: scans caches, thumbnails, logs, trash and old downloads, shows the biggest space users and lets you delete them safely… |
+| `ethos-cleaner` 🧹 | 2.0.0 | native | Find what is eating your disk — folder sizes, biggest files, junk cleanup, EthOS caches and Docker leftovers — with recoverable deletes. |
 | `ethos-docker` 🐳 | 1.0.5 | native | Engine status, containers, images, volumes and Compose projects in one place: start, stop, restart, inspect logs, prune and install Docker Engine on… |
 | `ethos-editor` ⌨️ | 1.0.2 | native | A VS Code-style workbench in the browser: single files or whole folders, tabs and breadcrumbs, search, Source Control with inline git gutters, split… |
 | `ethos-git` 🦊 | 1.0.1 | window 3005 | Self-hosted Git for your NAS: repositories, issues, pull requests, releases and a web editor, reachable on your LAN or through the Domains package. G… |
