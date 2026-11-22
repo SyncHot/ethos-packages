@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T17:46:43+00:00",
+  "generated_at": "2026-11-22T17:50:57+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -287,8 +287,8 @@
     {
       "id": "ethos-monitor",
       "name": "Uptime Monitor",
-      "version": "1.0.0",
-      "description": "Watch the things a NAS is supposed to keep alive: web apps, routers, printers, cameras and other servers. Uptime Kuma pings HTTP, TCP, DNS and ICMP endpoints on a schedule, keeps response-time history and notifies you by email, Telegram, Discord, ntfy or webhook when something goes down. The first visit creates the administrator account and locks the instance; the UI opens in its own EthOS window on port 3001.",
+      "version": "1.0.1",
+      "description": "Watch the things a NAS is supposed to keep alive: web apps, routers, printers, cameras and other servers. Uptime Kuma pings HTTP, TCP, DNS and ICMP endpoints on a schedule, keeps response-time history and notifies you by email, Telegram, Discord, ntfy or webhook when something goes down. The first visit creates the administrator account and locks the instance; the UI opens in its own EthOS window on port 3091.",
       "icon": "📈",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-monitor/icon.svg",
       "category": "monitoring",
@@ -305,9 +305,9 @@
         "docker"
       ],
       "screenshots": [],
-      "changelog": "1.0.0: first release — Uptime Kuma 2.5.12 pinned, SQLite in a package volume that survives updates, web UI on port 3001 (own login, created on the first visit) and a container healthcheck. Monitors HTTP, TCP, DNS and ICMP targets and delivers alerts through its own notification integrations.",
+      "changelog": "1.0.1: the web UI listens on host port 3091 instead of 3001, which collides with common compose projects and dev servers (the container still serves on 3001). 1.0.0: first release — Uptime Kuma 2.5.12 pinned, SQLite in a package volume that survives updates, web UI on port 3001 (own login, created on the first visit) and a container healthcheck. Monitors HTTP, TCP, DNS and ICMP targets and delivers alerts through its own notification integrations.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-monitor/manifest.json",
-      "manifest_sha256": "ade1c9bacea4474443a6ff502f37a03d1039e824ef93e32bf479e4451905d895",
+      "manifest_sha256": "9e1c98adec3640b16c4628ecd9f4997afaea72ccd1af140a160367b2bc18d8d9",
       "size_bytes": 1339
     },
     {
@@ -381,8 +381,8 @@
     {
       "id": "ethos-rss",
       "name": "FreshRSS",
-      "version": "1.0.0",
-      "description": "A news reader that lives on the NAS and keeps your feeds, read state and stars in one place instead of in a phone app's silo. FreshRSS fetches RSS/Atom feeds on its own schedule and gives every device the same unread list. The first visit runs the installer and creates the administrator account; the UI opens in its own EthOS window on port 8080, and feeds and articles are stored in a package volume.",
+      "version": "1.0.1",
+      "description": "A news reader that lives on the NAS and keeps your feeds, read state and stars in one place instead of in a phone app's silo. FreshRSS fetches RSS/Atom feeds on its own schedule and gives every device the same unread list. The first visit runs the installer and creates the administrator account; the UI opens in its own EthOS window on port 8085, and feeds and articles are stored in a package volume.",
       "icon": "📰",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-rss/icon.svg",
       "category": "productivity",
@@ -399,9 +399,9 @@
         "docker"
       ],
       "screenshots": [],
-      "changelog": "1.0.0: first release — FreshRSS 1.30.4 pinned, SQLite database and feed cache in a package volume that survives updates, web UI on port 8080 (own login, created by the first-visit installer) and a container healthcheck. Needs outbound internet access to fetch feeds.",
+      "changelog": "1.0.1: the web UI listens on host port 8085 instead of 8080, which is claimed by many dev servers (the container still serves on 80). 1.0.0: first release — FreshRSS 1.30.4 pinned, SQLite database and feed cache in a package volume that survives updates, web UI on port 8080 (own login, created by the first-visit installer) and a container healthcheck. Needs outbound internet access to fetch feeds.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-rss/manifest.json",
-      "manifest_sha256": "71d61d6c6476e18680d331e958d0d50e2d9c78b49aa17947818c27ff569c965d",
+      "manifest_sha256": "c5d826ac7a661893ffbabf0932dcb4a7e5b9ece249afe6c22c467f033e533428",
       "size_bytes": 1494
     },
     {

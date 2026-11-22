@@ -4,7 +4,7 @@ services:
     image: freshrss/freshrss:1.30.4
     container_name: ethos-rss
     ports:
-      - "8080:80"  # Web UI (own login, created by the first-visit installer)
+      - "8085:80"  # Web UI (own login, created by the first-visit installer)
     volumes:
       # SQLite database, feed cache, user state and configuration.
       - rss-data:/var/www/FreshRSS/data

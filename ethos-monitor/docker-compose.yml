@@ -4,7 +4,7 @@ services:
     image: louislam/uptime-kuma:2.5.12
     container_name: ethos-monitor
     ports:
-      - "3001:3001"  # Web UI (own login, created on the first visit)
+      - "3091:3001"  # Web UI (own login, created on the first visit)
     volumes:
       # Monitors, history and notification settings survive updates.
       - uptime-data:/app/data

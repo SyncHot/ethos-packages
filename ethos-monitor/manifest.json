@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-monitor",
   "name": "Uptime Monitor",
-  "version": "1.0.0",
-  "description": "Watch the things a NAS is supposed to keep alive: web apps, routers, printers, cameras and other servers. Uptime Kuma pings HTTP, TCP, DNS and ICMP endpoints on a schedule, keeps response-time history and notifies you by email, Telegram, Discord, ntfy or webhook when something goes down. The first visit creates the administrator account and locks the instance; the UI opens in its own EthOS window on port 3001.",
+  "version": "1.0.1",
+  "description": "Watch the things a NAS is supposed to keep alive: web apps, routers, printers, cameras and other servers. Uptime Kuma pings HTTP, TCP, DNS and ICMP endpoints on a schedule, keeps response-time history and notifies you by email, Telegram, Discord, ntfy or webhook when something goes down. The first visit creates the administrator account and locks the instance; the UI opens in its own EthOS window on port 3091.",
   "icon": "📈",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-monitor/icon.svg",
   "category": "monitoring",
@@ -15,23 +15,23 @@
   "ui": {
     "mode": "window",
     "scheme": "http",
-    "port": 3001,
+    "port": 3091,
     "path": "/",
     "expose": "lan",
     "auth": "package"
   },
   "healthcheck": {
     "scheme": "http",
-    "port": 3001,
+    "port": 3091,
     "path": "/"
   },
   "system_requires": [
     "docker"
   ],
-  "changelog": "1.0.0: first release — Uptime Kuma 2.5.12 pinned, SQLite in a package volume that survives updates, web UI on port 3001 (own login, created on the first visit) and a container healthcheck. Monitors HTTP, TCP, DNS and ICMP targets and delivers alerts through its own notification integrations.",
+  "changelog": "1.0.1: the web UI listens on host port 3091 instead of 3001, which collides with common compose projects and dev servers (the container still serves on 3001). 1.0.0: first release — Uptime Kuma 2.5.12 pinned, SQLite in a package volume that survives updates, web UI on port 3001 (own login, created on the first visit) and a container healthcheck. Monitors HTTP, TCP, DNS and ICMP targets and delivers alerts through its own notification integrations.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-monitor/docker-compose.yml",
-    "sha256": "9afa4bb036d20555cec1fbc8eaf24a8e51df673c41ceb5f8c9a61cc801567437"
+    "sha256": "0c29ac3ddb0b61a389dd3faaa8e3366120373a93d31516edcfee210a8d7f29c8"
   },
   "files": [
     {
