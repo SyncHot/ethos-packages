@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-git",
   "name": "Forgejo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Self-hosted Git for your NAS: repositories, issues, pull requests, releases and a web editor, reachable on your LAN or through the Domains package. Give the Code Editor and Git Diff apps a remote to push to. Repositories live in a package volume, so no share permissions are involved; the first visit creates the administrator account and locks the instance.",
   "icon": "🦊",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git/icon.svg",
@@ -15,23 +15,23 @@
   "ui": {
     "mode": "window",
     "scheme": "http",
-    "port": 3000,
+    "port": 3005,
     "path": "/",
     "expose": "lan",
     "auth": "package"
   },
   "healthcheck": {
     "scheme": "http",
-    "port": 3000,
+    "port": 3005,
     "path": "/api/healthz"
   },
   "system_requires": [
     "docker"
   ],
-  "changelog": "1.0.0: first release — Forgejo 17.0.2 pinned, SQLite in a package volume, web UI on port 3000 and SSH on 2222 (so it never collides with the NAS sshd). The first visit runs the installer with the database pre-filled; create the administrator account there. Self-registration is disabled.",
+  "changelog": "1.0.1: the web UI moved to host port 3005 — port 3000 is taken by many other compose projects, which made the first install fail with “port is already allocated”. 1.0.0: first release — Forgejo 17.0.2 pinned, SQLite in a package volume, web UI on port 3000 and SSH on 2222 (so it never collides with the NAS sshd). The first visit runs the installer with the database pre-filled; create the administrator account there. Self-registration is disabled.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git/docker-compose.yml",
-    "sha256": "054357e9dde4009dd320c804ad5d90e97bbbd61b6e71097be782c2a73267bfe1"
+    "sha256": "4ece14f337a44d685ea8fb89fbf50a7048f1ed8679ad076565ecd62fbbf39c42"
   },
   "files": [
     {

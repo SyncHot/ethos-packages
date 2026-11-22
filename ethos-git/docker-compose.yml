@@ -18,7 +18,10 @@ services:
       # The first visit creates the administrator; nobody else may sign up.
       FORGEJO__service__DISABLE_REGISTRATION: "true"
     ports:
-      - "3000:3000"  # Web UI (own login)
+      # 3005 on the host: 3000 is a common default and is already taken on many
+      # NAS hosts (other compose projects, dev servers), which made the install
+      # fail with "Bind for 127.0.0.1:3000 failed: port is already allocated".
+      - "3005:3000"  # Web UI (own login)
       - "2222:22"    # Git over SSH
     volumes:
       # Repositories, LFS objects, attachments, SQLite and configuration.

@@ -105,7 +105,7 @@ reachable by the browser and EthOS cannot authenticate it. Say so in the manifes
 - Never publish a port that collides with the EthOS core (`9000`, `9001`, `9002`) or with another
   official package. Known in-use ports: antivirus `8092`, domains `80/443/8093`, vmm `8095` +
   `8094` + `18190-18194`, welcome `8090`, kanban `8098`, sticky notes `8099`, books `8089`, monitor
-  `3001`, rss `8080`, sync `8384/22000/21027`, git `3000/2222`.
+  `3001`, rss `8080`, sync `8384/22000/21027`, git `3005/2222`.
 - **Files on the shares must belong to the NAS account.** A service that writes to `/mnt` or
   `/media` runs with the EthOS service identity — EthOS exports `ETHOS_SERVICE_UID` and
   `ETHOS_SERVICE_GID` to `docker compose`, so use `PUID: "${ETHOS_SERVICE_UID}"` (with a `:-1000`
