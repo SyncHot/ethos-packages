@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T18:13:19+00:00",
+  "generated_at": "2026-11-22T18:40:20+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -173,7 +173,7 @@
     {
       "id": "ethos-editor",
       "name": "Code Editor",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "description": "A VS Code-style workbench in the browser: single files or whole folders, tabs and breadcrumbs, search, Source Control with inline git gutters, split terminals, Problems/Output panels and an AI chat tab. File access stays in EthOS behind its path scope, so this package ships the desktop app only.",
       "icon": "⌨️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-editor/icon.svg",
@@ -187,10 +187,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: light code theme (VS Code Light+ tokens and chrome), the terminal follows the appearance toggle, and unsaved changes show in the status bar instead of overriding the window title; requires EthOS 2.0. 1.0.0: first release. The Code Editor desktop app moves out of the core install; editing, git and terminal endpoints stay in EthOS, and File Station still opens files in it.",
+      "changelog": "1.0.2: the window ships its own stylesheet (the `.ed-*` workbench rules were only in the core index.html) and injects it once on render — no visual change, and the package no longer depends on core CSS. 1.0.1: light code theme (VS Code Light+ tokens and chrome), the terminal follows the appearance toggle, and unsaved changes show in the status bar instead of overriding the window title; requires EthOS 2.0. 1.0.0: first release. The Code Editor desktop app moves out of the core install; editing, git and terminal endpoints stay in EthOS, and File Station still opens files in it.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-editor/manifest.json",
-      "manifest_sha256": "914aedaaba0fca8f22e89702b81071b85599d0cebef7358da11c6f622dd40d34",
-      "size_bytes": 206496
+      "manifest_sha256": "c9176f38b08fe1a4e3ffcdd138c29b4315c11bba47102719e243ff6bebeca07a",
+      "size_bytes": 256306
     },
     {
       "id": "ethos-git",

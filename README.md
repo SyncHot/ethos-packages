@@ -14,7 +14,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `ethos-books` 📚 | 1.2.1 | native | Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied… |
 | `ethos-cleaner` 🧹 | 1.0.1 | native | Find what is eating your disk: scans caches, thumbnails, logs, trash and old downloads, shows the biggest space users and lets you delete them safely… |
 | `ethos-docker` 🐳 | 1.0.5 | native | Engine status, containers, images, volumes and Compose projects in one place: start, stop, restart, inspect logs, prune and install Docker Engine on… |
-| `ethos-editor` ⌨️ | 1.0.1 | native | A VS Code-style workbench in the browser: single files or whole folders, tabs and breadcrumbs, search, Source Control with inline git gutters, split… |
+| `ethos-editor` ⌨️ | 1.0.2 | native | A VS Code-style workbench in the browser: single files or whole folders, tabs and breadcrumbs, search, Source Control with inline git gutters, split… |
 | `ethos-git` 🦊 | 1.0.1 | window 3005 | Self-hosted Git for your NAS: repositories, issues, pull requests, releases and a web editor, reachable on your LAN or through the Domains package. G… |
 | `ethos-git-diff` ⎇ | 1.0.1 | native | Side-by-side diff with partial (hunk and line) staging, commit box, pull/push and recent history for any Git repository on your shares. Opening a dif… |
 | `ethos-kanban` 🗂️ | 1.0.3 | native | Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Packages app: the board lives in the package's own service a… |
