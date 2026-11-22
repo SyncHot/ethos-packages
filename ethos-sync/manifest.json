@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-sync",
   "name": "Syncthing",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the middle — and the shared folders are your real shares under /mnt and /media. The web GUI opens in its own EthOS window; set a GUI username and password on the first visit, because port 8384 is reachable on your network.",
   "icon": "🔁",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sync/icon.svg",
@@ -28,10 +28,10 @@
   "system_requires": [
     "docker"
   ],
-  "changelog": "1.0.0: first release — Syncthing 2.1.7 pinned, a config volume that survives updates, /mnt and /media mounted read-write for syncing, the sync protocol on 22000 tcp/udp and local discovery on 21027/udp. The GUI listens on port 8384 so the EthOS window can embed it; set a GUI username and password on the first visit.",
+  "changelog": "1.0.1: Syncthing runs with the NAS account's uid/gid (EthOS passes ETHOS_SERVICE_UID/ETHOS_SERVICE_GID to docker compose), so synced files stay editable by EthOS and by share users; the healthcheck uses the image's own /rest/noauth/health endpoint. 1.0.0: first release — Syncthing 2.1.7 pinned, a config volume that survives updates, /mnt and /media mounted read-write for syncing, the sync protocol on 22000 tcp/udp and local discovery on 21027/udp. The GUI listens on port 8384 so the EthOS window can embed it; set a GUI username and password on the first visit.",
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sync/docker-compose.yml",
-    "sha256": "75c00129e8cbb6da1d6b4638bfdbc2f2d774cd57bf478e3cdcf9e2252a67b8d7"
+    "sha256": "0d2da03c474da9cea70e1a3acfdb47439f8ca01e2a4ba6eb72c8fb165f8b7f8c"
   },
   "files": [
     {

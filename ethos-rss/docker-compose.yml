@@ -1,0 +1,24 @@
+services:
+  freshrss:
+    # Pinned on purpose: the signed compose file must describe exactly what runs.
+    image: freshrss/freshrss:1.30.4
+    container_name: ethos-rss
+    ports:
+      - "8080:80"  # Web UI (own login, created by the first-visit installer)
+    volumes:
+      # SQLite database, feed cache, user state and configuration.
+      - rss-data:/var/www/FreshRSS/data
+      # Third-party extensions survive updates too.
+      - rss-extensions:/var/www/FreshRSS/extensions
+    restart: unless-stopped
+    healthcheck:
+      # The image is php:apache, so PHP is always available for the probe.
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1/i/') === false ? 1 : 0);"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  rss-data: {}
+  rss-extensions: {}

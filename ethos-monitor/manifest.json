@@ -1,0 +1,44 @@
+{
+  "schema": 2,
+  "id": "ethos-monitor",
+  "name": "Uptime Monitor",
+  "version": "1.0.0",
+  "description": "Watch the things a NAS is supposed to keep alive: web apps, routers, printers, cameras and other servers. Uptime Kuma pings HTTP, TCP, DNS and ICMP endpoints on a schedule, keeps response-time history and notifies you by email, Telegram, Discord, ntfy or webhook when something goes down. The first visit creates the administrator account and locks the instance; the UI opens in its own EthOS window on port 3001.",
+  "icon": "📈",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-monitor/icon.svg",
+  "category": "monitoring",
+  "author": "SyncHot",
+  "homepage": "https://uptime.kuma.pet",
+  "license": "MIT",
+  "channel": "stable",
+  "min_ethos_version": "2.28.0",
+  "ui": {
+    "mode": "window",
+    "scheme": "http",
+    "port": 3001,
+    "path": "/",
+    "expose": "lan",
+    "auth": "package"
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 3001,
+    "path": "/"
+  },
+  "system_requires": [
+    "docker"
+  ],
+  "changelog": "1.0.0: first release — Uptime Kuma 2.5.12 pinned, SQLite in a package volume that survives updates, web UI on port 3001 (own login, created on the first visit) and a container healthcheck. Monitors HTTP, TCP, DNS and ICMP targets and delivers alerts through its own notification integrations.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-monitor/docker-compose.yml",
+    "sha256": "9afa4bb036d20555cec1fbc8eaf24a8e51df673c41ceb5f8c9a61cc801567437"
+  },
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-monitor/icon.svg",
+      "sha256": "972361824520b4744c550262a08ed44469d603234862ae60fe448365af2fdf15",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}

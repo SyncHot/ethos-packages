@@ -31,6 +31,14 @@ services:
       # host.docker.internal:9000 (the EthOS API/UI).
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    healthcheck:
+      # Caddy's admin API is the only endpoint that must stay alive for the UI
+      # to reload routes; busybox wget ships with the alpine image.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   # Control plane: reads/writes routes, renders the Caddy config and reloads
   # Caddy over its admin API. Bound to loopback only - EthOS reaches it through
@@ -58,6 +66,12 @@ services:
     depends_on:
       - proxy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8093/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   caddy-data:

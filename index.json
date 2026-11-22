@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T16:42:20+00:00",
+  "generated_at": "2026-11-22T16:59:19+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -31,7 +31,7 @@
     {
       "id": "domains",
       "name": "Domains",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "description": "Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another device, a container, or EthOS itself - without touching nginx by hand. Caddy issues and renews Let's Encrypt certificates on its own, and the stack keeps routing even when EthOS is restarting.",
       "icon": "🌐",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/icon.svg",
@@ -49,10 +49,10 @@
         "docker"
       ],
       "screenshots": [],
-      "changelog": "1.2.1: requires EthOS 2.0. 1.2.0: the window follows the AntiVirus layout — a left rail with Overview, Routes, Certificates, Settings and Diagnostics, status pills, stat tiles and action cards. Routes show their options as chips, the form keeps headers/Host/streaming under Advanced, and the ACME email field is no longer overwritten by the background refresh. 1.1.1: read certificates from Caddy's actual storage root (/data/caddy/certificates), so the certificate list and expiry show up. per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
+      "changelog": "1.2.2: the proxy container reports the health of Caddy's admin API and the control plane probes its own /api/health, so a dead route engine is visible instead of looking healthy. 1.2.1: requires EthOS 2.0. 1.2.0: the window follows the AntiVirus layout — a left rail with Overview, Routes, Certificates, Settings and Diagnostics, status pills, stat tiles and action cards. Routes show their options as chips, the form keeps headers/Host/streaming under Advanced, and the ACME email field is no longer overwritten by the background refresh. 1.1.1: read certificates from Caddy's actual storage root (/data/caddy/certificates), so the certificate list and expiry show up. per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/manifest.json",
-      "manifest_sha256": "50631d7faea05a714993bee017b8878512e9d2b84403748b60ed7a4f3120ce4e",
-      "size_bytes": 96579
+      "manifest_sha256": "8e7e263cc455a19d9437234d83094b1fb66e5b7a07f139082b7d2fd7e2516c76",
+      "size_bytes": 97129
     },
     {
       "id": "download-manager",
@@ -285,6 +285,32 @@
       "size_bytes": 5240
     },
     {
+      "id": "ethos-monitor",
+      "name": "Uptime Monitor",
+      "version": "1.0.0",
+      "description": "Watch the things a NAS is supposed to keep alive: web apps, routers, printers, cameras and other servers. Uptime Kuma pings HTTP, TCP, DNS and ICMP endpoints on a schedule, keeps response-time history and notifies you by email, Telegram, Discord, ntfy or webhook when something goes down. The first visit creates the administrator account and locks the instance; the UI opens in its own EthOS window on port 3001.",
+      "icon": "📈",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-monitor/icon.svg",
+      "category": "monitoring",
+      "author": "SyncHot",
+      "homepage": "https://uptime.kuma.pet",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [
+        "compose"
+      ],
+      "system_requires": [
+        "docker"
+      ],
+      "screenshots": [],
+      "changelog": "1.0.0: first release — Uptime Kuma 2.5.12 pinned, SQLite in a package volume that survives updates, web UI on port 3001 (own login, created on the first visit) and a container healthcheck. Monitors HTTP, TCP, DNS and ICMP targets and delivers alerts through its own notification integrations.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-monitor/manifest.json",
+      "manifest_sha256": "ade1c9bacea4474443a6ff502f37a03d1039e824ef93e32bf479e4451905d895",
+      "size_bytes": 1339
+    },
+    {
       "id": "ethos-music",
       "name": "Music",
       "version": "1.0.2",
@@ -351,6 +377,32 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/manifest.json",
       "manifest_sha256": "44f5d68e66348e551b6b55aa03adc2749f6cac964b04faed4a482884f0ca68b8",
       "size_bytes": 186097
+    },
+    {
+      "id": "ethos-rss",
+      "name": "FreshRSS",
+      "version": "1.0.0",
+      "description": "A news reader that lives on the NAS and keeps your feeds, read state and stars in one place instead of in a phone app's silo. FreshRSS fetches RSS/Atom feeds on its own schedule and gives every device the same unread list. The first visit runs the installer and creates the administrator account; the UI opens in its own EthOS window on port 8080, and feeds and articles are stored in a package volume.",
+      "icon": "📰",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-rss/icon.svg",
+      "category": "productivity",
+      "author": "SyncHot",
+      "homepage": "https://freshrss.org",
+      "license": "AGPL-3.0-or-later",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [
+        "compose"
+      ],
+      "system_requires": [
+        "docker"
+      ],
+      "screenshots": [],
+      "changelog": "1.0.0: first release — FreshRSS 1.30.4 pinned, SQLite database and feed cache in a package volume that survives updates, web UI on port 8080 (own login, created by the first-visit installer) and a container healthcheck. Needs outbound internet access to fetch feeds.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-rss/manifest.json",
+      "manifest_sha256": "71d61d6c6476e18680d331e958d0d50e2d9c78b49aa17947818c27ff569c965d",
+      "size_bytes": 1494
     },
     {
       "id": "ethos-shares",
@@ -423,7 +475,7 @@
     {
       "id": "ethos-sync",
       "name": "Syncthing",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the middle — and the shared folders are your real shares under /mnt and /media. The web GUI opens in its own EthOS window; set a GUI username and password on the first visit, because port 8384 is reachable on your network.",
       "icon": "🔁",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sync/icon.svg",
@@ -441,10 +493,10 @@
         "docker"
       ],
       "screenshots": [],
-      "changelog": "1.0.0: first release — Syncthing 2.1.7 pinned, a config volume that survives updates, /mnt and /media mounted read-write for syncing, the sync protocol on 22000 tcp/udp and local discovery on 21027/udp. The GUI listens on port 8384 so the EthOS window can embed it; set a GUI username and password on the first visit.",
+      "changelog": "1.0.1: Syncthing runs with the NAS account's uid/gid (EthOS passes ETHOS_SERVICE_UID/ETHOS_SERVICE_GID to docker compose), so synced files stay editable by EthOS and by share users; the healthcheck uses the image's own /rest/noauth/health endpoint. 1.0.0: first release — Syncthing 2.1.7 pinned, a config volume that survives updates, /mnt and /media mounted read-write for syncing, the sync protocol on 22000 tcp/udp and local discovery on 21027/udp. The GUI listens on port 8384 so the EthOS window can embed it; set a GUI username and password on the first visit.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sync/manifest.json",
-      "manifest_sha256": "5ca7b5d4aaf62d13c8504e19f8e37107da558da20a368a57d9cb16dad2794608",
-      "size_bytes": 2028
+      "manifest_sha256": "6843b300db9f9429c54599acf3078a4c221466d9286a897c28ffc1a65f4688a2",
+      "size_bytes": 2470
     },
     {
       "id": "ethos-video",

@@ -54,16 +54,26 @@ repo.pub            publisher public key (private key never committed)
   `index.json:manifest_sha256`. A hand-edited manifest that was not run through the build makes
   Package Center fail with **“Manifest checksum does not match the signed index”**.
 - **Rebuild, sign and verify** after every edit — an unsigned or stale `index.json` is rejected by
-  pinned clients:
+  pinned clients. `lint` must be green (CI runs the same rules) and `readme` keeps the catalog table
+  in this file's sibling `README.md` in sync:
   ```bash
   cd ~/apps/compose/ethos-nas
   .venv/bin/python scripts/ethos-pack build  --repo ~/apps/compose/ethos-packages \
     --base-url https://raw.githubusercontent.com/SyncHot/ethos-packages/main
+  .venv/bin/python scripts/ethos-pack readme --repo ~/apps/compose/ethos-packages
+  .venv/bin/python scripts/ethos-pack lint   --repo ~/apps/compose/ethos-packages
   .venv/bin/python scripts/ethos-pack sign   --repo ~/apps/compose/ethos-packages \
     --key ~/.ethos-pack/ethos-packages/repo.key
   .venv/bin/python scripts/ethos-pack verify --repo ~/apps/compose/ethos-packages \
-    --pub ~/.ethos-pack/ethos-packages/repo.pub
+    --pub ~/apps/compose/ethos-packages/repo.pub
   ```
+- **Images are pinned and services restart.** `ethos-pack lint` (and the repo CI) fails on `:latest`,
+  `:stable`, `:edge`, any tag without a version number, an untagged image, or a compose service
+  without a `restart:` policy. Add a `healthcheck:` whenever the image makes one possible — it is a
+  warning today and the EthOS package-health monitor reports unhealthy containers from it.
+- **Never hand-edit the README catalog table.** It lives between `<!-- catalog:start -->` and
+  `<!-- catalog:end -->` and is generated from `index.json` by `ethos-pack readme`; lint fails on a
+  missing row or an older version.
 - **Never commit `repo.key`** or any private key material. Only `repo.pub` belongs here.
 - Remote URLs must be HTTPS under
   `https://raw.githubusercontent.com/SyncHot/ethos-packages/main/`. No relative URLs and no
@@ -77,6 +87,31 @@ repo.pub            publisher public key (private key never committed)
 - **Declare host software in `system_requires`** — never install it yourself. See
   “Host dependencies (mandatory)” below.
 
+## Ports, logins and the NAS account
+
+EthOS embeds a package UI by loading the package's own port in a window frame, so the port is
+reachable by the browser and EthOS cannot authenticate it. Say so in the manifest:
+
+```json
+"ui": { "mode": "window", "port": 3001, "path": "/", "expose": "lan", "auth": "package" }
+```
+
+- `ui.expose` is `"loopback"` (default) or `"lan"`. Only `"lan"` is embedded; a loopback UI shows
+  an “Open in a new tab” card instead of a dead frame.
+- `ui.auth` is **required** for `"lan"`: `"package"` when the app has its own login, `"none"` when
+  it deliberately does not. Package Center shows that in the detail dialog and the install dialog
+  requires the operator to tick a box for `"none"` — shipping an unauthenticated panel is a
+  conscious decision, never a default.
+- Never publish a port that collides with the EthOS core (`9000`, `9001`, `9002`) or with another
+  official package. Known in-use ports: antivirus `8092`, domains `80/443/8093`, vmm `8095` +
+  `8094` + `18190-18194`, welcome `8090`, kanban `8098`, sticky notes `8099`, books `8089`, monitor
+  `3001`, rss `8080`, sync `8384/22000/21027`, git `3000/2222`.
+- **Files on the shares must belong to the NAS account.** A service that writes to `/mnt` or
+  `/media` runs with the EthOS service identity — EthOS exports `ETHOS_SERVICE_UID` and
+  `ETHOS_SERVICE_GID` to `docker compose`, so use `PUID: "${ETHOS_SERVICE_UID}"` (with a `:-1000`
+  fallback for older cores) or `user:`. `ethos-pack lint`/the policy warns when a read-write share
+  bind has neither.
+
 ## Host dependencies (mandatory)
 
 A package never runs `apt`, never bundles OS binaries and never asks the operator to install
@@ -85,6 +120,10 @@ something by hand. It **declares** what it needs and EthOS owns the lifecycle:
 ```json
 { "system_requires": ["samba"] }
 ```
+
+A manifest that ships a compose file **does not need to list `docker`**: `ethos-pack build` and the
+core's `validate_manifest` add it automatically, so Package Center can offer the engine install
+before the first `compose up`.
 
 - **Allowed ids are a closed registry** in EthOS (`backend/services/system_deps.py`): today
   `docker` and `samba`. Anything else is rejected at manifest validation, so an id EthOS does not

@@ -4,6 +4,12 @@ services:
     image: syncthing/syncthing:2.1.7
     container_name: ethos-sync
     environment:
+      # Run as the EthOS service account so files created on /mnt and /media stay
+      # editable by the NAS and its users. EthOS exports these for `docker compose`
+      # (favicon: services/package_installer._compose_env); the 1000 fallback keeps
+      # older cores working.
+      PUID: "${ETHOS_SERVICE_UID:-1000}"
+      PGID: "${ETHOS_SERVICE_GID:-1000}"
       # The GUI must listen on all container interfaces: EthOS embeds it in a
       # window from your browser, not from the NAS itself. Port 8384 is therefore
       # reachable on the LAN — set a GUI username and password on the first visit.
@@ -25,7 +31,8 @@ services:
       - /media:/media
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8384/rest/noauth/health | grep -q OK"]
+      # The image ships curl; /rest/noauth/health answers without a session.
+      test: ["CMD-SHELL", "curl -fkLsS -m 2 http://127.0.0.1:8384/rest/noauth/health | grep -q OK"]
       interval: 30s
       timeout: 5s
       retries: 3

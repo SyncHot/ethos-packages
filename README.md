@@ -8,7 +8,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | Package | Version | UI | What it is |
 |---|---|---|---|
 | `backup-manager` 🔄 | 1.0.3 | native | Versioned backups for folders and Docker Compose projects. Dated hardlink snapshots, GFS retention, quick/deep verify, a restore wizard and optional… |
-| `domains` 🌐 | 1.2.1 | native | Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another… |
+| `domains` 🌐 | 1.2.2 | native | Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another… |
 | `download-manager` ⬇️ | 1.1.0 | native | HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window. |
 | `ethos-antivirus` 🛡️ | 2.1.6 | native | ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only… |
 | `ethos-books` 📚 | 1.2.0 | native | Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied… |
@@ -19,13 +19,15 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `ethos-git-diff` ⎇ | 1.0.1 | native | Side-by-side diff with partial (hunk and line) staging, commit box, pull/push and recent history for any Git repository on your shares. Opening a dif… |
 | `ethos-kanban` 🗂️ | 1.0.2 | native | Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Packages app: the board lives in the package's own service a… |
 | `ethos-media-enhance` 🎯 | 1.0.2 | engine | Face-aware video thumbnails for Files: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a pri… |
+| `ethos-monitor` 📈 | 1.0.0 | window 3001 | Watch the things a NAS is supposed to keep alive: web apps, routers, printers, cameras and other servers. Uptime Kuma pings HTTP, TCP, DNS and ICMP e… |
 | `ethos-music` 🎵 | 1.0.2 | native | Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared wi… |
 | `ethos-music-engine` 🎵 | 1.0.1 | engine | YouTube search, streaming and downloads for the Music app and the EthOS Music Android app. yt-dlp runs in a private environment that only this packag… |
 | `ethos-photos` 📷 | 1.0.3 | native | Photos for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer… |
+| `ethos-rss` 📰 | 1.0.0 | window 8080 | A news reader that lives on the NAS and keeps your feeds, read state and stars in one place instead of in a phone app's silo. FreshRSS fetches RSS/At… |
 | `ethos-shares` 📁 | 1.3.0 | native | Manage SMB shares, per-user and group access rules, and Samba credentials for existing Linux accounts. Includes permission masks, service status, and… |
 | `ethos-sticky-notes` 🗒️ | 2.0.0 | native | Per-account notes and checklist tasks: search, pin, archive, due dates, reminders with browser push, and a collapsible right-edge desktop ribbon. |
 | `ethos-surveillance` 📹 | 2.0.0 | native | Surveillance Station for EthOS: live HLS wall, continuous or scheduled recording with retention, timeline playback and MP4 export, masked motion zone… |
-| `ethos-sync` 🔁 | 1.0.0 | window 8384 | Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the midd… |
+| `ethos-sync` 🔁 | 1.0.1 | window 8384 | Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the midd… |
 | `ethos-video` 🎬 | 2.3.1 | native | Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for… |
 | `ethos-welcome` 🌅 | 1.0.4 | window 8090 | A tiny static welcome page for your NAS, served by nginx on port 8090. |
 | `tic-tac-toe` ❌ | 2.1.1 | native | A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port. |
@@ -112,9 +114,25 @@ topbar toggle switches `<html class="light">` / `<html class="dark">` at runtime
 
 Details and a checklist: [`.github/skills/package-theme/SKILL.md`](.github/skills/package-theme/SKILL.md).
 
+## Window UIs and ports
+
+A package with a web UI is embedded in an EthOS window by loading its own port, so the manifest
+must state whether that port is reachable on your network and whether the app brings a login:
+
+```json
+"ui": { "mode": "window", "port": 3001, "path": "/", "expose": "lan", "auth": "package" }
+```
+
+`expose` is `loopback` (default) or `lan`; `auth` is `package` or `none` and is required for `lan`.
+Package Center shows that in the detail dialog and asks for an explicit confirmation when a port
+has no login. A service that writes to `/mnt` or `/media` should run as the NAS account
+(`PUID: "${ETHOS_SERVICE_UID:-1000}"`) — EthOS passes `ETHOS_SERVICE_UID`/`ETHOS_SERVICE_GID` to
+`docker compose`.
+
 ## Rebuilding and signing
 
-The CLI lives in the EthOS NAS repository:
+The CLI lives in the EthOS NAS repository. `lint` enforces the catalog rules (pinned images,
+`restart:`, `ui.expose`/`ui.auth`, README drift) and `readme` regenerates the table above.
 
 ```bash
 cd ~/apps/compose/ethos-nas
@@ -127,6 +145,8 @@ cp ~/.ethos-pack/ethos-packages/repo.pub ~/apps/compose/ethos-packages/repo.pub
 .venv/bin/python scripts/ethos-pack build \
   --repo ~/apps/compose/ethos-packages \
   --base-url https://raw.githubusercontent.com/SyncHot/ethos-packages/main
+.venv/bin/python scripts/ethos-pack readme --repo ~/apps/compose/ethos-packages
+.venv/bin/python scripts/ethos-pack lint   --repo ~/apps/compose/ethos-packages
 .venv/bin/python scripts/ethos-pack sign \
   --repo ~/apps/compose/ethos-packages \
   --key ~/.ethos-pack/ethos-packages/repo.key

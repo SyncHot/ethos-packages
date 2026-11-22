@@ -1,0 +1,44 @@
+{
+  "schema": 2,
+  "id": "ethos-rss",
+  "name": "FreshRSS",
+  "version": "1.0.0",
+  "description": "A news reader that lives on the NAS and keeps your feeds, read state and stars in one place instead of in a phone app's silo. FreshRSS fetches RSS/Atom feeds on its own schedule and gives every device the same unread list. The first visit runs the installer and creates the administrator account; the UI opens in its own EthOS window on port 8080, and feeds and articles are stored in a package volume.",
+  "icon": "📰",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-rss/icon.svg",
+  "category": "productivity",
+  "author": "SyncHot",
+  "homepage": "https://freshrss.org",
+  "license": "AGPL-3.0-or-later",
+  "channel": "stable",
+  "min_ethos_version": "2.28.0",
+  "ui": {
+    "mode": "window",
+    "scheme": "http",
+    "port": 8080,
+    "path": "/",
+    "expose": "lan",
+    "auth": "package"
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 8080,
+    "path": "/i/"
+  },
+  "system_requires": [
+    "docker"
+  ],
+  "changelog": "1.0.0: first release — FreshRSS 1.30.4 pinned, SQLite database and feed cache in a package volume that survives updates, web UI on port 8080 (own login, created by the first-visit installer) and a container healthcheck. Needs outbound internet access to fetch feeds.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-rss/docker-compose.yml",
+    "sha256": "2721f791eb0966e09926dd727c282cc5bff1d9937a37977a7d86c7be3b4d03fe"
+  },
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-rss/icon.svg",
+      "sha256": "422db5df62d8a03a177e75af4a178671fc762f363c1f7ecbf8af192dfa713be2",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+services:
+  uptime-kuma:
+    # Pinned on purpose: the signed compose file must describe exactly what runs.
+    image: louislam/uptime-kuma:2.5.12
+    container_name: ethos-monitor
+    ports:
+      - "3001:3001"  # Web UI (own login, created on the first visit)
+    volumes:
+      # Monitors, history and notification settings survive updates.
+      - uptime-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      # The image ships Node, not curl; hit the UI and require a 200.
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3001/',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  uptime-data: {}
