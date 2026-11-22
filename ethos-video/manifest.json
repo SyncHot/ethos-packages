@@ -21,7 +21,7 @@
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/frontend/app.js",
-      "sha256": "4397d876ba044743a4a8136069bc719a07e1c5add5a94c3e6f7d18a7b53463e8",
+      "sha256": "a3dec47ada7a0bf2d957bce3e61a8d55716abcc9f92fd4557e22fd48d5827f6f",
       "path": "frontend/app.js",
       "mode": 420
     },
