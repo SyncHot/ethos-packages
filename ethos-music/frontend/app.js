@@ -1943,9 +1943,10 @@ export function renderMusicPage(body) {
             { label: 'Podcasty', ic: 'rss' }, { label: 'Radio', ic: 'radio' },
             { label: 'Biblioteka', ic: 'library' }, { label: 'Ustawienia', ic: 'settings' },
         ];
-        const nav = el('nav', { class: 'em-nav' });
+        const nav = el('nav', { class: 'em-nav', 'data-testid': 'em-nav' });
         items.forEach((it, i) => {
-            const b = el('button', { class: 'em-navitem' + (i === 0 ? ' active' : '') },
+            const b = el('button', { class: 'em-navitem' + (i === 0 ? ' active' : ''),
+                                     'data-testid': `em-nav-${i}` },
                 el('span', { html: icon(it.ic, 24) }), it.label);
             b.addEventListener('click', () => setTab(i));
             nav.appendChild(b);
@@ -1965,11 +1966,11 @@ export function renderMusicPage(body) {
         miniBar.append(thumb, el('div', { class: 'em-mini-main' },
             el('div', { class: 'em-mini-title' }, t.title),
             el('div', { class: 'em-mini-sub' }, t.artist || '\u00a0')));
-        const prevB = el('button', { class: 'em-iconbtn', title: 'Poprzedni' }, icon('prev', 22));
+        const prevB = el('button', { class: 'em-iconbtn', title: 'Poprzedni', 'data-testid': 'em-mini-prev' }, icon('prev', 22));
         prevB.addEventListener('click', (e) => { e.stopPropagation(); engine.prev(); });
-        const playB = el('button', { class: 'em-iconbtn', title: 'Odtwórz / wstrzymaj' }, icon(engine.isPlaying ? 'pause' : 'play', 24));
+        const playB = el('button', { class: 'em-iconbtn', title: 'Odtwórz / wstrzymaj', 'data-testid': 'em-mini-play' }, icon(engine.isPlaying ? 'pause' : 'play', 24));
         playB.addEventListener('click', (e) => { e.stopPropagation(); engine.toggle(); });
-        const nextB = el('button', { class: 'em-iconbtn', title: 'Następny' }, icon('next', 22));
+        const nextB = el('button', { class: 'em-iconbtn', title: 'Następny', 'data-testid': 'em-mini-next' }, icon('next', 22));
         nextB.addEventListener('click', (e) => { e.stopPropagation(); engine.next(); });
         miniBar.append(prevB, playB, nextB);
         miniBar.onclick = () => openFullPlayer();
@@ -1999,15 +2000,15 @@ export function renderMusicPage(body) {
         const inner = el('div', { class: 'em-full-inner' });
         // header
         const head = el('div', { class: 'em-full-head' });
-        const collapse = el('button', { class: 'em-iconbtn', title: 'Zwiń' }, icon('chevronDown', 26));
+        const collapse = el('button', { class: 'em-iconbtn', title: 'Zwiń', 'data-testid': 'em-fp-collapse' }, icon('chevronDown', 26));
         collapse.addEventListener('click', closeFullPlayer);
         head.appendChild(collapse);
         head.appendChild(el('div', { class: 'em-full-label' }, 'Odtwarzanie teraz'));
-        const queueBtn = el('button', { class: 'em-iconbtn', title: 'Kolejka' }, icon('queue', 24));
+        const queueBtn = el('button', { class: 'em-iconbtn', title: 'Kolejka', 'data-testid': 'em-fp-queue' }, icon('queue', 24));
         queueBtn.addEventListener('click', () => toggleQueuePanel(fp));
         head.appendChild(queueBtn);
         // Wyłącznik czasowy — parity z aplikacją Android (15 → 30 → 60 → wył.).
-        const sleepBtn = el('button', { class: 'em-iconbtn', title: 'Wyłącznik czasowy' }, icon('timer', 22));
+        const sleepBtn = el('button', { class: 'em-iconbtn', title: 'Wyłącznik czasowy', 'data-testid': 'em-fp-sleep' }, icon('timer', 22));
         const paintSleepBtn = () => { sleepBtn.style.color = engine.sleepMinutes ? C.green : ''; };
         sleepBtn.addEventListener('click', () => {
             const next = engine.sleepMinutes === 0 ? 15 : engine.sleepMinutes === 15 ? 30 : engine.sleepMinutes === 30 ? 60 : 0;
@@ -2059,15 +2060,15 @@ export function renderMusicPage(body) {
 
         // controls
         const ctrls = el('div', { class: 'em-controls' });
-        const shufB = el('button', { class: 'em-ctl' + (engine.shuffle ? ' on' : ''), title: 'Losowo' }, icon('shuffle', 20));
+        const shufB = el('button', { class: 'em-ctl' + (engine.shuffle ? ' on' : ''), title: 'Losowo', 'data-testid': 'em-fp-shuffle' }, icon('shuffle', 20));
         shufB.addEventListener('click', () => engine.toggleShuffle());
-        const prevB = el('button', { class: 'em-ctl', title: 'Poprzedni' }, icon('prev', 28));
+        const prevB = el('button', { class: 'em-ctl', title: 'Poprzedni', 'data-testid': 'em-fp-prev' }, icon('prev', 28));
         prevB.addEventListener('click', () => engine.prev());
-        const playB = el('button', { class: 'em-playbig', title: 'Odtwórz / wstrzymaj' }, icon(engine.isPlaying ? 'pause' : 'play', 30));
+        const playB = el('button', { class: 'em-playbig', title: 'Odtwórz / wstrzymaj', 'data-testid': 'em-fp-play' }, icon(engine.isPlaying ? 'pause' : 'play', 30));
         playB.addEventListener('click', () => engine.toggle());
-        const nextB = el('button', { class: 'em-ctl', title: 'Następny' }, icon('next', 28));
+        const nextB = el('button', { class: 'em-ctl', title: 'Następny', 'data-testid': 'em-fp-next' }, icon('next', 28));
         nextB.addEventListener('click', () => engine.next());
-        const repB = el('button', { class: 'em-ctl' + (engine.repeat !== 'off' ? ' on' : ''), title: 'Powtarzaj' }, icon('repeat', 20) + (engine.repeat === 'one' ? '<span style="position:absolute;font-size:9px;font-weight:800;margin-top:-14px">1</span>' : ''));
+        const repB = el('button', { class: 'em-ctl' + (engine.repeat !== 'off' ? ' on' : ''), title: 'Powtarzaj', 'data-testid': 'em-fp-repeat' }, icon('repeat', 20) + (engine.repeat === 'one' ? '<span style="position:absolute;font-size:9px;font-weight:800;margin-top:-14px">1</span>' : ''));
         repB.addEventListener('click', () => engine.cycleRepeat());
         ctrls.append(shufB, prevB, playB, nextB, repB);
         inner.appendChild(ctrls);

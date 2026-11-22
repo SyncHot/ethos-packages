@@ -20,7 +20,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `ethos-kanban` 🗂️ | 1.0.2 | native | Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Packages app: the board lives in the package's own service a… |
 | `ethos-media-enhance` 🎯 | 1.0.2 | engine | Face-aware video thumbnails for Files: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a pri… |
 | `ethos-monitor` 📈 | 1.0.0 | window 3001 | Watch the things a NAS is supposed to keep alive: web apps, routers, printers, cameras and other servers. Uptime Kuma pings HTTP, TCP, DNS and ICMP e… |
-| `ethos-music` 🎵 | 1.0.2 | native | Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared wi… |
+| `ethos-music` 🎵 | 1.0.3 | native | Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared wi… |
 | `ethos-music-engine` 🎵 | 1.0.1 | engine | YouTube search, streaming and downloads for the Music app and the EthOS Music Android app. yt-dlp runs in a private environment that only this packag… |
 | `ethos-photos` 📷 | 1.0.3 | native | Photos for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer… |
 | `ethos-rss` 📰 | 1.0.0 | window 8080 | A news reader that lives on the NAS and keeps your feeds, read state and stars in one place instead of in a phone app's silo. FreshRSS fetches RSS/At… |
