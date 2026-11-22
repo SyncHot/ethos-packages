@@ -35,6 +35,7 @@ const ICON = {
     trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
     alert: '<path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.5M12 17.2h.01"/>',
     engine: '<path d="M4 8h16v9H4zM7 8V5h10v3M8 17v3M16 17v3M2 12h2M20 12h2"/>',
+    share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/>',
 };
 
 function svg(name, size = 18) {
@@ -117,6 +118,7 @@ class VideoStation {
             home: { continue_watching: [], recently_added: [] },
             resume: {},
             list: new Set(),
+            shared: [],
             library: null,
             libraryAt: 0,
             folder: null,
@@ -189,6 +191,7 @@ class VideoStation {
                     <button type="button" class="vd-link" data-action="nav" data-mode="series" data-testid="vd-nav-series">Series</button>
                     <button type="button" class="vd-link" data-action="nav" data-mode="library" data-testid="vd-nav-library">Library</button>
                     <button type="button" class="vd-link" data-action="nav" data-mode="mylist" data-testid="vd-nav-list">My List</button>
+                    <button type="button" class="vd-link" data-action="nav" data-mode="shared" data-testid="vd-nav-shared">Shared</button>
                 </nav>
                 <div class="vd-actions">
                     <button type="button" class="vd-icon-btn" data-action="search" title="Search (Ctrl+K)" data-testid="vd-search-open">${svg('search')}</button>
@@ -204,6 +207,7 @@ class VideoStation {
                 <button type="button" data-action="nav" data-mode="movies" data-testid="vd-bottom-movies">${svg('film', 20)}<span>Movies</span></button>
                 <button type="button" data-action="nav" data-mode="series" data-testid="vd-bottom-series">${svg('tv', 20)}<span>Series</span></button>
                 <button type="button" data-action="nav" data-mode="library" data-testid="vd-bottom-library">${svg('folder', 20)}<span>Library</span></button>
+                <button type="button" data-action="nav" data-mode="shared" data-testid="vd-bottom-shared">${svg('share', 20)}<span>Shared</span></button>
                 <button type="button" data-action="nav" data-mode="settings" data-testid="vd-bottom-settings">${svg('settings', 20)}<span>More</span></button>
             </nav>
         </div>`;
@@ -546,6 +550,7 @@ class VideoStation {
             s.truncated = !!data.truncated;
             s.sort = s.cfg?.options?.sort || 'name';
             s.layout = s.cfg?.options?.view === 'list' ? 'list' : 'grid';
+            this.loadShared();
             this.updateChrome();
             this.migrateLocalList();
             // Load the full library in the background for Movies/Series/Search.
@@ -557,6 +562,14 @@ class VideoStation {
             this.state.loading = false;
             this.renderView();
         }
+    }
+
+    async loadShared() {
+        try {
+            const data = await this.apiJson('/api/sharing/incoming?kind=path');
+            this.state.shared = data.grants || [];
+        } catch { /* older core or transient failure — keep the previous list */ }
+        if (this.state.mode === 'shared' || this.state.mode === 'settings') this.renderView();
     }
 
     async ensureLibrary(force = false) {
@@ -625,6 +638,7 @@ class VideoStation {
             back: extra.back ?? this.state.back,
         });
         if (mode !== 'search') this.state.query = '';
+        if (mode === 'shared') this.loadShared();
         this.main.scrollTop = 0;
         this.updateChrome();
         this.renderView();
@@ -655,6 +669,7 @@ class VideoStation {
             case 'series': html = s.show ? this.showDetailHtml(s.show) : this.seriesHtml(); break;
             case 'library': html = this.libraryHtml(); break;
             case 'mylist': html = this.myListHtml(); break;
+            case 'shared': html = this.sharedHtml(); break;
             case 'search': html = this.searchHtml(); break;
             case 'settings': html = this.settingsHtml(); break;
             case 'detail': html = this.detailHtml(); break;
@@ -991,19 +1006,35 @@ class VideoStation {
 
     folderHtml(folder) {
         const s = this.state;
+        const sharedGrant = (s.shared || []).find((g) => folder.path === g.resource || folder.path.startsWith(g.resource + '/'));
         return `<div class="vd-page" data-testid="vd-folder">
             <div class="vd-crumbs">
                 <button type="button" data-action="nav" data-mode="library">Library</button>
                 <span>/</span><b>${this.esc(basename(folder.path))}</b>
             </div>
             <div class="vd-page-head">
-                <div><h1>${this.esc(basename(folder.path))}</h1><p>${(folder.videos || []).length} videos · ${(folder.folders || []).length} folders</p></div>
+                <div><h1>${this.esc(basename(folder.path))}</h1><p>${(folder.videos || []).length} videos · ${(folder.folders || []).length} folders ${sharedGrant ? `<span class="vd-tag">Read-only · shared by ${this.esc(sharedGrant.owner)}</span>` : ''}</p></div>
                 <div class="vd-grow"></div>
                 <button class="vd-btn" type="button" data-action="back">${svg('back')} Back</button>
             </div>
             ${folder.folders?.length ? `<div class="vd-folders">${folder.folders.map((f) => `<button class="vd-folder" type="button" data-action="open-folder" data-path="${this.attr(f.path)}">
                 ${svg('folder', 20)}<span>${this.esc(f.name)}</span></button>`).join('')}</div>` : ''}
             ${this.collectionHtml((folder.videos || []).map((v) => v), 'library')}
+        </div>`;
+    }
+
+    // ── Shared with me ───────────────────────────────────────────────────────
+
+    sharedHtml() {
+        const grants = this.state.shared || [];
+        return `<div class="vd-page" data-testid="vd-shared">
+            <div class="vd-page-head"><div><h1>Shared with me</h1><p>Video folders other accounts made available to you — view-only.</p></div></div>
+            ${grants.length ? `<section class="vd-panel"><h2>Folders</h2>
+                ${grants.map((g) => `<div class="vd-rootrow"><code>${this.esc(g.resource)}</code>
+                    <span class="vd-tag">${this.esc(g.owner)}</span>
+                    <button class="vd-btn small" type="button" data-action="open-shared" data-path="${this.attr(g.resource)}">Open</button>
+                </div>`).join('')}</section>`
+                : `<div class="vd-empty"><b>Nothing shared with you</b>When another account shares a video folder, it appears here.</div>`}
         </div>`;
     }
 
@@ -1121,11 +1152,19 @@ class VideoStation {
 
             <section class="vd-panel"><h2>Library</h2>
                 ${(s.roots || []).map((r) => `<div class="vd-rootrow"><code>${this.esc(r)}</code>
+                    <button class="vd-btn small" type="button" data-action="share-root" data-path="${this.attr(r)}">${svg('share', 12)} Share</button>
                     <button class="vd-btn small danger" type="button" data-action="remove-root" data-path="${this.attr(r)}">${svg('trash', 12)} Remove</button>
                 </div>`).join('') || '<p>No root folders yet.</p>'}
                 <div class="vd-actionsbar" style="border-top:0;margin-top:4px;padding-top:4px">
                     <button class="vd-btn primary" type="button" data-action="add-folder">${svg('plus')} Add folder</button>
                 </div>
+            </section>
+
+            <section class="vd-panel" data-testid="vd-settings-shared"><h2>Shared with me</h2>
+                ${(s.shared || []).length ? (s.shared || []).map((g) => `<div class="vd-rootrow"><code>${this.esc(g.resource)}</code>
+                    <span class="vd-tag">${this.esc(g.owner)}</span>
+                    <button class="vd-btn small" type="button" data-action="open-shared" data-path="${this.attr(g.resource)}">Open</button>
+                </div>`).join('') : '<p>Nothing shared with you yet.</p>'}
             </section>
 
             <section class="vd-panel"><h2>Playback</h2>
@@ -1465,7 +1504,8 @@ class VideoStation {
             base: 0, duration: 0, info: null, audioIdx: 0, audioTracks: [], subs: [], subIdx: -1,
             quality: state.cfg?.options?.quality || 'balanced', hls: null, session: null,
             playWhenReady: true, ended: false, lastSave: 0, wakeLock: null, stats: false,
-            opening: true, hideTimer: null, seekReloading: false,
+            opening: true, hideTimer: null, seekReloading: false, hlsRetried: false, lastError: null,
+            acodec: null, noAudioNoticed: false,
         };
         this.player = player;
         this.bindPlayer(player);
@@ -1536,23 +1576,52 @@ class VideoStation {
 
     transcodeUrl(path, t = 0, a = 0, q = 'balanced') {
         return `/api/videos/transcode?path=${encodeURIComponent(path)}${t > 0 ? `&t=${t.toFixed(3)}` : ''}`
-            + `&a=${a}&q=${encodeURIComponent(q)}&token=${encodeURIComponent(this.token)}`;
+            + `&a=${a}&q=${encodeURIComponent(q)}&acodec=${this.audioCodec()}&token=${encodeURIComponent(this.token)}`;
+    }
+
+    audioCodec() {
+        // Chromium builds without the proprietary AAC decoder still decode Opus
+        // in MP4; if neither works the movie plays without sound instead of
+        // failing with "The stream could not be played".
+        if (this._audioCodec) return this._audioCodec;
+        let hasMse = false;
+        try { hasMse = typeof window.MediaSource !== 'undefined'; } catch { hasMse = false; }
+        if (!hasMse) { this._audioCodec = 'aac'; return this._audioCodec; }
+        const probe = (type) => {
+            try { return !!window.MediaSource.isTypeSupported(type); } catch { return false; }
+        };
+        this._audioCodec = probe('audio/mp4; codecs="mp4a.40.2"') ? 'aac'
+            : probe('audio/mp4; codecs="opus"') ? 'opus' : 'none';
+        this.ctx.logger.info('Playback audio codec', this._audioCodec);
+        return this._audioCodec;
     }
 
     withToken(url) {
         return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(this.token)}`;
     }
 
-    async startHls(player, start, audioIdx) {
+    async startHls(player, start, audioIdx, { allowLegacy = true } = {}) {
         player.seekReloading = true;
         try {
             const data = await this.apiPost('/api/videos/hls', {
-                path: player.item.path, t: Math.max(0, start || 0), a: audioIdx || 0, q: player.quality,
+                path: player.item.path, t: Math.max(0, start || 0), a: audioIdx || 0,
+                q: player.quality, acodec: this.audioCodec(),
             });
-            if (this.player !== player) return;
+            if (this.player !== player) {
+                // Spóźniona odpowiedź po zamknięciu odtwarzacza — oddaj sesję,
+                // żeby nie blokowała limitu użytkownika przez 2 minuty.
+                this.ctx.apiFetch(`/api/videos/hls/${encodeURIComponent(data.session)}/stop`,
+                    { method: 'POST' }).catch(() => {});
+                return;
+            }
             player.session = data.session;
             player.mode = data.mode || player.mode;
             player.encoder = data.encoder || player.encoder;
+            player.acodec = data.acodec || player.acodec;
+            if (player.acodec === 'none' && !player.noAudioNoticed) {
+                player.noAudioNoticed = true;
+                this.toast('This browser cannot decode the audio — playing without sound', 'warning');
+            }
             player.decode = data.decode || player.decode;
             player.base = Math.max(0, Number(start) || 0);
             player.live = true;
@@ -1562,7 +1631,9 @@ class VideoStation {
             player.video.play().catch(() => {});
         } catch (err) {
             if (this.player !== player) return;
-            this.ctx.logger.warn('HLS start failed, falling back to the legacy pipe', String(err));
+            player.lastError = err?.message || String(err);
+            this.ctx.logger.warn('HLS start failed', String(err));
+            if (!allowLegacy) throw err;
             player.live = true;
             player.encoder = this.state.status?.encoder || null;
             player.video.src = this.transcodeUrl(player.item.path, player.base, player.audioIdx, player.quality);
@@ -1576,12 +1647,19 @@ class VideoStation {
 
     async attachPlaylist(player, url) {
         const video = player.video;
-        const nativeHls = video.canPlayType('application/vnd.apple.mpegurl');
-        if (nativeHls) {
+        // Prefer hls.js whenever MSE exists: the bounded HLS window is a live
+        // stream, and the native path (Safari/Android Chrome) refuses seeks
+        // outside the window with a bare media error.
+        let hasMse = false;
+        try { hasMse = typeof window.MediaSource !== 'undefined'; } catch { hasMse = false; }
+        let Hls = null;
+        if (hasMse) {
+            try { Hls = await this.loadHls(); } catch { Hls = null; }
+        }
+        if (!Hls) {
             video.src = url;
             return;
         }
-        const Hls = await this.loadHls();
         if (this.player !== player) return;
         if (player.hls) {
             player.hls.destroy();
@@ -1591,20 +1669,52 @@ class VideoStation {
         player.hls = hls;
         hls.on(Hls.Events.ERROR, (_event, data) => {
             if (!data?.fatal) return;
-            this.ctx.logger.error('HLS playback error', `${data.type}/${data.details}`);
-            player.hls?.destroy();
-            player.hls = null;
-            // Nie zostawiaj osieroconej sesji (blokuje kolejny start u tego użytkownika).
-            this.stopHlsSession(player);
-            if (player.video.src !== this.transcodeUrl(player.item.path, player.base, player.audioIdx, player.quality)) {
-                player.live = true;
-                player.video.src = this.transcodeUrl(player.item.path, player.base, player.audioIdx, player.quality);
-                player.video.play().catch(() => {});
-                this.toast('Stream error — switched to the legacy player');
-            }
+            const detail = `${data.type}/${data.details}${data.reason ? ` — ${data.reason}` : ''}`;
+            // Bez tego wpisu awaria odtwarzania była niewidoczna w logach EthOS.
+            this.ctx.logger.error('HLS playback error', detail);
+            player.lastError = detail;
+            this.recoverPlayback(player);
         });
         hls.loadSource(url);
         hls.attachMedia(video);
+    }
+
+    async recoverPlayback(player) {
+        if (this.player !== player) return;
+        if (player.hls) { try { player.hls.destroy(); } catch { /* ignore */ } player.hls = null; }
+        await this.stopHlsSession(player);
+        if (this.player !== player) return;
+        if (!player.hlsRetried) {
+            player.hlsRetried = true;
+            this.toast('Retrying the stream…');
+            try {
+                await this.startHls(player, this.absTime(player), player.audioIdx, { allowLegacy: false });
+                return;
+            } catch (err) {
+                player.lastError = err?.message || String(err);
+                this.ctx.logger.error('HLS retry failed', player.lastError);
+                if (this.player !== player) return;
+            }
+        }
+        player.live = true;
+        player.encoder = this.state.status?.encoder || null;
+        player.video.src = this.transcodeUrl(player.item.path, player.base, player.audioIdx, player.quality);
+        player.video.play().catch(() => {});
+        this.toast('Stream error — switched to the legacy player', 'warning');
+    }
+
+    async retryPlayer() {
+        const player = this.player;
+        if (!player) return;
+        player.layer.querySelector('.vd-error')?.remove();
+        player.hlsRetried = false;
+        player.lastError = null;
+        if (player.live) {
+            await this.startHls(player, this.absTime(player), player.audioIdx);
+            return;
+        }
+        player.video.src = this.streamUrl(player.item.path);
+        player.video.play().catch(() => {});
     }
 
     loadHls() {
@@ -1612,7 +1722,10 @@ class VideoStation {
         if (this._hlsPromise) return this._hlsPromise;
         this._hlsPromise = new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = '/api/packages/ethos-video/ui/frontend/hls.min.js';
+            // Script tags cannot send the Authorization header; the query token
+            // also covers header/localStorage-only sessions (no auth cookie).
+            const asset = '/api/packages/ethos-video/ui/frontend/hls.min.js';
+            script.src = this.token ? this.withToken(asset) : asset;
             script.onload = () => window.Hls ? resolve(window.Hls) : reject(new Error('hls.js did not load'));
             script.onerror = () => reject(new Error('Could not load the HLS player'));
             document.head.appendChild(script);
@@ -1702,6 +1815,11 @@ class VideoStation {
         video.addEventListener('ended', () => this.finishPlayback(player));
         video.addEventListener('error', () => {
             if (player.opening) return;
+            const err = video.error;
+            const detail = `code=${err ? err.code : '?'} message=${err ? err.message : ''} `
+                + `mode=${player.mode} src=${String(video.currentSrc || video.src || '').slice(0, 120)}`;
+            this.ctx.logger.error('Video element error', detail);
+            if (err?.message) player.lastError = err.message;
             if (player.live && !player.seekReloading) {
                 this.renderPlayerError(player, 'The stream could not be played. Try a lower quality or the legacy player.');
             }
@@ -1887,7 +2005,7 @@ class VideoStation {
             audio.innerHTML = player.audioTracks.length
                 ? player.audioTracks.map((t, i) => `<option value="${i}" ${i === player.audioIdx ? 'selected' : ''}>${this.esc(this.trackLabel(t))}</option>`).join('')
                 : '<option>Audio</option>';
-            audio.disabled = player.audioTracks.length < 2;
+            audio.disabled = player.audioTracks.length < 2 || this.audioCodec() === 'none';
         }
         const sub = player.layer.querySelector('[data-role="sub"]');
         if (sub) {
@@ -2034,10 +2152,16 @@ class VideoStation {
     renderPlayerError(player, message) {
         const ui = player.layer.querySelector('[data-role="ui"]');
         if (!ui) return;
+        player.layer.querySelector('.vd-error')?.remove();
         const box = document.createElement('div');
         box.className = 'vd-error';
         box.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;max-width:440px;background:rgba(20,10,10,.92)';
-        box.innerHTML = `${this.esc(message)}<div style="margin-top:10px"><button class="vd-btn small" type="button" data-action="close-player">Back</button></div>`;
+        const detail = player.lastError
+            ? `<div style="margin-top:8px;font-size:10.5px;line-height:1.45;opacity:.75;word-break:break-word">${this.esc(String(player.lastError).slice(0, 400))}</div>`
+            : '';
+        box.innerHTML = `${this.esc(message)}${detail}<div style="margin-top:10px;display:flex;gap:8px">
+            <button class="vd-btn small" type="button" data-action="player-retry">Try again</button>
+            <button class="vd-btn small" type="button" data-action="close-player">Back</button></div>`;
         player.layer.appendChild(box);
     }
 
@@ -2182,6 +2306,18 @@ class VideoStation {
         } else if (action === 'search') {
             this.state.back = { mode: this.state.mode, path: this.state.path, show: this.state.show, detail: this.state.detail };
             this.navigate('search');
+        } else if (action === 'open-shared') {
+            this.state.path = path;
+            this.state.folder = null;
+            this.state.folderLoading = false;
+            this.state.mode = 'library';
+            this.main.scrollTop = 0;
+            this.updateChrome();
+            this.loadFolder(path);
+        } else if (action === 'share-root') {
+            this.ctx.share?.open({ kind: 'path', resource: path })
+                .then(() => this.loadShared())
+                .catch((err) => this.ctx.logger.error('Could not share folder', String(err)));
         } else if (action === 'open-folder') {
             this.state.path = path;
             this.state.folder = null;
@@ -2221,6 +2357,8 @@ class VideoStation {
             this.renderView();
         } else if (action === 'close-player') {
             this.stopPlayer();
+        } else if (action === 'player-retry') {
+            this.retryPlayer();
         } else if (action === 'player-toggle') {
             this.togglePlay(this.player);
         } else if (action === 'player-seek') {
