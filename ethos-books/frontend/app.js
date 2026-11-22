@@ -21,6 +21,7 @@ const SKIP_DIRS = new Set(['@eaDir', '#recycle', '.@__thumb', 'lost+found', '.Tr
 const MAX_DEPTH = 8;
 const MAX_NODES = 20000;
 const MAX_META_BYTES = 150 * 1024 * 1024;
+const MAX_AUDIO_META = 400;      // metadata reads per scan (new files only)
 const SCAN_BATCH = 100;
 
 const READ_THEMES = {
@@ -1012,6 +1013,55 @@ async function scanOne(root, task, shared = false) {
         });
     }
 
+    // Durations power “time left”, the progress percentage and the phone
+    // player. Only new/changed tracks are opened; a rescan reuses stored values.
+    const knownTracks = new Map();
+    for (const book of (_state.library.books || [])) {
+        for (const track of (book.tracks || [])) {
+            if (Number(track.duration) > 0) {
+                knownTracks.set(track.path, {
+                    duration: Number(track.duration),
+                    modified: Number(track.modified) || 0,
+                });
+            }
+        }
+    }
+    const pendingTracks = [];
+    for (const entry of entries) {
+        for (const track of (entry.tracks || [])) {
+            const known = knownTracks.get(track.path);
+            if (known && known.modified === (Number(track.modified) || 0)) track.duration = known.duration;
+            else pendingTracks.push(track);
+        }
+    }
+    if (pendingTracks.length) {
+        task.update({ detail: `Reading audio metadata · ${root}` });
+        await mapLimit(pendingTracks.slice(0, MAX_AUDIO_META), 4, async (track) => {
+            if (_state.scanCancel) return;
+            try { track.duration = await audioDuration(track.path); } catch { track.duration = 0; }
+        });
+    }
+
+    // Embedded artwork: ID3 APIC for MP3, `covr` for M4B/M4A. Shared titles
+    // skip covers — the service only stores covers for owned books.
+    if (!shared) {
+        const candidates = entries
+            .filter((entry) => (entry.tracks || []).length && !entry._cover)
+            .slice(0, MAX_AUDIO_META);
+        if (candidates.length) {
+            task.update({ detail: `Reading audio covers · ${root}` });
+            await mapLimit(candidates, 2, async (entry) => {
+                if (_state.scanCancel || entry._cover) return;
+                try {
+                    const cover = await audioCover(entry.tracks[0].path);
+                    if (cover) entry._cover = cover;
+                } catch (err) {
+                    log.debug('audio cover failed', `${entry.path}: ${String(err?.message || err)}`);
+                }
+            });
+        }
+    }
+
     const sourceBooks = shared ? (_state.library.shared_books || []) : (_state.library.books || []);
     const known = sourceBooks.filter((book) => under(book.path, root)).map((book) => book.path);
     const seen = new Set(entries.map((entry) => entry.path));
@@ -1053,7 +1103,10 @@ async function scanOne(root, task, shared = false) {
     for (const entry of withCover) {
         if (_state.scanCancel) break;
         try {
-            await json(`books/${idByPath.get(entry.path)}/cover`, { method: 'POST', body: { data: entry._cover, format: 'webp' } });
+            await json(`books/${idByPath.get(entry.path)}/cover`, {
+                method: 'POST',
+                body: { data: entry._cover.data, format: entry._cover.format },
+            });
         } catch (err) {
             log.debug('cover upload failed', `${entry.path}: ${String(err?.detail || err?.message || err)}`);
         }
@@ -1087,6 +1140,161 @@ function dirAuthor(dir, root) {
     if (!parent || parent === root || parent === '') return '';
     return baseName(parent);
 }
+
+// ── Audio metadata (duration + embedded cover) ───────────────────────────
+
+/** Run `worker` over `items` with at most `limit` promises in flight. */
+async function mapLimit(items, limit, worker) {
+    const results = new Array(items.length);
+    let cursor = 0;
+    const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+        for (;;) {
+            const index = cursor++;
+            if (index >= items.length) return;
+            results[index] = await worker(items[index], index);
+        }
+    });
+    await Promise.all(runners);
+    return results;
+}
+
+/** Duration of one audio file, read from metadata only (no full download). */
+function audioDuration(path) {
+    return new Promise((resolve) => {
+        const audio = new Audio();
+        let settled = false;
+        const finish = (value) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            try { audio.pause(); } catch { /* ignore */ }
+            audio.removeAttribute('src');
+            try { audio.load(); } catch { /* ignore */ }
+            resolve(value);
+        };
+        const timer = setTimeout(() => finish(0), 8000);
+        audio.preload = 'metadata';
+        audio.addEventListener('loadedmetadata', () => finish(Number(audio.duration) || 0), { once: true });
+        audio.addEventListener('error', () => finish(0), { once: true });
+        audio.src = mediaUrl(path);
+    });
+}
+
+function base64FromBytes(bytes) {
+    let binary = '';
+    const chunk = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + chunk));
+    }
+    return btoa(binary);
+}
+
+/** ID3v2 APIC (MP3) → {data, format}. */
+function id3Cover(bytes) {
+    if (bytes.length < 10) return null;
+    if (bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) return null;  // "ID3"
+    const version = bytes[3];
+    const size = ((bytes[6] & 0x7f) << 21) | ((bytes[7] & 0x7f) << 14)
+        | ((bytes[8] & 0x7f) << 7) | (bytes[9] & 0x7f);
+    let offset = 10;
+    if (bytes[5] & 0x40) {  // extended header
+        if (version >= 4) {
+            const ext = ((bytes[offset] & 0x7f) << 21) | ((bytes[offset + 1] & 0x7f) << 14)
+                | ((bytes[offset + 2] & 0x7f) << 7) | (bytes[offset + 3] & 0x7f);
+            offset += ext;
+        } else {
+            const ext = (bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
+            offset += 4 + ext;
+        }
+    }
+    const end = Math.min(bytes.length, 10 + size);
+    while (offset + 10 <= end) {
+        const id = String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]);
+        if (!/^[A-Z0-9]{4}$/.test(id)) return null;
+        const frameSize = version >= 4
+            ? ((bytes[offset + 4] & 0x7f) << 21) | ((bytes[offset + 5] & 0x7f) << 14)
+                | ((bytes[offset + 6] & 0x7f) << 7) | (bytes[offset + 7] & 0x7f)
+            : (bytes[offset + 4] << 24) | (bytes[offset + 5] << 16) | (bytes[offset + 6] << 8) | bytes[offset + 7];
+        if (frameSize <= 0) return null;
+        if (id === 'APIC') {
+            let position = offset + 10;
+            const encoding = bytes[position];
+            position += 1;
+            let mime = '';
+            while (position < end && bytes[position] !== 0) {
+                mime += String.fromCharCode(bytes[position]);
+                position += 1;
+            }
+            position += 1;  // MIME terminator
+            position += 1;  // picture type
+            if (encoding === 1 || encoding === 2) {
+                while (position + 1 < end && !(bytes[position] === 0 && bytes[position + 1] === 0)) position += 2;
+                position += 2;
+            } else {
+                while (position < end && bytes[position] !== 0) position += 1;
+                position += 1;
+            }
+            const frameEnd = Math.min(end, offset + 10 + frameSize);
+            const data = bytes.subarray(position, frameEnd);
+            if (!data.length || data.length > 500 * 1024) return null;
+            return { data: base64FromBytes(data), format: mime.includes('png') ? 'png' : 'jpg' };
+        }
+        offset += 10 + frameSize;
+    }
+    return null;
+}
+
+/** MP4 `covr` atom (M4B/M4A) → {data, format}. */
+function mp4Cover(bytes) {
+    for (let index = 4; index + 8 < bytes.length; index += 1) {
+        if (!(bytes[index] === 0x63 && bytes[index + 1] === 0x6f
+                && bytes[index + 2] === 0x76 && bytes[index + 3] === 0x72)) continue;  // "covr"
+        const boxSize = (bytes[index - 4] << 24) | (bytes[index - 3] << 16)
+            | (bytes[index - 2] << 8) | bytes[index - 1];
+        let position = index + 4;
+        const boxEnd = Math.min(bytes.length, index - 4 + boxSize);
+        while (position + 16 <= boxEnd) {
+            const childSize = (bytes[position] << 24) | (bytes[position + 1] << 16)
+                | (bytes[position + 2] << 8) | bytes[position + 3];
+            const type = String.fromCharCode(bytes[position + 4], bytes[position + 5],
+                bytes[position + 6], bytes[position + 7]);
+            if (childSize < 8) break;
+            if (type === 'data') {
+                const dataType = (bytes[position + 8] << 24) | (bytes[position + 9] << 16)
+                    | (bytes[position + 10] << 8) | bytes[position + 11];
+                const payload = bytes.subarray(position + 16, Math.min(boxEnd, position + childSize));
+                if (!payload.length || payload.length > 500 * 1024) return null;
+                return { data: base64FromBytes(payload), format: dataType === 14 ? 'png' : 'jpg' };
+            }
+            position += childSize;
+        }
+    }
+    return null;
+}
+
+/**
+ * Embedded cover of one audio file. Only the head and the tail are fetched:
+ * ID3 sits at the start of an MP3 and MP4 `covr` lives in `moov`, which
+ * ffmpeg often puts at the end. A 1 GB audiobook is never downloaded here.
+ */
+async function audioCover(path) {
+    const window = 512 * 1024;
+    const chunks = [];
+    for (const range of [`bytes=0-${window - 1}`, `bytes=-${window}`]) {
+        try {
+            const res = await _ctx.apiFetch(rawUrl(path), { headers: { Range: range } });
+            if (res.ok) chunks.push(new Uint8Array(await res.arrayBuffer()));
+        } catch (err) {
+            log.debug('audio cover range failed', `${path}: ${String(err?.message || err)}`);
+        }
+    }
+    for (const chunk of chunks) {
+        const cover = id3Cover(chunk) || mp4Cover(chunk);
+        if (cover) return cover;
+    }
+    return null;
+}
+
 
 // ── EPUB metadata & covers ──────────────────────────────────────────────────
 
@@ -1178,7 +1386,7 @@ async function epubMeta(path) {
         if (file) {
             try {
                 const blob = await file.async('blob');
-                meta.cover = await toWebpBase64(blob);
+                meta.cover = { data: await toWebpBase64(blob), format: 'webp' };
             } catch (err) {
                 log.debug('cover extraction failed', String(err?.message || err));
             }

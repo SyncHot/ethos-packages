@@ -22,6 +22,12 @@ The service never opens a book. It stores metadata, covers and reading positions
   copied into the package directory.
 - EPUB metadata (title, author, series, language, cover) is parsed in the browser with the vendored
   JSZip; the cover is downscaled to a 420 px WebP and posted to the service.
+- Audiobooks gain a **duration** per track (read from `<audio>` metadata, new/changed files only)
+  and the **embedded cover** is extracted from ID3 APIC (MP3) or the MP4 `covr` atom (M4B/M4A) by
+  fetching just the first/last 512 KB of the file — never the whole audiobook. The original
+  JPEG/PNG is stored as-is.
+- The phone client lives in the core at `/books` (`docs/books-pwa.md` in the EthOS NAS repo); the
+  desktop window stays the only place that scans folders.
 
 `DELETE /books/{id}` removes a title from the library only; the file on the NAS is untouched.
 
@@ -37,7 +43,7 @@ The UI calls `ctx.proxy(...)`, so every path below is
 | POST | `scan` | `{root, entries[], removed[], done}` | `{added, updated, removed, total, ids}` |
 | POST | `books/{id}/cover` | `{data: base64, format}` | book |
 | GET | `covers/{id}` | — | `image/webp` |
-| PUT | `books/{id}/progress` | `{percent, locator, position_s, finished}` | `{progress}` |
+| PUT | `books/{id}/progress` | `{percent, locator, position_s, finished, updated_at?}` | `{progress}` (newest write wins) |
 | PUT | `books/{id}/meta` | `{title, author, series, series_index}` | book |
 | DELETE | `books/{id}` | — | `{ok, removed}` |
 | GET/PUT | `settings` | reader/player preferences | `{settings}` |
@@ -45,6 +51,9 @@ The UI calls `ctx.proxy(...)`, so every path below is
 
 Limits: 20 000 titles, 64 folders, 500 scan entries per request, 512 KB covers per title, 2 000
 characters per metadata field. Paths must be absolute and inside `/home`, `/mnt` or `/media`.
+
+Every GET answers an `ETag`; send it back as `If-None-Match` to get `304 Not Modified` (the phone
+revalidates its library on each start). JSON responses use `Cache-Control: private, no-cache`.
 
 ## Readers
 

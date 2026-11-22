@@ -10,7 +10,7 @@ The catalog currently contains twenty-one packages:
 | `domains` 🌐 | 1.2.1 | native | Caddy reverse proxy with automatic Let's Encrypt certificates for your own domains |
 | `download-manager` ⬇️ | 1.0.4 | native | HTTP, magnet and debrid downloads with a priority queue (drag-and-drop), categories, a daily start window, bandwidth limits, RSS rules and watch folders; uses the core Download Station API |
 | `ethos-antivirus` 🛡️ | 2.1.5 | native | ClamAV scanner with quarantine, scan history, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
-| `ethos-books` 📚 | 1.0.0 | native | EPUB/PDF reader and audiobook player for books already on the NAS: folders are scanned through the core file API, progress and covers per account; ships a small venv service (`user_access`) |
+| `ethos-books` 📚 | 1.2.0 | native | EPUB/PDF reader and audiobook player for books already on the NAS: folders are scanned through the core file API, progress, durations and covers per account; the phone client is the core `/books` PWA; ships a small venv service (`user_access`) |
 | `ethos-cleaner` 🧹 | 1.0.1 | native | Disk space analyzer, biggest files and safe cleanup suggestions (trash, temp, caches, journal) through the core disk-clean API |
 | `ethos-docker` 🐳 | 1.0.4 | native | Containers, images, volumes and Compose projects; the Docker engine itself stays host software installed through the privileged helper |
 | `ethos-editor` ⌨️ | 1.0.1 | native | VS Code-style workbench: files and folders, tabs, find/replace, Source Control with inline git gutters, terminals, Problems/Output and Markdown preview |

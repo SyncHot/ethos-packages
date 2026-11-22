@@ -39,7 +39,7 @@ import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-TOOL_VERSION = "1.0.0"
+TOOL_VERSION = "1.2.0"
 PORT = int(os.environ.get("ETHOS_PACKAGE_PORT", "8089"))
 STATE_DIR = os.environ.get("ETHOS_PACKAGE_DATA_DIR") or os.getcwd()
 COVER_DIR = os.path.join(STATE_DIR, "covers")
@@ -200,6 +200,7 @@ def _clean_tracks(raw) -> list:
             "path": path,
             "title": _text(item.get("title"), 300),
             "size": _clean_int(item.get("size") or 0, 0, 1 << 40),
+            "duration": round(_clean_float(item.get("duration") or 0, 0.0, 10**7), 1),
             "modified": _clean_float(item.get("modified") or 0, 0, 10**11),
         })
     return tracks
@@ -235,6 +236,7 @@ def _clean_book(raw) -> dict | None:
             book["tracks"] = _clean_tracks(raw.get("tracks"))
             if book["tracks"]:
                 book["size"] = sum(t["size"] for t in book["tracks"])
+                book["duration_s"] = round(sum(t["duration"] for t in book["tracks"]), 1)
         return book
     except ApiError:
         return None
@@ -250,6 +252,17 @@ def _clean_progress(raw) -> dict:
         "finished": bool(raw.get("finished")),
         "updated_at": _text(raw.get("updated_at"), 40) or _now(),
     }
+
+
+def _ts(value) -> float:
+    """ISO timestamp → epoch seconds; unparseable values sort first (oldest)."""
+    text = str(value or "").strip()
+    if not text:
+        return 0.0
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return 0.0
 
 
 def _clean_settings(raw) -> dict:
@@ -581,7 +594,12 @@ def save_progress(user: str, book_id: str, payload: dict) -> dict:
         store = _load(PROGRESS_FILE)
         progress = _user_progress(store, user)
         record = _clean_progress(payload)
-        record["updated_at"] = _now()
+        existing = progress.get(book_id) or {}
+        # Two devices can flush a position for the same book. The newest write
+        # wins; a late flush from a phone that was offline must not rewind the
+        # position the desktop reached afterwards.
+        if existing and _ts(record.get("updated_at")) < _ts(existing.get("updated_at")):
+            return {"progress": existing, "skipped": True}
         progress[book_id] = record
         _save(PROGRESS_FILE, store)
         return {"progress": record}
@@ -678,7 +696,7 @@ def _dispatch(method: str, route: str, user: str, payload: dict):
 class Handler(BaseHTTPRequestHandler):
     server_version = f"EthosBooks/{TOOL_VERSION}"
 
-    def _reply(self, status: int, payload) -> None:
+    def _reply(self, status: int, payload, inm: str = "") -> None:
         if isinstance(payload, tuple) and len(payload) == 2 and isinstance(payload[0], bytes):
             body, media = payload
             self.send_response(status)
@@ -690,10 +708,19 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
         body = json.dumps(payload).encode()
+        tag = hashlib.sha1(body).hexdigest()
+        if inm and inm.strip() in (tag, f'"{tag}"'):
+            # The phone revalidates the library on every start; 304 keeps it
+            # cheap once nothing changed.
+            self.send_response(304)
+            self.send_header("ETag", f'"{tag}"')
+            self.end_headers()
+            return
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", "private, no-cache")
+        self.send_header("ETag", f'"{tag}"')
         self.end_headers()
         self.wfile.write(body)
 
@@ -721,7 +748,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ApiError("Authentication required", 401)
             payload = self._payload() if method in ("POST", "PUT") else {}
             status, body = _dispatch(method, self.path, user, payload)
-            self._reply(status, body)
+            self._reply(status, body, inm=self.headers.get("If-None-Match") or "")
         except ApiError as exc:
             self._reply(exc.status, {"detail": exc.detail})
         except Exception as exc:  # noqa: BLE001 — a package must never crash
