@@ -36,6 +36,7 @@ const ICON = {
     alert: '<path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.5M12 17.2h.01"/>',
     engine: '<path d="M4 8h16v9H4zM7 8V5h10v3M8 17v3M16 17v3M2 12h2M20 12h2"/>',
     share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/>',
+    download: '<path d="M12 4v10M8 10.5 12 15l4-4.5"/><path d="M5 19h14"/>',
 };
 
 function svg(name, size = 18) {
@@ -123,6 +124,12 @@ class VideoStation {
             sharedAt: 0,
             library: null,
             libraryAt: 0,
+            // Offline download queue (shared with the /videos phone PWA).
+            downloads: [],
+            downloadsAt: 0,
+            downloadTimer: null,
+            downloadQuality: 'balanced',
+            downloadQualities: [],
             folder: null,
             roots: [],
             folders: [],
@@ -173,6 +180,7 @@ class VideoStation {
     destroy() {
         this.abort.abort();
         this.stopPlayer({ quiet: true });
+        if (this.state.downloadTimer) { clearInterval(this.state.downloadTimer); this.state.downloadTimer = null; }
         if (this.keyHandler) document.removeEventListener('keydown', this.keyHandler);
         if (this.onScroll && this.main) this.main.removeEventListener('scroll', this.onScroll);
         if (this.pageHide) window.removeEventListener('pagehide', this.pageHide);
@@ -194,8 +202,10 @@ class VideoStation {
                     <button type="button" class="vd-link" data-action="nav" data-mode="library" data-testid="vd-nav-library">Library</button>
                     <button type="button" class="vd-link" data-action="nav" data-mode="mylist" data-testid="vd-nav-list">My List</button>
                     <button type="button" class="vd-link" data-action="nav" data-mode="shared" data-testid="vd-nav-shared">Shared</button>
+                    <button type="button" class="vd-link" data-action="nav" data-mode="downloads" data-testid="vd-nav-downloads">Downloads</button>
                 </nav>
                 <div class="vd-actions">
+                    <button type="button" class="vd-icon-btn" data-action="nav" data-mode="downloads" title="Downloads" data-testid="vd-downloads-open">${svg('download')}</button>
                     <button type="button" class="vd-icon-btn" data-action="search" title="Search (Ctrl+K)" data-testid="vd-search-open">${svg('search')}</button>
                     <span class="vd-engine" data-testid="vd-engine-chip" title="Media engine"></span>
                     <button type="button" class="vd-icon-btn" data-action="nav" data-mode="settings" title="Settings" data-testid="vd-settings-open">${svg('settings')}</button>
@@ -553,6 +563,8 @@ class VideoStation {
             s.sort = s.cfg?.options?.sort || 'name';
             s.layout = s.cfg?.options?.view === 'list' ? 'list' : 'grid';
             this.loadShared();
+            this.loadDownloadSettings();
+            this.loadDownloads();
             this.updateChrome();
             this.migrateLocalList();
             // Load the full library in the background for Movies/Series/Search.
@@ -663,6 +675,8 @@ class VideoStation {
         });
         if (mode !== 'search') this.state.query = '';
         if (mode === 'shared') this.loadShared();
+        this.syncDownloadPolling();
+        if (mode === 'downloads') this.loadDownloads(true);
         this.main.scrollTop = 0;
         this.updateChrome();
         this.renderView();
@@ -695,6 +709,7 @@ class VideoStation {
             case 'mylist': html = this.myListHtml(); break;
             case 'shared': html = this.sharedHtml(); break;
             case 'search': html = this.searchHtml(); break;
+            case 'downloads': html = this.downloadsHtml(); break;
             case 'settings': html = this.settingsHtml(); break;
             case 'detail': html = this.detailHtml(); break;
             default: html = this.homeHtml();
@@ -1162,6 +1177,14 @@ class VideoStation {
                             <button class="vd-btn primary" type="button" data-action="play" data-path="${this.attr(item.path)}">${svg('play')} ${resume ? `Resume ${fmtTime(resume.time)}` : 'Play'}</button>
                             ${item.sharedOwner ? '' : `<button class="vd-btn" type="button" data-action="toggle-list" data-path="${this.attr(item.path)}">${inList ? `${svg('check')} In My List` : `${svg('plus')} My List`}</button>`}
                             ${item.kind === 'episode' ? `<button class="vd-btn" type="button" data-action="show" data-show="${this.attr(item.show || '')}">${svg('tv')} Series</button>` : ''}
+                            ${item.sharedOwner ? '' : `<select class="vd-select" data-role="download-version" title="Download version" data-testid="vd-download-version">
+                                ${(this.state.downloadQualities.length ? this.state.downloadQualities : [
+                                    { value: 'original', label: 'Original' },
+                                    { value: 'balanced', label: '1080p' },
+                                    { value: 'fast', label: '720p' },
+                                ]).map((q) => `<option value="${this.attr(q.value)}" ${this.state.downloadQuality === q.value ? 'selected' : ''}>${this.esc(q.label)}</option>`).join('')}
+                            </select>
+                            <button class="vd-btn" type="button" data-action="download" data-path="${this.attr(item.path)}" data-testid="vd-download">${svg('download')} Download</button>`}
                             <button class="vd-btn" type="button" data-action="back">${svg('back')} Back</button>
                         </div>
                     </div>
@@ -1237,8 +1260,7 @@ class VideoStation {
                     <div class="vd-field"><label>Playback</label>
                         <label class="vd-check"><input type="checkbox" data-setting="auto_subtitles" ${o.auto_subtitles !== false ? 'checked' : ''}> Auto-load sibling subtitles</label>
                         <label class="vd-check"><input type="checkbox" data-setting="autoplay_next" ${o.autoplay_next !== false ? 'checked' : ''}> Autoplay next episode</label>
-                        <label class="vd-check"><input type="checkbox" data-setting="hardware_decode" ${o.hardware_decode !== false ? 'checked' : ''}> Hardware decode when supported</label>
-                    </div>
+                        <label class="vd-check"><input type="checkbox" data-setting="hardware_decode" ${o.hardware_decode !== false ? 'checked' : ''}> Hardware decode when supported</label>                    </div>
                 </div>
             </section>
 
@@ -1273,6 +1295,22 @@ class VideoStation {
                 </div>
                 <div class="vd-tags" data-testid="vd-metadata-sources"><span class="vd-tag">Sources not tested yet</span></div>
                 <p class="vd-help">Keyless: <a href="https://www.stremio.com/" target="_blank" rel="noopener">Cinemeta (unofficial Stremio addon)</a> and <a href="https://www.tvmaze.com/" target="_blank" rel="noopener">TVmaze (CC BY-SA 4.0)</a>. TMDB is optional and <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">not endorsed or certified by TMDB</a>. Artwork is cached on this NAS; files are never renamed.</p>
+            </section>
+
+            <section class="vd-panel" data-testid="vd-settings-downloads"><h2>Downloads</h2>
+                <div class="vd-fields">
+                    <div class="vd-field"><label>Default version</label>
+                        <select class="vd-select" data-setting="download_quality" data-testid="vd-setting-download-quality">
+                            ${(this.state.downloadQualities.length ? this.state.downloadQualities : [
+                                { value: 'original', label: 'Original · no re-encode' },
+                                { value: 'balanced', label: '1080p' },
+                                { value: 'fast', label: '720p · small' },
+                            ]).map((q) => `<option value="${this.attr(q.value)}" ${(o.download_quality || 'balanced') === q.value ? 'selected' : ''}>${this.esc(q.label)}</option>`).join('')}
+                        </select>
+                        <small class="vd-help">Used by the one-tap Download here and in the Videos phone app. “Original” copies the video instead of re-encoding it whenever the file allows it.</small>
+                    </div>
+                </div>
+                <p class="vd-help">The NAS renders queued films one at a time and keeps a rolling window of prepared files. Each copy is freed as soon as a device stored it — open <b>Downloads</b> to see the queue.</p>
             </section>
 
             <section class="vd-panel"><h2>Media engine</h2>
@@ -1317,6 +1355,7 @@ class VideoStation {
             auto_subtitles: !!get('auto_subtitles')?.checked,
             autoplay_next: !!get('autoplay_next')?.checked,
             hardware_decode: !!get('hardware_decode')?.checked,
+            download_quality: get('download_quality')?.value || s.downloadQuality || 'balanced',
             sort: s.sort,
             view: s.layout,
         };
@@ -1379,6 +1418,120 @@ class VideoStation {
             this.renderView();
         } catch (err) {
             this.ctx.notifications.toast(`Refresh failed: ${err.message}`, 'error');
+        }
+    }
+
+    // ── Downloads (server queue shared with the /videos phone PWA) ───────────
+
+    async loadDownloadSettings() {
+        try {
+            const data = await this.apiJson('/api/videos/download-settings');
+            this.state.downloadQuality = data.quality || 'balanced';
+            this.state.downloadQualities = Array.isArray(data.qualities) ? data.qualities : [];
+            if (['detail', 'settings', 'downloads'].includes(this.state.mode)) this.renderView();
+        } catch { /* older core without the endpoint — keep the local default */ }
+    }
+
+    async loadDownloads(force = false) {
+        if (!force && Date.now() - this.state.downloadsAt < 1200) return;
+        try {
+            const data = await this.apiJson('/api/videos/exports');
+            this.state.downloads = Array.isArray(data.jobs) ? data.jobs : [];
+            this.state.downloadsAt = Date.now();
+            if (data.defaults?.quality) this.state.downloadQuality = data.defaults.quality;
+            if (!this.state.downloadQualities.length) this.loadDownloadSettings();
+            if (this.state.mode === 'downloads') this.renderView();
+        } catch (err) {
+            this.ctx.logger.warn('Downloads load failed', String(err));
+        }
+    }
+
+    syncDownloadPolling() {
+        if (this.state.downloadTimer) {
+            clearInterval(this.state.downloadTimer);
+            this.state.downloadTimer = null;
+        }
+        if (this.state.mode !== 'downloads') return;
+        this.state.downloadTimer = setInterval(() => this.loadDownloads(), 3000);
+    }
+
+    downloadStage(job) {
+        const pct = Math.round(Number(job.percent) || 0);
+        if (job.status === 'queued') {
+            return `<span class="vd-tag">Queued${Number(job.queue_position) > 1 ? ` #${job.queue_position}` : ''}</span>`;
+        }
+        if (job.status === 'rendering') return `<span class="vd-tag gold">Preparing ${pct}%</span>`;
+        if (job.status === 'done') return `<span class="vd-tag ok">Ready · ${this.esc(fmtBytes(job.size))}</span>`;
+        if (job.status === 'failed') return `<span class="vd-tag bad">Failed</span>`;
+        if (job.status === 'consumed') return '<span class="vd-tag">Saved on device</span>';
+        return `<span class="vd-tag">${this.esc(job.status)}</span>`;
+    }
+
+    downloadsHtml() {
+        const jobs = this.state.downloads || [];
+        const active = jobs.filter((j) => j.status === 'queued' || j.status === 'rendering');
+        const ready = jobs.filter((j) => j.status === 'done');
+        const saved = jobs.filter((j) => j.status === 'consumed');
+        const failed = jobs.filter((j) => j.status === 'failed');
+        const summary = [
+            active.length ? `<span class="vd-tag gold">${active.length} preparing</span>` : '',
+            ready.length ? `<span class="vd-tag ok">${ready.length} ready</span>` : '',
+            saved.length ? `<span class="vd-tag">${saved.length} saved</span>` : '',
+            failed.length ? `<span class="vd-tag bad">${failed.length} failed</span>` : '',
+        ].filter(Boolean).join(' ');
+        const rows = jobs.map((job) => {
+            const item = this.findItem(job.path) || { path: job.path, name: job.name, title: job.name };
+            const pct = Math.min(100, Number(job.percent) || 0);
+            const isActive = job.status === 'queued' || job.status === 'rendering';
+            const actions = [
+                job.status === 'done' && this.token
+                    ? `<a class="vd-btn small" href="/api/videos/exports/${this.attr(job.id)}/download?token=${this.attr(encodeURIComponent(this.token))}" download>${svg('download', 12)} Save</a>`
+                    : '',
+                isActive ? `<button class="vd-btn small" type="button" data-action="download-cancel" data-id="${this.attr(job.id)}">Cancel</button>` : '',
+                !isActive ? `<button class="vd-btn small danger" type="button" data-action="download-delete" data-id="${this.attr(job.id)}">${svg('trash', 12)}</button>` : '',
+            ].filter(Boolean).join(' ');
+            return `<tr data-testid="vd-download-row">
+                <td><img class="vd-thumb" src="${this.attr(this.artUrl(item, 'poster'))}" alt="" loading="lazy"></td>
+                <td><div class="vd-title">${this.esc(item.tmdb?.title || item.title || job.name)}</div>
+                    <div class="vd-path">${this.esc(job.name || '')}</div>
+                    ${job.note ? `<div class="vd-path">${this.esc(job.note)}</div>` : ''}</td>
+                <td><span class="vd-tag">${this.esc(job.quality_label || job.quality)}</span></td>
+                <td>${this.downloadStage(job)}
+                    ${isActive ? `<div class="vd-progress" style="position:static;margin-top:6px;height:4px;background:rgba(128,128,128,.25)"><i style="width:${pct.toFixed(1)}%;background:var(--vd-gold)"></i></div>` : ''}</td>
+                <td class="vd-acts">${actions}</td>
+            </tr>`;
+        }).join('');
+        return `<div class="vd-page" data-testid="vd-downloads">
+            <div class="vd-page-head">
+                <div><h1>Downloads</h1>
+                    <p>Films prepared by the NAS for offline viewing. The queue is shared with the Videos phone app; the NAS frees each file once a device stored it.</p></div>
+                <div class="vd-grow"></div>
+                <button class="vd-btn small" type="button" data-action="download-refresh">${svg('refresh', 12)} Refresh</button>
+            </div>
+            ${summary ? `<div class="vd-toolbar">${summary}</div>` : ''}
+            ${jobs.length ? `<table class="vd-table"><thead><tr><th></th><th>Title</th><th>Version</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+                : `<div class="vd-empty"><b>Nothing queued</b>Open a movie and choose Download to prepare it for offline viewing. You can queue as many as you like — they render one by one.</div>`}
+        </div>`;
+    }
+
+    async queueDownload(path, quality) {
+        const item = this.findItem(path);
+        const version = quality || this.state.downloadQuality || 'balanced';
+        try {
+            const job = await this.apiPost('/api/videos/exports', { path, q: version, a: 0 });
+            this.ctx.notifications.toast(`${item ? this.displayTitle(item) : 'Video'} queued · ${job.quality_label || version}`, 'success');
+            await this.loadDownloads(true);
+        } catch (err) {
+            this.ctx.notifications.toast(`Download failed: ${err.message}`, 'error');
+        }
+    }
+
+    async cancelDownloadJob(id) {
+        try {
+            await this.ctx.apiFetch(`/api/videos/exports/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            await this.loadDownloads(true);
+        } catch (err) {
+            this.ctx.notifications.toast(`Could not cancel: ${err.message}`, 'error');
         }
     }
 
@@ -2387,6 +2540,13 @@ class VideoStation {
             this.saveSettings();
         } else if (action === 'toggle-list') {
             this.toggleList(path);
+        } else if (action === 'download') {
+            const picker = el.closest('[data-testid="vd-detail"]')?.querySelector('[data-role="download-version"]');
+            this.queueDownload(path, picker?.value || undefined);
+        } else if (action === 'download-cancel' || action === 'download-delete') {
+            this.cancelDownloadJob(el.dataset.id);
+        } else if (action === 'download-refresh') {
+            this.loadDownloads(true);
         } else if (action === 'tmdb-test' || action === 'metadata-test') {
             this.metadataTest();
         } else if (action === 'tmdb-refresh-all' || action === 'metadata-refresh-all') {
