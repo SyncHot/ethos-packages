@@ -104,8 +104,15 @@ reachable by the browser and EthOS cannot authenticate it. Say so in the manifes
   conscious decision, never a default.
 - Never publish a port that collides with the EthOS core (`9000`, `9001`, `9002`) or with another
   official package. Known in-use ports: antivirus `8092`, domains `80/443/8093`, vmm `8095` +
-  `8094` + `18190-18194`, welcome `8090`, kanban `8098`, sticky notes `8099`, books `8089`, monitor
-  `3001`, rss `8080`, sync `8384/22000/21027`, git `3005/2222`.
+  `18190-18194` (console `8094` is a container-only mapping, Docker picks the host port), welcome
+  `8090`, kanban `8098`, sticky notes `8099`, books `8089`, monitor `3091`, rss `8085`, sync
+  `8384/22000/21027`, git `3005/2222`.
+- **Stay off the ports dev servers expect.** A package UI on `3000`, `3001`, `3008`, `8080`, `8081`
+  or `9000` collides with whatever the operator already runs (compose projects, framework dev
+  servers, other NAS apps). EthOS remaps a busy **compose** host port since 2.28.5, but the manifest,
+  README and changelog then promise a port the user does not get — and a **venv/native** service
+  cannot be remapped at all, so the install fails. `ethos-monitor` (3001 → 3091) and `ethos-rss`
+  (8080 → 8085) were moved for exactly this reason.
 - **Files on the shares must belong to the NAS account.** A service that writes to `/mnt` or
   `/media` runs with the EthOS service identity — EthOS exports `ETHOS_SERVICE_UID` and
   `ETHOS_SERVICE_GID` to `docker compose`, so use `PUID: "${ETHOS_SERVICE_UID}"` (with a `:-1000`
