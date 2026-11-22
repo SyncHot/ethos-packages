@@ -66,6 +66,20 @@ function showRestartOverlay(...args) { return _ctx.windows.showRestartOverlay(..
 function openLogs(options) { return _ctx.logs.open(options); }
 function startTask(...args) { return _ctx.progress.startTask(...args); }
 
+// ctx.modal.confirm is callback-based and returns the dialog element — it is
+// not a Promise. Wrap it once so every call site can `await` it; calling
+// `.then()` on the element used to throw and silently abort Docker actions.
+function confirmAction(title, message) {
+    return new Promise((resolve) => {
+        _ctx.modal.confirm({
+            title,
+            message,
+            onConfirm: () => resolve(true),
+            onCancel: () => resolve(false),
+        });
+    });
+}
+
 // ── Shared package shell (same layout/tokens as AntiVirus, Domains, Backups) ──
 const STYLE = `
 .dk-root {
@@ -1086,7 +1100,7 @@ async function _handleRootClick(event) {
 }
 
 async function dockerInstallEngine(btnEl) {
-    const ok = await _ctx.modal.confirm(
+    const ok = await confirmAction(
         'Install Docker Engine',
         'Install Docker Engine and Compose v2 from Docker’s official apt repository?\n\n' +
         'This downloads packages and takes a few minutes. EthOS keeps running, but a restart is needed afterwards to activate Docker access.'
@@ -1114,7 +1128,7 @@ async function dockerInstallEngine(btnEl) {
 };
 
 async function dockerRestartEthos() {
-    const ok = await _ctx.modal.confirm(
+    const ok = await confirmAction(
         'Restart EthOS',
         'Restart EthOS NAS to activate Docker access?\n\nThe web server restarts and this page refreshes automatically.'
     );
@@ -1130,7 +1144,7 @@ async function dockerRestartEthos() {
 
 function dockerAction(name, action, btnEl) {
     const verb = action === 'stop' ? 'Stop' : action === 'restart' ? 'Restart' : 'Start';
-    _ctx.modal.confirm('Docker Action', `${verb} container "${name}"?`).then(ok => {
+    confirmAction('Docker Action', `${verb} container "${name}"?`).then(ok => {
         if (!ok) return;
 
         if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = '0.5'; }
@@ -1162,7 +1176,7 @@ function dockerComposeAction(project, action, btnEl) {
         destroy: ['Compose Destroy', `Run "docker compose down --volumes" for project "${project}"? ALL containers, networks AND named volumes are removed — data in those volumes is lost. Images are kept.`],
     };
     const [title, msg] = prompts[action];
-    _ctx.modal.confirm(title, msg).then(ok => {
+    confirmAction(title, msg).then(ok => {
         if (!ok) return;
 
         if (btnEl) { btnEl.disabled = true; btnEl.style.opacity = '0.5'; }
@@ -1189,7 +1203,7 @@ function dockerComposeAction(project, action, btnEl) {
 };
 
 function dockerRemove(name, btnEl) {
-    _ctx.modal.confirm('Remove Container', `Permanently remove container "${name}"? Its data in named volumes is kept.`).then(ok => {
+    confirmAction('Remove Container', `Permanently remove container "${name}"? Its data in named volumes is kept.`).then(ok => {
         if (!ok) return;
 
         apiFetch(`/api/containers/${encodeURIComponent(name)}`, { method: 'DELETE' })
@@ -1292,7 +1306,7 @@ async function _executePull(button) {
 // Delete image
 async function _deleteImage(idOrTag) {
     const displayName = idOrTag.split(':')[0] || idOrTag;
-    if (!await _ctx.modal.confirm('Delete Image', `Delete Docker image "${displayName}"?`)) return;
+    if (!await confirmAction('Delete Image', `Delete Docker image "${displayName}"?`)) return;
     try {
         const r = await apiFetch(`/api/images/${encodeURIComponent(idOrTag)}`, { method: 'DELETE' });
         if (r.status === 409) {
@@ -1312,7 +1326,7 @@ async function _deleteImage(idOrTag) {
 
 // Prune images
 async function _pruneImages(button) {
-    if (!await _ctx.modal.confirm('Prune Images', 'Remove ALL unused Docker images? This cannot be undone.')) return;
+    if (!await confirmAction('Prune Images', 'Remove ALL unused Docker images? This cannot be undone.')) return;
     await _runTrackedAction(button, {
         title: 'Pruning images',
         detail: 'Removing images not referenced by any container',
@@ -1330,7 +1344,7 @@ async function _pruneImages(button) {
 
 // Delete volume
 async function _deleteVolume(name) {
-    if (!await _ctx.modal.confirm('Delete Volume', `Delete Docker volume "${name}"? All data in it will be lost.`)) return;
+    if (!await confirmAction('Delete Volume', `Delete Docker volume "${name}"? All data in it will be lost.`)) return;
     try {
         const r = await apiFetch(`/api/volumes/${encodeURIComponent(name)}`, { method: 'DELETE' });
         if (r.status === 409) {
@@ -1350,7 +1364,7 @@ async function _deleteVolume(name) {
 
 // Prune volumes
 async function _pruneVolumes(button) {
-    if (!await _ctx.modal.confirm('Prune Volumes', 'Remove all unused Docker volumes (named + anonymous)? All data in them will be lost.\n\nVolumes still referenced by any container — including stopped ones — are kept.')) return;
+    if (!await confirmAction('Prune Volumes', 'Remove all unused Docker volumes (named + anonymous)? All data in them will be lost.\n\nVolumes still referenced by any container — including stopped ones — are kept.')) return;
     await _runTrackedAction(button, {
         title: 'Pruning volumes',
         detail: 'Removing volumes not referenced by any container',
