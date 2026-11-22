@@ -1303,6 +1303,7 @@ class VideoStation {
                                     { value: 'original', label: 'Original' },
                                     { value: 'balanced', label: '1080p' },
                                     { value: 'fast', label: '720p' },
+                                    { value: 'tiny', label: '480p' },
                                 ]).map((q) => `<option value="${this.attr(q.value)}" ${this.state.downloadQuality === q.value ? 'selected' : ''}>${this.esc(q.label)}</option>`).join('')}
                             </select>
                             <button class="vd-btn" type="button" data-action="download" data-path="${this.attr(item.path)}" data-testid="vd-download">${svg('download')} Download</button>`}
@@ -1426,6 +1427,7 @@ class VideoStation {
                                 { value: 'original', label: 'Original · no re-encode' },
                                 { value: 'balanced', label: '1080p' },
                                 { value: 'fast', label: '720p · small' },
+                                { value: 'tiny', label: '480p · tiny' },
                             ]).map((q) => `<option value="${this.attr(q.value)}" ${(o.download_quality || 'balanced') === q.value ? 'selected' : ''}>${this.esc(q.label)}</option>`).join('')}
                         </select>
                         <small class="vd-help">Used by the one-tap Download here and in the Videos phone app. “Original” copies the video instead of re-encoding it whenever the file allows it.</small>
