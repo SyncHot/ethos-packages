@@ -48,6 +48,11 @@ repo.pub            publisher public key (private key never committed)
 - **Bump `version` and prepend `changelog`** for anything users can receive. Without a bump,
   Package Center never offers the update and installed rows keep the old manifest (including the
   old icon).
+- **Commit the manifest the build wrote, never a hand-edited one.** `ethos-pack build` rewrites
+  each `manifest.json` with the normalized form (recomputed `files[].sha256`, added
+  `runtime`/`capabilities`, stripped helper keys) and hashes *those bytes* into
+  `index.json:manifest_sha256`. A hand-edited manifest that was not run through the build makes
+  Package Center fail with **“Manifest checksum does not match the signed index”**.
 - **Rebuild, sign and verify** after every edit — an unsigned or stale `index.json` is rejected by
   pinned clients:
   ```bash
