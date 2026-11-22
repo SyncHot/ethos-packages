@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T10:27:43+00:00",
+  "generated_at": "2026-11-22T10:52:19+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -103,7 +103,7 @@
     {
       "id": "ethos-books",
       "name": "Books",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied and your permissions still apply; covers and your place in every title are kept per account.",
       "icon": "📚",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/icon.svg",
@@ -117,10 +117,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release — a library for EPUB, PDF and audiobooks with per-account progress. Add one or more folders, scan them through the EthOS file API (no copying, no extra share access), and read in a paginated or scrolled reader with light, sepia and dark themes. Audiobooks play from .m4b files or folders of .mp3/.flac tracks with resume, speed, skip and a sleep timer. Covers, titles, authors and series are extracted in the browser; the package service stores metadata only.",
+      "changelog": "1.1.0: shared folders and individual titles from other accounts — a “Shared with me” section in Folders & Scan and the library, read-only scanning and playback, and a Share button on your own scan folders (requires EthOS 2.13.3). 1.0.0: first release — a library for EPUB, PDF and audiobooks with per-account progress. Add one or more folders, scan them through the EthOS file API (no copying, no extra share access), and read in a paginated or scrolled reader with light, sepia and dark themes. Audiobooks play from .m4b files or folders of .mp3/.flac tracks with resume, speed, skip and a sleep timer. Covers, titles, authors and series are extracted in the browser; the package service stores metadata only.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/manifest.json",
-      "manifest_sha256": "edbde6cd9408aa57b127ad67d97c621fc2ffd0ae6c240a219973f235d2839ed3",
-      "size_bytes": 1898475
+      "manifest_sha256": "2bc99578f410394259a314e4ee235deedecd95fbf06c613c190569a05cb8c419",
+      "size_bytes": 1908329
     },
     {
       "id": "ethos-cleaner",
@@ -257,7 +257,7 @@
     {
       "id": "ethos-music",
       "name": "Music",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "description": "Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared with the EthOS Music Android app. The music API stays in EthOS so the phone keeps working; this package ships the desktop app. Install “Music Engine” for search, streaming and downloads.",
       "icon": "🎵",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/icon.svg",
@@ -273,10 +273,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.1: light and dark themes follow the EthOS toggle; feedback now goes to the global Notification Center instead of a package toast; downloads report progress in the shared task panel. 1.0.0: first release. The Music desktop app moves out of the core install; it requires the Music Engine package, which Package Center installs automatically. Your library, likes, playlists and podcast subscriptions stay in EthOS and remain shared with the Android app.",
+      "changelog": "1.0.2: share playlists with other accounts — a sharing card in Settings, a “Shared with me” section and read-only playlist playback (requires EthOS 2.13.3). 1.0.1: light and dark themes follow the EthOS toggle; feedback now goes to the global Notification Center instead of a package toast; downloads report progress in the shared task panel. 1.0.0: first release. The Music desktop app moves out of the core install; it requires the Music Engine package, which Package Center installs automatically. Your library, likes, playlists and podcast subscriptions stay in EthOS and remain shared with the Android app.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-music/manifest.json",
-      "manifest_sha256": "027fb03092cc8617a590d27e895029f75da430ae197d53442c53bedaf0c2080e",
-      "size_bytes": 112055
+      "manifest_sha256": "d7c1ae2c2a059593c6b15d333995b3eb87a13f11491df7cc0ac65e255dfbe656",
+      "size_bytes": 118086
     },
     {
       "id": "ethos-music-engine",
@@ -303,7 +303,7 @@
     {
       "id": "ethos-photos",
       "name": "Photos",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "description": "Photos for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer. The gallery index stays in EthOS (the EthOS Photos Android app reads it too); this package ships the desktop app, so it can update on its own.",
       "icon": "📷",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/icon.svg",
@@ -317,10 +317,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: Add folder uses the EthOS folder picker, and moving items to trash reports progress in the shared task panel. 1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
+      "changelog": "1.0.3: share albums with other EthOS accounts — a share action on every album, a “Shared with me” album section and a read-only shared view (requires EthOS 2.13.3). 1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: Add folder uses the EthOS folder picker, and moving items to trash reports progress in the shared task panel. 1.0.0: first release. The Photos desktop app moves out of the core install into Package Center; the gallery index, albums and private section keep living in EthOS, so the Android Moments app is unaffected and photos are still indexed without this package.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-photos/manifest.json",
-      "manifest_sha256": "7352de3f6712404675f1d56b364e1fa915f00aac19f24d24f7568237406f9578",
-      "size_bytes": 182823
+      "manifest_sha256": "44f5d68e66348e551b6b55aa03adc2749f6cac964b04faed4a482884f0ca68b8",
+      "size_bytes": 186097
     },
     {
       "id": "ethos-shares",
@@ -393,7 +393,7 @@
     {
       "id": "ethos-video",
       "name": "Video Station",
-      "version": "2.1.2",
+      "version": "2.1.3",
       "description": "Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for HEVC/AC3/MKV on desktop and phones; resume, subtitles, keyless metadata (Cinemeta/TVmaze) with optional TMDB, and a media-engine panel (VA-API/QuickSync/software). The video API stays in EthOS so the Android Video app keeps working.",
       "icon": "🎬",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/icon.svg",
@@ -407,10 +407,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "2.1.2: playback fixes — asks the server for the audio codec this browser can decode (AAC, Opus, or video-only with a notice) and always uses hls.js when Media Source is available, so Safari/Android Chrome no longer fail on the bounded live window. The player logs the real error, retries once, shows the reason with a \"Try again\" button, and frees a session that arrives after the window closed. movies that showed a black screen and \"The stream could not be played\" play again — AAC muxed from E-AC-3 \"5.1(side)\" tracks (the usual layout in WEB-DL rips) is now normalised to a standard 5.1 layout, which Chrome accepts. The player also logs the real error, retries the stream once and shows the reason with a \"Try again\" button. 2.1.0: metadata works without an API key — Cinemeta (movies and series, posters/backdrops/rating/cast) plus TVmaze (official series fallback), with an optional TMDB key for Polish titles and overviews. New provider picker, per-source health check, missing/re-fetch-all actions, source attribution and automatic bounded metadata fetch. Requires EthOS 2.13.0. 2.0.0: new cinema UI (full-bleed top nav, backdrop hero, poster shelves, detail pages, bottom tab bar on phones), server-side HLS playback for HEVC/AC3/MKV with VA-API/QuickSync hardware decode and encode, a real media-engine panel with probe diagnostics, working quality/audio/subtitle pickers, server-side My List, responsive touch layout and lazy poster loading. Requires EthOS 2.12.0. 1.0.2: renamed to Videos as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: light theme for the shell, rows and empty states (the hero and player stay cinematic), and adding a folder uses the EthOS folder picker. 1.0.0: first release.",
+      "changelog": "2.1.3: shared folders and their videos now appear directly on the Home tab in “Shared folders” and “Shared with you” shelves — no need to open the Shared tab first; shared titles are marked read-only and cannot be added to My List (requires EthOS 2.13.3). 2.1.2: playback fixes — asks the server for the audio codec this browser can decode (AAC, Opus, or video-only with a notice) and always uses hls.js when Media Source is available, so Safari/Android Chrome no longer fail on the bounded live window. The player logs the real error, retries once, shows the reason with a \"Try again\" button, and frees a session that arrives after the window closed. movies that showed a black screen and \"The stream could not be played\" play again — AAC muxed from E-AC-3 \"5.1(side)\" tracks (the usual layout in WEB-DL rips) is now normalised to a standard 5.1 layout, which Chrome accepts. The player also logs the real error, retries the stream once and shows the reason with a \"Try again\" button. 2.1.0: metadata works without an API key — Cinemeta (movies and series, posters/backdrops/rating/cast) plus TVmaze (official series fallback), with an optional TMDB key for Polish titles and overviews. New provider picker, per-source health check, missing/re-fetch-all actions, source attribution and automatic bounded metadata fetch. Requires EthOS 2.13.0. 2.0.0: new cinema UI (full-bleed top nav, backdrop hero, poster shelves, detail pages, bottom tab bar on phones), server-side HLS playback for HEVC/AC3/MKV with VA-API/QuickSync hardware decode and encode, a real media-engine panel with probe diagnostics, working quality/audio/subtitle pickers, server-side My List, responsive touch layout and lazy poster loading. Requires EthOS 2.12.0. 1.0.2: renamed to Videos as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: light theme for the shell, rows and empty states (the hero and player stay cinematic), and adding a folder uses the EthOS folder picker. 1.0.0: first release.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/manifest.json",
-      "manifest_sha256": "4a101ff979e1fc456975928367f20167755421e6e01fdbf9e5ab7f22f1e8e16b",
-      "size_bytes": 765698
+      "manifest_sha256": "bb35278b787f1f1296bfce5db41ea1cddb6baa6cabbce63550acbc93ba130c86",
+      "size_bytes": 768711
     },
     {
       "id": "ethos-welcome",
