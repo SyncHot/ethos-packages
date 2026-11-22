@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-surveillance",
   "name": "Cameras",
-  "version": "1.0.2",
-  "description": "Watch your IP cameras from EthOS: MJPEG live grid, per-camera motion detection with event thumbnails, snapshots and MP4 recordings. The camera service stays in EthOS (ffmpeg, motion threads, path-scoped recordings) so recordings keep running headless; this package ships the desktop app.",
+  "version": "2.0.0",
+  "description": "Surveillance Station for EthOS: live HLS wall, continuous or scheduled recording with retention, timeline playback and MP4 export, masked motion zones with Notification Center alerts, per-camera viewer access. The recording engine stays in EthOS so it keeps running headless.",
   "icon": "📹",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/icon.svg",
   "category": "security",
@@ -11,17 +11,17 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
-  "min_ethos_version": "2.0.0",
+  "min_ethos_version": "2.25.0",
   "ui": {
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "1.0.2: renamed to Cameras as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: requires EthOS 2.0. 1.0.0: first release. The Surveillance desktop app moves out of the core install; cameras, motion detection and recordings stay in EthOS, so recording continues even without this package.",
+  "changelog": "2.0.0: Surveillance Station rewrite. Live wall on HLS (one ffmpeg per camera, MJPEG fallback), continuous/scheduled recording with retention and disk quota, playback timeline with range export, motion zones with schedules and event snapshots, per-camera viewer access, admin-only management, /ws/surveillance status pushes. Requires EthOS 2.25.0. 1.0.2: renamed to Cameras as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: requires EthOS 2.0. 1.0.0: first release.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/frontend/app.js",
-      "sha256": "c4f2cc9a74782c470c162c4f0e33004d5155ea51e29fad46909a6c3066852e61",
+      "sha256": "e32d15691be6d563422df36b195985b808839ce4b98da7ecff5ceb0a3598b889",
       "path": "frontend/app.js",
       "mode": 420
     },

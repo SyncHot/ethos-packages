@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T13:53:02+00:00",
+  "generated_at": "2026-11-22T15:52:15+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -371,8 +371,8 @@
     {
       "id": "ethos-surveillance",
       "name": "Cameras",
-      "version": "1.0.2",
-      "description": "Watch your IP cameras from EthOS: MJPEG live grid, per-camera motion detection with event thumbnails, snapshots and MP4 recordings. The camera service stays in EthOS (ffmpeg, motion threads, path-scoped recordings) so recordings keep running headless; this package ships the desktop app.",
+      "version": "2.0.0",
+      "description": "Surveillance Station for EthOS: live HLS wall, continuous or scheduled recording with retention, timeline playback and MP4 export, masked motion zones with Notification Center alerts, per-camera viewer access. The recording engine stays in EthOS so it keeps running headless.",
       "icon": "📹",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/icon.svg",
       "category": "security",
@@ -385,10 +385,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.2: renamed to Cameras as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: requires EthOS 2.0. 1.0.0: first release. The Surveillance desktop app moves out of the core install; cameras, motion detection and recordings stay in EthOS, so recording continues even without this package.",
+      "changelog": "2.0.0: Surveillance Station rewrite. Live wall on HLS (one ffmpeg per camera, MJPEG fallback), continuous/scheduled recording with retention and disk quota, playback timeline with range export, motion zones with schedules and event snapshots, per-camera viewer access, admin-only management, /ws/surveillance status pushes. Requires EthOS 2.25.0. 1.0.2: renamed to Cameras as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: requires EthOS 2.0. 1.0.0: first release.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/manifest.json",
-      "manifest_sha256": "9e3a0cfed651f689a5093d6ede1c301754c37beac7be1c1c9c0da411b8fa0320",
-      "size_bytes": 32297
+      "manifest_sha256": "6ef58ddd2c8732a9926e3adf5564d06717d3ce63fd1ffd2cd7c9be2bda26feb3",
+      "size_bytes": 62112
     },
     {
       "id": "ethos-video",
