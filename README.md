@@ -17,7 +17,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `ethos-editor` ⌨️ | 1.0.1 | native | A VS Code-style workbench in the browser: single files or whole folders, tabs and breadcrumbs, search, Source Control with inline git gutters, split… |
 | `ethos-git` 🦊 | 1.0.1 | window 3005 | Self-hosted Git for your NAS: repositories, issues, pull requests, releases and a web editor, reachable on your LAN or through the Domains package. G… |
 | `ethos-git-diff` ⎇ | 1.0.1 | native | Side-by-side diff with partial (hunk and line) staging, commit box, pull/push and recent history for any Git repository on your shares. Opening a dif… |
-| `ethos-kanban` 🗂️ | 1.0.2 | native | Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Packages app: the board lives in the package's own service a… |
+| `ethos-kanban` 🗂️ | 1.0.3 | native | Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Packages app: the board lives in the package's own service a… |
 | `ethos-media-enhance` 🎯 | 1.0.2 | engine | Face-aware video thumbnails for Files: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a pri… |
 | `ethos-monitor` 📈 | 1.0.1 | window 3091 | Watch the things a NAS is supposed to keep alive: web apps, routers, printers, cameras and other servers. Uptime Kuma pings HTTP, TCP, DNS and ICMP e… |
 | `ethos-music` 🎵 | 1.0.3 | native | Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared wi… |

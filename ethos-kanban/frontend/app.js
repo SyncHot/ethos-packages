@@ -99,8 +99,43 @@ const _jsonOpts = (method, body) => ({ method, headers: { 'Content-Type': 'appli
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
 
+// ── Delegated actions (no inline onclick= in the markup) ─────────────────────
+const _KANBAN_ACTIONS = {
+    'new-board': () => window._kanbanNewBoard(),
+    'delete-board': () => window._kanbanDeleteBoard(),
+    'refresh': () => window._kanbanLoad(),
+    'add-column': () => window._kanbanAddColumn(),
+    'set-wip': (id) => window._kanbanSetWipLimit(id),
+    'rename-column': (id) => window._kanbanRenameColumn(id),
+    'delete-column': (id) => window._kanbanDeleteColumn(id),
+    'show-composer': (id) => window._kanbanShowComposer(id),
+    'composer-save': (id) => window._kanbanComposerSave(id),
+    'card-click': (id) => window._kanbanCardClick(id),
+    'switch-board': (id) => window._kanbanSwitchBoard(id),
+};
+
+function _bindActions() {
+    if (window.__kanbanActionsBound) return;
+    window.__kanbanActionsBound = true;
+    const run = (ev) => {
+        const el = ev.target.closest && ev.target.closest('[data-kanban-act]');
+        if (!el) return;
+        // A <select> must answer `change`, a title answers `dblclick`, the rest click.
+        if (el.tagName === 'SELECT' && ev.type !== 'change') return;
+        if (el.dataset.kanbanOn && el.dataset.kanbanOn !== ev.type) return;
+        const fn = _KANBAN_ACTIONS[el.dataset.kanbanAct];
+        if (!fn) return;
+        ev.preventDefault();
+        fn(el.dataset.kanbanArg || (el.tagName === 'SELECT' ? el.value : ''));
+    };
+    document.addEventListener('click', run);
+    document.addEventListener('dblclick', run);
+    document.addEventListener('change', run);
+}
+
 export async function renderKanbanPage(body) {
     if (!body) return;
+    _bindActions();
 
     body.innerHTML = `
         <div id="kanbanApp" data-testid="kanban-app" style="height:100%;display:flex;flex-direction:column;background:var(--bg-primary);font-family:system-ui,sans-serif;color:var(--text-1);">
@@ -110,15 +145,15 @@ export async function renderKanbanPage(body) {
                     <span>🗂️</span> Kanban
                 </h2>
                 <select id="kanbanBoardSelect" data-testid="kanban-board-select" aria-label="Select board"
-                        onchange="window._kanbanSwitchBoard(this.value)"
+                        data-kanban-act="switch-board"
                         style="padding:6px 10px;font-size:13px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-1);cursor:pointer;max-width:240px;"></select>
-                <button class="btn-ghost" data-testid="kanban-new-board-btn" onclick="window._kanbanNewBoard()" title="Create a new board"
+                <button class="btn-ghost" data-testid="kanban-new-board-btn" data-kanban-act="new-board" title="Create a new board"
                         style="padding:6px 12px;font-size:12px;border-radius:8px;background:#2563eb;color:white;border:none;cursor:pointer;">+ New Board</button>
-                <button class="btn-ghost" data-testid="kanban-delete-board-btn" onclick="window._kanbanDeleteBoard()" title="Delete current board"
+                <button class="btn-ghost" data-testid="kanban-delete-board-btn" data-kanban-act="delete-board" title="Delete current board"
                         style="padding:6px 10px;font-size:12px;border-radius:8px;background:none;color:var(--text-3);border:1px solid var(--border);cursor:pointer;">🗑</button>
                 <div style="flex:1;"></div>
                 <span id="kanbanBoardMeta" data-testid="kanban-board-meta" style="font-size:11px;color:var(--text-3);"></span>
-                <button class="btn-ghost" data-testid="kanban-refresh-btn" onclick="window._kanbanLoad()" title="Refresh"
+                <button class="btn-ghost" data-testid="kanban-refresh-btn" data-kanban-act="refresh" title="Refresh"
                         style="padding:6px 12px;font-size:12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);cursor:pointer;">🔄</button>
             </div>
 
@@ -166,7 +201,7 @@ function window_kanbanRender() {
             <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--text-3);">
                 <div style="font-size:52px;">🗂️</div>
                 <div style="font-size:15px;font-weight:600;color:var(--text-2);">No boards yet</div>
-                <button class="btn-ghost" data-testid="kanban-empty-new-board" onclick="window._kanbanNewBoard()"
+                <button class="btn-ghost" data-testid="kanban-empty-new-board" data-kanban-act="new-board"
                         style="padding:8px 18px;font-size:13px;border-radius:8px;background:#2563eb;color:white;border:none;cursor:pointer;">+ Create your first board</button>
             </div>`;
         return;
@@ -178,7 +213,7 @@ function window_kanbanRender() {
     area.innerHTML = `
         <div id="kanbanColumns" data-testid="kanban-columns" style="display:flex;gap:12px;align-items:flex-start;height:100%;min-width:min-content;">
             ${board.columns.map((c, i) => _columnHtml(board, c, i)).join('')}
-            <button class="btn-ghost" data-testid="kanban-add-column-btn" onclick="window._kanbanAddColumn()" title="Add a column"
+            <button class="btn-ghost" data-testid="kanban-add-column-btn" data-kanban-act="add-column" title="Add a column"
                     style="padding:10px 16px;font-size:12px;border-radius:10px;border:1px dashed var(--border);background:transparent;color:var(--text-3);cursor:pointer;white-space:nowrap;">+ Add Column</button>
         </div>`;
 
@@ -200,14 +235,14 @@ function _columnHtml(board, col, index) {
         <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);">
             <span data-testid="kanban-col-dot-${escapeAttr(col.id)}" style="width:9px;height:9px;border-radius:50%;background:${dot};flex:none;"></span>
             <span class="kanban-col-title" data-testid="kanban-col-title-${escapeAttr(col.id)}" title="Double-click to rename"
-                  ondblclick="window._kanbanRenameColumn('${jsAttr(col.id)}')"
+                  data-kanban-act="rename-column" data-kanban-on="dblclick" data-kanban-arg="${escapeAttr(col.id)}"
                   style="font-size:13px;font-weight:700;cursor:default;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-1);">${escapeHtml(col.title)}</span>
             <span data-testid="kanban-col-count-${escapeAttr(col.id)}" style="${countStyle}">${countText}</span>
-            <button class="btn-ghost" data-testid="kanban-col-wip-${escapeAttr(col.id)}" onclick="window._kanbanSetWipLimit('${jsAttr(col.id)}')" title="${wipTitle}"
+            <button class="btn-ghost" data-testid="kanban-col-wip-${escapeAttr(col.id)}" data-kanban-act="set-wip" data-kanban-arg="${escapeAttr(col.id)}" title="${wipTitle}"
                     style="font-size:11px;padding:2px 5px;color:var(--text-3);background:none;border:none;cursor:pointer;">${limit ? '🔒' : '∞'}</button>
-            <button class="btn-ghost" data-testid="kanban-col-rename-${escapeAttr(col.id)}" onclick="window._kanbanRenameColumn('${jsAttr(col.id)}')" title="Rename column"
+            <button class="btn-ghost" data-testid="kanban-col-rename-${escapeAttr(col.id)}" data-kanban-act="rename-column" data-kanban-arg="${escapeAttr(col.id)}" title="Rename column"
                     style="font-size:11px;padding:2px 5px;color:var(--text-3);background:none;border:none;cursor:pointer;">✏️</button>
-            <button class="btn-ghost" data-testid="kanban-col-delete-${escapeAttr(col.id)}" onclick="window._kanbanDeleteColumn('${jsAttr(col.id)}')" title="Delete column"
+            <button class="btn-ghost" data-testid="kanban-col-delete-${escapeAttr(col.id)}" data-kanban-act="delete-column" data-kanban-arg="${escapeAttr(col.id)}" title="Delete column"
                     style="font-size:11px;padding:2px 5px;color:var(--text-3);background:none;border:none;cursor:pointer;">🗑</button>
         </div>
 
@@ -215,7 +250,7 @@ function _columnHtml(board, col, index) {
              style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:8px;min-height:40px;">${col.cards.map(c => _cardHtml(board, col.id, c)).join('')}</div>
 
         <div style="padding:8px;border-top:1px solid var(--border);">
-            <button class="btn-ghost" data-testid="kanban-add-card-btn-${escapeAttr(col.id)}" onclick="window._kanbanShowComposer('${jsAttr(col.id)}')"
+            <button class="btn-ghost" data-testid="kanban-add-card-btn-${escapeAttr(col.id)}" data-kanban-act="show-composer" data-kanban-arg="${escapeAttr(col.id)}"
                     style="width:100%;padding:7px;font-size:12px;border-radius:8px;background:none;border:none;color:var(--text-3);cursor:pointer;text-align:left;">+ Add a card</button>
             <div id="kanbanComposer${escapeAttr(col.id)}" data-testid="kanban-composer-${escapeAttr(col.id)}" style="display:none;margin-top:6px;"></div>
         </div>
@@ -228,7 +263,7 @@ function _cardHtml(board, colId, card) {
     const due = _dueBadge(card.due_date);
     return `
     <div class="kanban-card" data-testid="kanban-card-${escapeAttr(card.id)}" data-card-id="${escapeAttr(card.id)}" draggable="true"
-         onclick="window._kanbanCardClick('${jsAttr(card.id)}')"
+         data-kanban-act="card-click" data-kanban-arg="${escapeAttr(card.id)}"
          style="background:var(--surface-0);border:1px solid var(--border);border-radius:9px;padding:10px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:border-color .12s, transform .12s;">
         <div data-testid="kanban-card-title-${escapeAttr(card.id)}" style="font-size:13px;font-weight:600;line-height:1.4;color:var(--text-1);word-break:break-word;">${escapeHtml(card.title)}</div>
         ${(labels || due) ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;align-items:center;">${labels}${due}</div>` : ''}
@@ -454,9 +489,9 @@ function window_kanbanShowComposer(colId) {
         <textarea data-testid="kanban-composer-input-${escapeAttr(colId)}" placeholder="What needs to be done?" rows="2"
                   style="width:100%;box-sizing:border-box;padding:8px;font-size:13px;border-radius:8px;border:1px solid var(--border);background:var(--surface-0);color:var(--text-1);resize:none;"></textarea>
         <div style="display:flex;gap:6px;margin-top:6px;">
-            <button class="btn-ghost" data-testid="kanban-composer-save-${escapeAttr(colId)}" onclick="window._kanbanComposerSave('${jsAttr(colId)}')"
+            <button class="btn-ghost" data-testid="kanban-composer-save-${escapeAttr(colId)}" data-kanban-act="composer-save" data-kanban-arg="${escapeAttr(colId)}"
                     style="padding:5px 12px;font-size:12px;border-radius:7px;background:#2563eb;color:white;border:none;cursor:pointer;">Add card</button>
-            <button class="btn-ghost" data-testid="kanban-composer-cancel-${escapeAttr(colId)}" onclick="window._kanbanShowComposer('${jsAttr(colId)}')"
+            <button class="btn-ghost" data-testid="kanban-composer-cancel-${escapeAttr(colId)}" data-kanban-act="show-composer" data-kanban-arg="${escapeAttr(colId)}"
                     style="padding:5px 12px;font-size:12px;border-radius:7px;background:none;color:var(--text-3);border:1px solid var(--border);cursor:pointer;">Cancel</button>
         </div>`;
     host.style.display = 'block';

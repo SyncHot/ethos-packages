@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T17:58:44+00:00",
+  "generated_at": "2026-11-22T18:13:19+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -243,7 +243,7 @@
     {
       "id": "ethos-kanban",
       "name": "Kanban Board",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "description": "Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Packages app: the board lives in the package's own service and keeps working for every signed-in account. Boards from the built-in version are imported automatically on first start.",
       "icon": "🗂️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/icon.svg",
@@ -257,10 +257,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: requires EthOS 2.0. 1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
+      "changelog": "1.0.3: no inline onclick/onchange handlers — every action goes through one delegated listener and ids travel as plain attributes instead of JavaScript inside HTML. 1.0.2: description renamed in the EthOS 2.0 naming. 1.0.1: requires EthOS 2.0. 1.0.0: first release. The Kanban board moves out of the core install into Package Center, using a private Python environment with no third-party dependencies. Boards from the built-in app are imported on first start.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-kanban/manifest.json",
-      "manifest_sha256": "f97e548fb5702478982c3f29921229bc6cca4e8d55561a9e7e1194a1225cfa0f",
-      "size_bytes": 52828
+      "manifest_sha256": "d0e8f347c8a8110eb2b8947d10241799ec088a726cd74b7a64a214e10e935302",
+      "size_bytes": 54509
     },
     {
       "id": "ethos-media-enhance",
