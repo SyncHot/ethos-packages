@@ -12,8 +12,19 @@ Playback uses the EthOS core API:
 - Hardware encoding is reported in Settings → Media engine (VA-API/QSV/software);
   VA-API/QSV hardware decode is used when the server probes it for the file.
 
-The video API, library walk, thumbnails, resume positions, TMDB cache and
+The video API, library walk, thumbnails, resume positions, metadata cache and
 transcoding stay in EthOS core; the Android Video app shares the same endpoints.
+
+## Metadata without an API key
+
+Settings → Metadata defaults to **Automatic**: if a TMDB key is configured it is
+used first, otherwise the core uses keyless **Cinemeta** (movies and series,
+posters/backdrops/rating/cast) and **TVmaze** (official series fallback). Adding
+a TMDB key is optional and gives Polish titles/overviews/posters. Keyless
+metadata is English; TVmaze requires CC BY-SA attribution and Cinemeta is an
+unofficial Stremio addon. Artwork is downloaded and served by the NAS — the
+window never hotlinks an external image. Sources can be tested, switched to
+TMDB/TVmaze-only, or turned off at any time.
 
 - **Package id:** `ethos-video` · **Runtime:** files · **UI:** native (window)
 - **Themes:** light and dark; the hero and player deliberately keep a cinematic

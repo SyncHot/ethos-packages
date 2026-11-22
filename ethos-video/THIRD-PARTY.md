@@ -1,5 +1,18 @@
 # Third-party software
 
+## Metadata and artwork sources
+
+- **Cinemeta / Stremio** — unofficial public addon endpoint used for keyless
+  movie/series metadata; posters/backdrops are served from
+  `images.metahub.space` and cached locally. No software is bundled.
+- **TVmaze** — series data licensed under CC BY-SA 4.0
+  (https://www.tvmaze.com/api); attribution is shown in Settings.
+- **TMDB** — optional, user-supplied API key. This product uses the TMDB API but
+  is not endorsed or certified by TMDB (https://www.themoviedb.org/).
+
+Artwork remains the property of its respective owners and is cached only for
+personal display in this self-hosted library.
+
 ## hls.js 1.7.4
 
 - Source: https://github.com/video-dev/hls.js

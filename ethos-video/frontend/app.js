@@ -372,6 +372,10 @@ class VideoStation {
         .vd-panel{background:var(--vd-solid);border:1px solid var(--vd-border);border-radius:var(--vd-radius);padding:18px}
         .vd-panel h2{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--vd-faint);font-weight:800}
         .vd-panel p{margin:0 0 10px;font-size:12.5px;line-height:1.6;color:var(--vd-muted)}
+        .vd-panel .vd-source{margin:0 0 12px;font-size:11px;letter-spacing:.3px;color:var(--vd-faint)}
+        .vd-panel .vd-source a{color:var(--vd-accent);text-decoration:none}
+        .vd-panel .vd-help{margin:8px 0 0;font-size:10.5px;line-height:1.55;color:var(--vd-faint)}
+        .vd-panel .vd-help a{color:var(--vd-accent);text-decoration:none}
         .vd-kv{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:11.5px}
         .vd-kv dt{color:var(--vd-faint)}
         .vd-kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
@@ -1083,7 +1087,8 @@ class VideoStation {
             </div>
             <div class="vd-detail-extra">
                 <section class="vd-panel"><h2>Details</h2>
-                    <p>${tm.overview || 'No synopsis yet. Add a TMDB key in Settings to enrich titles, posters and ratings.'}</p>
+                    <p>${tm.overview || 'No synopsis yet. Use “Fetch missing” in Settings → Metadata — keyless sources work without a TMDB key.'}</p>
+                    ${tm.source_label ? `<p class="vd-source" data-testid="vd-metadata-source">Metadata: ${tm.source_url ? `<a href="${this.attr(tm.source_url)}" target="_blank" rel="noopener">${this.esc(tm.source_label)}</a>` : this.esc(tm.source_label)}</p>` : ''}
                     <dl class="vd-kv">
                         <dt>File</dt><dd class="vd-path">${this.esc(item.name || basename(item.path))}</dd>
                         <dt>Size</dt><dd>${this.esc(fmtBytes(item.size))}</dd>
@@ -1147,20 +1152,37 @@ class VideoStation {
                 </div>
             </section>
 
-            <section class="vd-panel"><h2>Metadata (TMDB)</h2>
+            <section class="vd-panel"><h2>Metadata</h2>
                 <div class="vd-fields">
-                    <div class="vd-field"><label>API key</label>
-                        <input class="vd-input" type="password" data-setting="tmdb_key" placeholder="${this.attr(tm.api_key_set ? `Saved (${tm.api_key_masked})` : 'Paste a TMDB v3 key')}" autocomplete="off">
+                    <div class="vd-field"><label>Source</label>
+                        <select class="vd-select" data-setting="tmdb_provider" data-testid="vd-setting-metadata-provider">
+                            ${[
+                                ['auto', 'Automatic — TMDB key first, otherwise keyless'],
+                                ['keyless', 'Keyless — Cinemeta + TVmaze'],
+                                ['cinemeta', 'Cinemeta (Stremio, unofficial)'],
+                                ['tvmaze', 'TVmaze (series only)'],
+                                ['tmdb', 'TMDB (requires API key)'],
+                                ['off', 'Off'],
+                            ].map(([v, l]) => `<option value="${v}" ${(tm.provider || 'auto') === v ? 'selected' : ''}>${l}</option>`).join('')}
+                        </select>
                     </div>
-                    <div class="vd-field"><label>Language</label>
+                    <div class="vd-field"><label>TMDB API key (optional)</label>
+                        <input class="vd-input" type="password" data-setting="tmdb_key" data-testid="vd-setting-metadata-key" placeholder="${this.attr(tm.api_key_set ? `Saved (${tm.api_key_masked})` : 'Add a key only for better Polish metadata')}" autocomplete="off">
+                    </div>
+                    <div class="vd-field"><label>TMDB language</label>
                         <input class="vd-input" data-setting="tmdb_language" value="${this.attr(tm.language || 'pl-PL')}" placeholder="pl-PL">
+                        <small class="vd-help">Keyless sources return English text.</small>
                     </div>
-                    <div class="vd-field full"><label class="vd-check"><input type="checkbox" data-setting="tmdb_auto" ${tm.auto_fetch !== false ? 'checked' : ''}> Fetch metadata once per session</label></div>
+                    <div class="vd-field full"><label class="vd-check"><input type="checkbox" data-setting="tmdb_auto" ${tm.auto_fetch !== false ? 'checked' : ''}> Fetch missing metadata after opening (max. 20 titles, once per 6 h)</label></div>
                 </div>
                 <div class="vd-actionsbar">
-                    <button class="vd-btn" type="button" data-action="tmdb-test">${svg('check')} Test key</button>
-                    <button class="vd-btn primary" type="button" data-action="tmdb-refresh-all">${svg('refresh')} Fetch metadata now</button>
+                    <button class="vd-btn" type="button" data-action="metadata-test" data-testid="vd-metadata-test">${svg('check')} Test sources</button>
+                    ${tm.api_key_set ? '<button class="vd-btn danger" type="button" data-action="metadata-clear-key">Remove key</button>' : ''}
+                    <button class="vd-btn primary" type="button" data-action="metadata-refresh-all" data-testid="vd-metadata-refresh">${svg('refresh')} Fetch missing</button>
+                    <button class="vd-btn" type="button" data-action="metadata-refresh-all" data-force="1">Re-fetch all</button>
                 </div>
+                <div class="vd-tags" data-testid="vd-metadata-sources"><span class="vd-tag">Sources not tested yet</span></div>
+                <p class="vd-help">Keyless: <a href="https://www.stremio.com/" target="_blank" rel="noopener">Cinemeta (unofficial Stremio addon)</a> and <a href="https://www.tvmaze.com/" target="_blank" rel="noopener">TVmaze (CC BY-SA 4.0)</a>. TMDB is optional and <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">not endorsed or certified by TMDB</a>. Artwork is cached on this NAS; files are never renamed.</p>
             </section>
 
             <section class="vd-panel"><h2>Media engine</h2>
@@ -1209,6 +1231,7 @@ class VideoStation {
             view: s.layout,
         };
         const tmdb = {
+            provider: get('tmdb_provider')?.value || 'auto',
             auto_fetch: !!get('tmdb_auto')?.checked,
             language: get('tmdb_language')?.value || 'pl-PL',
         };
@@ -1291,23 +1314,51 @@ class VideoStation {
         }
     }
 
-    async tmdbTest() {
+    async metadataTest() {
         try {
-            const data = await this.apiJson('/api/videos/tmdb/test');
-            this.ctx.notifications.toast(data.ok ? 'TMDB key works' : (data.detail || 'TMDB key rejected'), 'success');
+            const data = await this.apiJson('/api/videos/metadata/test');
+            const box = this.view.querySelector('[data-testid="vd-metadata-sources"]');
+            if (box) {
+                box.innerHTML = (data.results || []).map((r) => {
+                    const msg = r.ok ? (r.latency_ms ? `${r.latency_ms} ms` : 'OK') : (r.message || 'Unavailable');
+                    return `<span class="vd-tag ${r.ok ? 'ok' : 'bad'}" data-testid="vd-metadata-source-${this.attr(r.id)}">${this.esc(r.label)}: ${this.esc(msg)}</span>`;
+                }).join('') || '<span class="vd-tag bad">No sources configured</span>';
+            }
+            this.ctx.notifications.toast(data.ok ? 'Metadata sources reachable' : 'Metadata sources unavailable',
+                data.ok ? 'success' : 'warning');
         } catch (err) {
-            this.ctx.notifications.toast(`TMDB test failed: ${err.message}`, 'error');
+            this.ctx.notifications.toast(`Metadata test failed: ${err.message}`, 'error');
         }
     }
 
-    async tmdbRefreshAll() {
+    async tmdbTest() { return this.metadataTest(); }
+
+    async metadataRefreshAll(force = false) {
         const task = this.ctx.progress.startTask({
-            appId: 'videos', title: 'Fetching TMDB metadata', detail: 'Walking the library…', testIdPrefix: 'vd-tmdb',
+            appId: 'videos',
+            title: force ? 'Re-fetching video metadata' : 'Fetching missing video metadata',
+            detail: 'Walking the library…',
+            testIdPrefix: 'vd-metadata',
         });
         try {
-            const data = await this.apiPost('/api/videos/tmdb/refresh', {});
-            task.finish('done', { percent: 100, detail: `${data.matched ?? data.updated ?? 0} titles updated` });
-            this.ctx.notifications.emit({ kind: 'success', title: 'Video metadata updated', message: `${data.matched ?? data.updated ?? 0} titles refreshed.` });
+            const data = await this.apiPost('/api/videos/metadata/refresh', { force: !!force });
+            const titles = data.titles_matched ?? 0;
+            const files = data.files_matched ?? 0;
+            const skipped = data.skipped ?? 0;
+            const detail = `${titles} titles · ${files} files${skipped ? ` · ${skipped} skipped` : ''}`;
+            if (data.aborted) {
+                task.finish('failed', { detail: data.aborted });
+                this.ctx.notifications.toast(data.aborted, 'warning');
+            } else if (!titles && data.errors) {
+                task.finish('failed', { detail: `${data.errors} errors` });
+                this.ctx.notifications.toast('Metadata refresh finished with errors', 'warning');
+            } else {
+                task.finish('done', { percent: 100, detail });
+                this.ctx.notifications.emit({
+                    kind: 'success', title: 'Video metadata updated',
+                    message: `${titles} titles and ${files} files updated.`,
+                });
+            }
             this.state.library = null;
             await this.loadBootstrap();
             this.renderView();
@@ -1316,6 +1367,30 @@ class VideoStation {
             this.ctx.notifications.toast(`Metadata refresh failed: ${err.message}`, 'error');
         }
     }
+
+    async tmdbRefreshAll() { return this.metadataRefreshAll(false); }
+
+    async clearMetadataKey() {
+        const ok = await this.ctx.modal.confirm(
+            'Remove TMDB key',
+            'Keyless metadata (Cinemeta + TVmaze) will keep working. Existing cached artwork stays.',
+            { danger: true, confirmLabel: 'Remove key' },
+        );
+        if (!ok) return;
+        try {
+            await this.apiPost('/api/videos/config', {
+                roots: this.state.roots,
+                options: this.state.cfg.options,
+                tmdb: { clear_key: true },
+            });
+            await this.loadBootstrap();
+            this.renderView();
+            this.ctx.notifications.toast('TMDB key removed', 'success');
+        } catch (err) {
+            this.ctx.notifications.toast(`Could not remove key: ${err.message}`, 'error');
+        }
+    }
+
 
     async engineTest() {
         try {
@@ -1978,7 +2053,7 @@ class VideoStation {
         const file = kind === 'backdrop'
             ? (tm.backdrop_file || tm.poster_file)
             : (tm.poster_file || tm.backdrop_file);
-        if (file) return `/api/videos/tmdb/image?file=${encodeURIComponent(file)}&token=${encodeURIComponent(this.token)}`;
+        if (file) return `/api/videos/metadata/image?file=${encodeURIComponent(file)}&token=${encodeURIComponent(this.token)}`;
         const width = kind === 'backdrop' ? 960 : 342;
         return `/api/videos/thumbnail?path=${encodeURIComponent(item.path)}&w=${width}&token=${encodeURIComponent(this.token)}`;
     }
@@ -2125,10 +2200,12 @@ class VideoStation {
             this.saveSettings();
         } else if (action === 'toggle-list') {
             this.toggleList(path);
-        } else if (action === 'tmdb-test') {
-            this.tmdbTest();
-        } else if (action === 'tmdb-refresh-all') {
-            this.tmdbRefreshAll();
+        } else if (action === 'tmdb-test' || action === 'metadata-test') {
+            this.metadataTest();
+        } else if (action === 'tmdb-refresh-all' || action === 'metadata-refresh-all') {
+            this.metadataRefreshAll(el.dataset.force === '1');
+        } else if (action === 'metadata-clear-key') {
+            this.clearMetadataKey();
         } else if (action === 'tmdb-refresh') {
             this.refreshOne(path);
         } else if (action === 'engine-test') {
@@ -2185,7 +2262,7 @@ class VideoStation {
 
     async refreshOne(path) {
         try {
-            await this.apiPost('/api/videos/tmdb/refresh', { path, force: true });
+            await this.apiPost('/api/videos/metadata/refresh', { path, force: true });
             this.state.library = null;
             await this.ensureLibrary(true);
             this.renderView();

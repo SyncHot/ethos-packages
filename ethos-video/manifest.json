@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-video",
   "name": "Video Station",
-  "version": "2.0.0",
-  "description": "Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for HEVC/AC3/MKV on desktop and phones; resume, subtitles, TMDB metadata and a media-engine panel (VA-API/QuickSync/software). The video API stays in EthOS so the Android Video app keeps working.",
+  "version": "2.1.0",
+  "description": "Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for HEVC/AC3/MKV on desktop and phones; resume, subtitles, keyless metadata (Cinemeta/TVmaze) with optional TMDB, and a media-engine panel (VA-API/QuickSync/software). The video API stays in EthOS so the Android Video app keeps working.",
   "icon": "🎬",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/icon.svg",
   "category": "media",
@@ -11,17 +11,17 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
-  "min_ethos_version": "2.12.0",
+  "min_ethos_version": "2.13.0",
   "ui": {
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "2.0.0: new cinema UI (full-bleed top nav, backdrop hero, poster shelves, detail pages, bottom tab bar on phones), server-side HLS playback for HEVC/AC3/MKV with VA-API/QuickSync hardware decode and encode, a real media-engine panel with probe diagnostics, working quality/audio/subtitle pickers, server-side My List, responsive touch layout and lazy poster loading. Requires EthOS 2.12.0. 1.0.2: renamed to Videos as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: light theme for the shell, rows and empty states (the hero and player stay cinematic), and adding a folder uses the EthOS folder picker. 1.0.0: first release. The Video Station desktop app moves out of the core install; the video library API, thumbnails and streaming stay in EthOS, shared with the Android app.",
+  "changelog": "2.1.0: metadata works without an API key — Cinemeta (movies and series, posters/backdrops/rating/cast) plus TVmaze (official series fallback), with an optional TMDB key for Polish titles and overviews. New provider picker, per-source health check, missing/re-fetch-all actions, source attribution and automatic bounded metadata fetch. Requires EthOS 2.13.0. 2.0.0: new cinema UI (full-bleed top nav, backdrop hero, poster shelves, detail pages, bottom tab bar on phones), server-side HLS playback for HEVC/AC3/MKV with VA-API/QuickSync hardware decode and encode, a real media-engine panel with probe diagnostics, working quality/audio/subtitle pickers, server-side My List, responsive touch layout and lazy poster loading. Requires EthOS 2.12.0. 1.0.2: renamed to Videos as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: light theme for the shell, rows and empty states (the hero and player stay cinematic), and adding a folder uses the EthOS folder picker. 1.0.0: first release.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/frontend/app.js",
-      "sha256": "b6fce2fada5a940268125260682796c391430b6103097b1428c60363a8604a5d",
+      "sha256": "d7ddea471f83b7b975905978efe4bf495a7db3a28a80d059f7929beec27a9a79",
       "path": "frontend/app.js",
       "mode": 420
     },
