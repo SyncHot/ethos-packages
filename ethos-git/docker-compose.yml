@@ -1,0 +1,35 @@
+services:
+  forgejo:
+    # Pinned on purpose: the signed compose file must describe exactly what runs.
+    image: codeberg.org/forgejo/forgejo:17.0.2
+    container_name: ethos-git
+    environment:
+      # Repositories, uploads and the SQLite database live in the volume below;
+      # Forgejo owns it with these ids (no host bind, so no NAS permissions).
+      USER_UID: "1000"
+      USER_GID: "1000"
+      FORGEJO__database__DB_TYPE: "sqlite3"
+      FORGEJO__server__HTTP_PORT: "3000"
+      # SSH is served by Forgejo itself on 2222 (published), so clone URLs are
+      # complete and the host sshd keeps port 22.
+      FORGEJO__server__START_SSH_SERVER: "true"
+      FORGEJO__server__SSH_LISTEN_PORT: "22"
+      FORGEJO__server__SSH_PORT: "2222"
+      # The first visit creates the administrator; nobody else may sign up.
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+    ports:
+      - "3000:3000"  # Web UI (own login)
+      - "2222:22"    # Git over SSH
+    volumes:
+      # Repositories, LFS objects, attachments, SQLite and configuration.
+      - forgejo-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  forgejo-data: {}

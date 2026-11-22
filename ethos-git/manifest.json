@@ -1,0 +1,44 @@
+{
+  "schema": 2,
+  "id": "ethos-git",
+  "name": "Forgejo",
+  "version": "1.0.0",
+  "description": "Self-hosted Git for your NAS: repositories, issues, pull requests, releases and a web editor, reachable on your LAN or through the Domains package. Give the Code Editor and Git Diff apps a remote to push to. Repositories live in a package volume, so no share permissions are involved; the first visit creates the administrator account and locks the instance.",
+  "icon": "🦊",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git/icon.svg",
+  "category": "tools",
+  "author": "SyncHot",
+  "homepage": "https://forgejo.org",
+  "license": "GPL-3.0-or-later",
+  "channel": "stable",
+  "min_ethos_version": "2.27.0",
+  "ui": {
+    "mode": "window",
+    "scheme": "http",
+    "port": 3000,
+    "path": "/",
+    "expose": "lan",
+    "auth": "package"
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 3000,
+    "path": "/api/healthz"
+  },
+  "system_requires": [
+    "docker"
+  ],
+  "changelog": "1.0.0: first release — Forgejo 17.0.2 pinned, SQLite in a package volume, web UI on port 3000 and SSH on 2222 (so it never collides with the NAS sshd). The first visit runs the installer with the database pre-filled; create the administrator account there. Self-registration is disabled.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git/docker-compose.yml",
+    "sha256": "054357e9dde4009dd320c804ad5d90e97bbbd61b6e71097be782c2a73267bfe1"
+  },
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git/icon.svg",
+      "sha256": "04ccb0472bde93c8ce17e0a40c1f231898160025d4cd711809c0e091a6ee4a92",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}

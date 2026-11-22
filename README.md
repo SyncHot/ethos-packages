@@ -2,34 +2,38 @@
 
 Signed package repository for [EthOS NAS](https://github.com/SyncHot/ethos-nas).
 
-The catalog currently contains twenty-one packages:
+The catalog is generated from `index.json` — run `ethos-pack readme` after a build.
 
+<!-- catalog:start -->
 | Package | Version | UI | What it is |
 |---|---|---|---|
-| `backup-manager` 🔄 | 1.0.3 | native | Versioned backups for folders and Docker Compose projects: hardlink snapshots, 7/4/6 retention, verify, restore wizard and optional rclone offsite copies |
-| `domains` 🌐 | 1.2.1 | native | Caddy reverse proxy with automatic Let's Encrypt certificates for your own domains |
-| `download-manager` ⬇️ | 1.0.4 | native | HTTP, magnet and debrid downloads with a priority queue (drag-and-drop), categories, a daily start window, bandwidth limits, RSS rules and watch folders; uses the core Download Station API |
-| `ethos-antivirus` 🛡️ | 2.1.5 | native | ClamAV scanner with quarantine, scan history, scheduled scans and scan settings for `/home`, `/mnt`, `/media`; API via authenticated proxy |
-| `ethos-books` 📚 | 1.2.0 | native | EPUB/PDF reader and audiobook player for books already on the NAS: folders are scanned through the core file API, progress, durations and covers per account; the phone client is the core `/books` PWA; ships a small venv service (`user_access`) |
-| `ethos-cleaner` 🧹 | 1.0.1 | native | Disk space analyzer, biggest files and safe cleanup suggestions (trash, temp, caches, journal) through the core disk-clean API |
-| `ethos-docker` 🐳 | 1.0.4 | native | Containers, images, volumes and Compose projects; the Docker engine itself stays host software installed through the privileged helper |
-| `ethos-editor` ⌨️ | 1.0.1 | native | VS Code-style workbench: files and folders, tabs, find/replace, Source Control with inline git gutters, terminals, Problems/Output and Markdown preview |
-| `ethos-git-diff` ⎇ | 1.0.1 | native | IntelliJ-style side-by-side diff with hunk staging/unstaging, backed by the core editor git API |
-| `ethos-kanban` 🗂️ | 1.0.1 | native | Kanban boards with drag & drop, labels and due dates; ships a small venv service (`user_access`) |
-| `ethos-media-enhance` 🎯 | 1.0.1 | engine | Face-aware video thumbnails for File Station (OpenCV in the package's private venv) |
-| `ethos-music` 🎵 | 1.0.1 | native | Spotify-style Music desktop app sharing playlists, likes and history with the Android app |
-| `ethos-music-engine` 🎵 | 1.0.1 | engine | yt-dlp search/stream/download for Music, installed offline from a pinned wheelhouse |
-| `ethos-photos` 📷 | 1.0.1 | native | Photo library: folders, grid/timeline, calendar, Moments, albums, favourites and the PIN-encrypted Private section |
-| `ethos-shares` 📁 | 1.2.1 | native | Samba share management; Samba is installed with the package through the host-dependency helper |
-| `ethos-sticky-notes` 🗒️ | 1.0.0 | native | Per-account sticky notes on colored cards with auto-save, reorder and five pastel colors; ships a small venv service (`user_access`) |
-| `ethos-surveillance` 📹 | 1.0.1 | native | Camera monitoring: live MJPEG grid, motion detection and an event timeline; recording stays in the core |
-| `ethos-video` 🎬 | 1.0.1 | native | Video Station: movies/series, search, My List, resume positions and an in-window player |
-| `ethos-welcome` 🌅 | 1.0.3 | window 8090 | Static welcome page served by nginx (the reference port UI; no EthOS login) |
-| `tic-tac-toe` ❌ | 2.1.1 | native | Two-player game inside an EthOS window; no container or port |
-| `vmm` 🖥️ | 1.0.5 | native | EthOS VM Manager — KVM virtual machines with a browser console (Docker-assigned host port), qcow2 disks on your shares and autostart; needs `/dev/kvm` (`capabilities: ["kvm"]`) |
+| `backup-manager` 🔄 | 1.0.3 | native | Versioned backups for folders and Docker Compose projects. Dated hardlink snapshots, GFS retention, quick/deep verify, a restore wizard and optional… |
+| `domains` 🌐 | 1.2.1 | native | Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another… |
+| `download-manager` ⬇️ | 1.1.0 | native | HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window. |
+| `ethos-antivirus` 🛡️ | 2.1.6 | native | ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only… |
+| `ethos-books` 📚 | 1.2.0 | native | Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied… |
+| `ethos-cleaner` 🧹 | 1.0.1 | native | Find what is eating your disk: scans caches, thumbnails, logs, trash and old downloads, shows the biggest space users and lets you delete them safely… |
+| `ethos-docker` 🐳 | 1.0.5 | native | Engine status, containers, images, volumes and Compose projects in one place: start, stop, restart, inspect logs, prune and install Docker Engine on… |
+| `ethos-editor` ⌨️ | 1.0.1 | native | A VS Code-style workbench in the browser: single files or whole folders, tabs and breadcrumbs, search, Source Control with inline git gutters, split… |
+| `ethos-git` 🦊 | 1.0.0 | window 3000 | Self-hosted Git for your NAS: repositories, issues, pull requests, releases and a web editor, reachable on your LAN or through the Domains package. G… |
+| `ethos-git-diff` ⎇ | 1.0.1 | native | Side-by-side diff with partial (hunk and line) staging, commit box, pull/push and recent history for any Git repository on your shares. Opening a dif… |
+| `ethos-kanban` 🗂️ | 1.0.2 | native | Boards, columns and cards with drag and drop, labels, due dates and a card editor. Now a Packages app: the board lives in the package's own service a… |
+| `ethos-media-enhance` 🎯 | 1.0.2 | engine | Face-aware video thumbnails for Files: picks the frame with the largest face and crops around it instead of using a random shot. OpenCV runs in a pri… |
+| `ethos-music` 🎵 | 1.0.2 | native | Spotify-style player for your NAS: search and stream from YouTube, a downloaded library, playlists, likes, radio stations and podcasts, all shared wi… |
+| `ethos-music-engine` 🎵 | 1.0.1 | engine | YouTube search, streaming and downloads for the Music app and the EthOS Music Android app. yt-dlp runs in a private environment that only this packag… |
+| `ethos-photos` 📷 | 1.0.3 | native | Photos for your NAS: a timeline of every photo and video on your shares, albums, favourites, a private PIN-protected section and a full-screen viewer… |
+| `ethos-shares` 📁 | 1.3.0 | native | Manage SMB shares, per-user and group access rules, and Samba credentials for existing Linux accounts. Includes permission masks, service status, and… |
+| `ethos-sticky-notes` 🗒️ | 2.0.0 | native | Per-account notes and checklist tasks: search, pin, archive, due dates, reminders with browser push, and a collapsible right-edge desktop ribbon. |
+| `ethos-surveillance` 📹 | 2.0.0 | native | Surveillance Station for EthOS: live HLS wall, continuous or scheduled recording with retention, timeline playback and MP4 export, masked motion zone… |
+| `ethos-sync` 🔁 | 1.0.0 | window 8384 | Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the midd… |
+| `ethos-video` 🎬 | 2.3.1 | native | Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for… |
+| `ethos-welcome` 🌅 | 1.0.4 | window 8090 | A tiny static welcome page for your NAS, served by nginx on port 8090. |
+| `tic-tac-toe` ❌ | 2.1.1 | native | A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port. |
+| `vmm` 🖥️ | 1.2.0 | native | Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO or boot a ready-made system image such as the… |
+<!-- catalog:end -->
 
-All packages declare `min_ethos_version: "2.0.0"`. Every package ships a Package Center icon
-(`<package-id>/icon.svg`) referenced by `icon_url` in its manifest.
+Every manifest declares the EthOS version it needs (`min_ethos_version`, enforced at install
+time) and ships a Package Center icon (`<package-id>/icon.svg`) referenced by `icon_url`.
 
 ## Add this repository
 

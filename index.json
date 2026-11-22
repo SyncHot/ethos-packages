@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T15:52:15+00:00",
+  "generated_at": "2026-11-22T16:42:20+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -45,12 +45,14 @@
       "capabilities": [
         "compose"
       ],
-      "system_requires": [],
+      "system_requires": [
+        "docker"
+      ],
       "screenshots": [],
       "changelog": "1.2.1: requires EthOS 2.0. 1.2.0: the window follows the AntiVirus layout — a left rail with Overview, Routes, Certificates, Settings and Diagnostics, status pills, stat tiles and action cards. Routes show their options as chips, the form keeps headers/Host/streaming under Advanced, and the ACME email field is no longer overwritten by the background refresh. 1.1.1: read certificates from Caddy's actual storage root (/data/caddy/certificates), so the certificate list and expiry show up. per-route response headers and permanent redirects, plus a bulk route import so an existing proxy configuration (for example Nginx Proxy Manager) can be migrated in one step. 1.0.0: initial release: Caddy-based reverse proxy with automatic Let's Encrypt certificates, per-domain routes to any host:port (including EthOS itself), WebSocket and streaming support, live certificate expiry, a DNS preflight check and the proxy log in one native EthOS window.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/domains/manifest.json",
-      "manifest_sha256": "d7879d4ed316dcf9940beb47c7861f45cb6d2e2bf7c0aae640db2ae4e23c36e5",
-      "size_bytes": 94175
+      "manifest_sha256": "50631d7faea05a714993bee017b8878512e9d2b84403748b60ed7a4f3120ce4e",
+      "size_bytes": 96579
     },
     {
       "id": "download-manager",
@@ -79,7 +81,7 @@
     {
       "id": "ethos-antivirus",
       "name": "EthOS AntiVirus",
-      "version": "2.1.5",
+      "version": "2.1.6",
       "description": "ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only scans of /home, /mnt and /media; signatures update automatically.",
       "icon": "🛡️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/icon.svg",
@@ -93,12 +95,14 @@
       "capabilities": [
         "compose"
       ],
-      "system_requires": [],
+      "system_requires": [
+        "docker"
+      ],
       "screenshots": [],
-      "changelog": "2.1.5: scans report progress in the shared task panel instead of only the status line; requires EthOS 2.0. 2.1.4: Browse… in the scan target and schedule forms uses the EthOS folder picker, restricted to /home, /mnt and /media. 2.1.3: health/status report which shares are visible in the scanner container and the UI warns instead of failing scans silently. 2.1.2: fix scans failing with 'not visible in the scanner container' — the UI container now mounts /home, /mnt and /media read-only at /scan. 2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
+      "changelog": "2.1.6: the ClamAV image is pinned to 1.5.5 instead of the floating :stable tag, and the control-plane container reports a healthcheck. 2.1.5: scans report progress in the shared task panel instead of only the status line; requires EthOS 2.0. 2.1.4: Browse… in the scan target and schedule forms uses the EthOS folder picker, restricted to /home, /mnt and /media. 2.1.3: health/status report which shares are visible in the scanner container and the UI warns instead of failing scans silently. 2.1.2: fix scans failing with 'not visible in the scanner container' — the UI container now mounts /home, /mnt and /media read-only at /scan. 2.1.1: light and dark themes follow the EthOS appearance toggle. 2.1.0: Synology-style options — quarantine copies, whitelist/file-type/size filters, smart scan, scan log, scheduled scans, definition info and a persistent package data volume. 2.0.1: Package Center icon. 2.0.0: native EthOS window UI; package service bound to loopback and reached through an authenticated proxy. 1.0.1: clearer first-start status and longer scan timeout.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-antivirus/manifest.json",
-      "manifest_sha256": "898852890b1f564df966f27fd13c173b9fdd6a07d428d665c8d0fa6b950fef76",
-      "size_bytes": 92567
+      "manifest_sha256": "2c88f3c875fda767eaa092e510cfe726c23781ef37ecf319d989254b125190b1",
+      "size_bytes": 94425
     },
     {
       "id": "ethos-books",
@@ -187,6 +191,32 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-editor/manifest.json",
       "manifest_sha256": "914aedaaba0fca8f22e89702b81071b85599d0cebef7358da11c6f622dd40d34",
       "size_bytes": 206496
+    },
+    {
+      "id": "ethos-git",
+      "name": "Forgejo",
+      "version": "1.0.0",
+      "description": "Self-hosted Git for your NAS: repositories, issues, pull requests, releases and a web editor, reachable on your LAN or through the Domains package. Give the Code Editor and Git Diff apps a remote to push to. Repositories live in a package volume, so no share permissions are involved; the first visit creates the administrator account and locks the instance.",
+      "icon": "🦊",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git/icon.svg",
+      "category": "tools",
+      "author": "SyncHot",
+      "homepage": "https://forgejo.org",
+      "license": "GPL-3.0-or-later",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [
+        "compose"
+      ],
+      "system_requires": [
+        "docker"
+      ],
+      "screenshots": [],
+      "changelog": "1.0.0: first release — Forgejo 17.0.2 pinned, SQLite in a package volume, web UI on port 3000 and SSH on 2222 (so it never collides with the NAS sshd). The first visit runs the installer with the database pre-filled; create the administrator account there. Self-registration is disabled.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-git/manifest.json",
+      "manifest_sha256": "ace63a56b2782bf4b6b0e75c25923284f58cec14b6434e5c0e83c6815fddb74a",
+      "size_bytes": 1815
     },
     {
       "id": "ethos-git-diff",
@@ -391,6 +421,32 @@
       "size_bytes": 62112
     },
     {
+      "id": "ethos-sync",
+      "name": "Syncthing",
+      "version": "1.0.0",
+      "description": "Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the middle — and the shared folders are your real shares under /mnt and /media. The web GUI opens in its own EthOS window; set a GUI username and password on the first visit, because port 8384 is reachable on your network.",
+      "icon": "🔁",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sync/icon.svg",
+      "category": "storage",
+      "author": "SyncHot",
+      "homepage": "https://syncthing.net",
+      "license": "MPL-2.0",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [
+        "compose"
+      ],
+      "system_requires": [
+        "docker"
+      ],
+      "screenshots": [],
+      "changelog": "1.0.0: first release — Syncthing 2.1.7 pinned, a config volume that survives updates, /mnt and /media mounted read-write for syncing, the sync protocol on 22000 tcp/udp and local discovery on 21027/udp. The GUI listens on port 8384 so the EthOS window can embed it; set a GUI username and password on the first visit.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sync/manifest.json",
+      "manifest_sha256": "5ca7b5d4aaf62d13c8504e19f8e37107da558da20a368a57d9cb16dad2794608",
+      "size_bytes": 2028
+    },
+    {
       "id": "ethos-video",
       "name": "Video Station",
       "version": "2.3.1",
@@ -415,7 +471,7 @@
     {
       "id": "ethos-welcome",
       "name": "EthOS Welcome",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "description": "A tiny static welcome page for your NAS, served by nginx on port 8090.",
       "icon": "🌅",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/icon.svg",
@@ -429,12 +485,14 @@
       "capabilities": [
         "compose"
       ],
-      "system_requires": [],
+      "system_requires": [
+        "docker"
+      ],
       "screenshots": [],
-      "changelog": "1.0.3: Package Center now offers Open UI for the page on port 8090; requires EthOS 2.0. 1.0.2: light and dark themes, honours the ?theme= passed by EthOS and falls back to prefers-color-scheme. 1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
+      "changelog": "1.0.4: nginx is pinned to a real version and the container has a healthcheck; the manifest states that port 8090 is reachable on your network and has no login. 1.0.3: Package Center now offers Open UI for the page on port 8090; requires EthOS 2.0. 1.0.2: light and dark themes, honours the ?theme= passed by EthOS and falls back to prefers-color-scheme. 1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/manifest.json",
-      "manifest_sha256": "bc8e92f53ca5f8b073526a2b6ad4dc6722a094b2fd3a3847a5438d53f1c17898",
-      "size_bytes": 5408
+      "manifest_sha256": "7a217d08300b78432a190bad3386c0eb070638842ff630dba78c92894eba6f49",
+      "size_bytes": 5754
     },
     {
       "id": "tic-tac-toe",
@@ -476,12 +534,14 @@
         "compose",
         "kvm"
       ],
-      "system_requires": [],
+      "system_requires": [
+        "docker"
+      ],
       "screenshots": [],
       "changelog": "1.2.0: edit machines. Every stopped machine has an Edit button: rename it, change vCPU and memory, set or clear forwarded guest ports, and switch autostart on or off - no need to delete the VM and re-import the image. A guest port that is already forwarded keeps its host port, so a bookmarked http://nas:18190 link survives the edit. Disks, firmware and the install image stay read-only: rewriting them is how a working guest gets lost. 1.1.0: forward guest ports. A VM runs behind its own NAT, so its web UI was unreachable from the NAS — the only way in was the console. Add a guest port when you create a machine (9000 for an EthOS OS image, 80 for a web appliance) and the card shows a link like http://<this-nas>:18190 → guest 9000. Up to three ports per machine; they come from a published range (18190-18194) and are handed out once, so an address never moves. 1.0.9: Console links point at the right port again. The window asked EthOS for the console's published host port through a variable that does not exist (`_ctx` instead of `ctx`), the error was swallowed by a try/catch, and every link fell back to the container port 8094 — on the NAS that number belongs to another service, so Console opened a dead or foreign page. The lookup now uses `ctx`, retries while Docker republishes the mapping, and refuses to build a URL out of the container port: if the port is not published yet it says so instead of opening a broken link. 1.0.8: the console opens in a new tab when EthOS is served over https — browsers drop an http iframe inside an https page as mixed content, which looked like a blank console with no error. On http (LAN) the console still embeds, and the panel says which mode it used. 1.0.7: picking a bootable image (.img/.img.xz/.qcow2) now pre-selects UEFI firmware and explains why, so an EthOS OS image boots on the first try. 1.0.6: boot a ready-made image, not just an installer — pick a .img/.img.xz/.qcow2 file (for example the EthOS OS release) and it becomes the VM's disk, decompressed and converted to qcow2 in one step, with a free-space check up front. .iso installers still attach as CD-ROM. 1.0.5: the window shows a calm “Starting engine…” state while the first-run QEMU/noVNC installation is still running, instead of a connection-reset error. 1.0.4: the console no longer reserves host port 8094 — Docker maps the container port to a free host port and the window discovers it, so the package starts even when another service already uses 8094. 1.0.3: requires EthOS 2.0. 1.0.2: the console overlay no longer covers the window — it is hidden until you press Console, so the machine list and the create form are always visible. 1.0.1: the browser console connects again — the WebSocket handshake now selects the `binary` subprotocol noVNC asks for, which browsers otherwise reject. Port 8094 shows a short explanation instead of raw JSON when opened directly, the create form pre-fills a real storage root, and picking a folder fills the ISO list automatically. 1.0.0: first release. KVM virtual machines with a browser console: create a VM from an ISO stored on the NAS, start, stop and reset it, follow its live status, and let it start automatically with EthOS. Disks are qcow2 files on a share you pick. Snapshots, cloning and OVA export follow in 1.1.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/manifest.json",
-      "manifest_sha256": "2a0a5f1fa7fba4eef6bcd8b7796e64c39d0045105aeb42eb60245c6be4e8f04f",
-      "size_bytes": 106134
+      "manifest_sha256": "b3beef667bb2c71edb7c2914e60cbfd294ddad9829bbb799547a2fa4dbf15c81",
+      "size_bytes": 108241
     }
   ]
 }

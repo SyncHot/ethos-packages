@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-welcome",
   "name": "EthOS Welcome",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A tiny static welcome page for your NAS, served by nginx on port 8090.",
   "icon": "🌅",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/icon.svg",
@@ -16,12 +16,17 @@
     "mode": "window",
     "scheme": "http",
     "port": 8090,
-    "path": "/"
+    "path": "/",
+    "expose": "lan",
+    "auth": "none"
   },
-  "changelog": "1.0.3: Package Center now offers Open UI for the page on port 8090; requires EthOS 2.0. 1.0.2: light and dark themes, honours the ?theme= passed by EthOS and falls back to prefers-color-scheme. 1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
+  "changelog": "1.0.4: nginx is pinned to a real version and the container has a healthcheck; the manifest states that port 8090 is reachable on your network and has no login. 1.0.3: Package Center now offers Open UI for the page on port 8090; requires EthOS 2.0. 1.0.2: light and dark themes, honours the ?theme= passed by EthOS and falls back to prefers-color-scheme. 1.0.1: Package Center icon. 1.0.0: initial release: static welcome page with a live clock.",
+  "system_requires": [
+    "docker"
+  ],
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/docker-compose.yml",
-    "sha256": "bf860c16265967f720d5709acbf467bcdcea864f8d56bd4c8298519e40c329e2"
+    "sha256": "e9de693b7de7904ba3e68fd5024ae2fb5762575031000b5313ebeec1ca1d50e6"
   },
   "files": [
     {

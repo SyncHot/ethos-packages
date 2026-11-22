@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install cryptography
+        run: pip install cryptography pyyaml
       - name: Run package service tests
         run: python -m unittest discover -s ethos-sticky-notes/tests -v
       - name: Validate signed repository

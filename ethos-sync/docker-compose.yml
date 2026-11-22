@@ -1,0 +1,35 @@
+services:
+  syncthing:
+    # Pinned on purpose: the signed compose file must describe exactly what runs.
+    image: syncthing/syncthing:2.1.7
+    container_name: ethos-sync
+    environment:
+      # The GUI must listen on all container interfaces: EthOS embeds it in a
+      # window from your browser, not from the NAS itself. Port 8384 is therefore
+      # reachable on the LAN — set a GUI username and password on the first visit.
+      STGUIADDRESS: 0.0.0.0:8384
+      # NAS data is group-readable (0660); keep everything Syncthing creates
+      # writable by the same group as the rest of the share.
+      UMASK: "0002"
+    ports:
+      - "8384:8384"        # Web GUI (own login)
+      - "22000:22000/tcp"  # Sync protocol
+      - "22000:22000/udp"  # QUIC transport
+      - "21027:21027/udp"  # Local discovery
+    volumes:
+      # Configuration, device IDs and the TLS certificate survive updates.
+      - sync-config:/var/syncthing
+      # Folders you sync must live on the shares; these are the only two trees
+      # EthOS lets a package bind, and Syncthing needs to write to them.
+      - /mnt:/mnt
+      - /media:/media
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8384/rest/noauth/health | grep -q OK"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  sync-config: {}
