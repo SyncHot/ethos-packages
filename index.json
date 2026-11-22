@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T10:13:31+00:00",
+  "generated_at": "2026-11-22T10:27:43+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -349,8 +349,8 @@
     {
       "id": "ethos-sticky-notes",
       "name": "Sticky Notes",
-      "version": "1.0.0",
-      "description": "Per-account sticky notes on colored cards: always-editable text, five pastel colors, reorder and one-click remove. Now a Packages app with its own private service.",
+      "version": "2.0.0",
+      "description": "Per-account notes and checklist tasks: search, pin, archive, due dates, reminders with browser push, and a collapsible right-edge desktop ribbon.",
       "icon": "🗒️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/icon.svg",
       "category": "productivity",
@@ -363,10 +363,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.0: first release. Sticky Notes moves out of the core install into Package Center: a native window, a private stdlib Python service and per-account notes imported automatically from the built-in widget.",
+      "changelog": "2.0.0: checklist tasks, search, pin, archive, due dates and reminders with Web Push; a per-account right-edge desktop ribbon with quick capture; requires EthOS 2.14.1.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/manifest.json",
-      "manifest_sha256": "165bfc8c06ec511d8c054b2340798393b43a0c4e3a0ff21ef220338b70dd785c",
-      "size_bytes": 41515
+      "manifest_sha256": "5b9d88c8c20c6d48f6d26de818fd96354ab051c4f6d44830b718b76cf7b4eed8",
+      "size_bytes": 132334
     },
     {
       "id": "ethos-surveillance",

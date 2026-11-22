@@ -2,8 +2,8 @@
   "schema": 2,
   "id": "ethos-sticky-notes",
   "name": "Sticky Notes",
-  "version": "1.0.0",
-  "description": "Per-account sticky notes on colored cards: always-editable text, five pastel colors, reorder and one-click remove. Now a Packages app with its own private service.",
+  "version": "2.0.0",
+  "description": "Per-account notes and checklist tasks: search, pin, archive, due dates, reminders with browser push, and a collapsible right-edge desktop ribbon.",
   "icon": "🗒️",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/icon.svg",
   "category": "productivity",
@@ -11,32 +11,48 @@
   "homepage": "https://github.com/SyncHot/ethos-packages",
   "license": "MIT",
   "channel": "stable",
-  "min_ethos_version": "2.0.0",
+  "min_ethos_version": "2.14.1",
   "runtime": "venv",
   "user_access": true,
   "ui": {
     "mode": "native",
     "entry": "frontend/app.js",
-    "port": 8099
+    "port": 8099,
+    "ribbon": {
+      "entry": "frontend/ribbon.js",
+      "title": "Sticky Notes"
+    }
   },
   "healthcheck": {
     "scheme": "http",
     "port": 8099,
     "path": "/health"
   },
-  "changelog": "1.0.0: first release. Sticky Notes moves out of the core install into Package Center: a native window, a private stdlib Python service and per-account notes imported automatically from the built-in widget.",
+  "changelog": "2.0.0: checklist tasks, search, pin, archive, due dates and reminders with Web Push; a per-account right-edge desktop ribbon with quick capture; requires EthOS 2.14.1.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/server/main.py",
-      "sha256": "9cafc143a7205750f9bc411d14c0130faeb14e5babf7339dba399933f82b7254",
+      "sha256": "e680f6b5dd007d46053fa3a35ab67bf4d7ae87957dd07e8d4b1ab9d44e9d75fd",
       "path": "server/main.py",
       "mode": 420
     },
     {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/server/push.py",
+      "sha256": "443a2bca4159458e8df898e0dd0c70768ef059cc0e56c814fb5f632d0a5bcc23",
+      "path": "server/push.py",
+      "mode": 420
+    },
+    {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/frontend/app.js",
-      "sha256": "32d510ca3b8e3c7a5ef303817769cfecce4d8d80d933b39f753f60650048b569",
+      "sha256": "b86736c7231515005e2ebdd313552a221b3a303147f89f56dc4c392f2ef636d9",
       "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/frontend/ribbon.js",
+      "sha256": "64587b2b166ad45c3aad0120599e5766093524633d2d8dc96374bad0dedb57b5",
+      "path": "frontend/ribbon.js",
       "mode": 420
     },
     {
@@ -49,8 +65,174 @@
   "python": {
     "entry": "server/main.py",
     "port": 8099,
-    "requirements": [],
+    "requirements": [
+      "pywebpush==2.5.0",
+      "cryptography==50.0.2"
+    ],
     "requires_python": "3.14",
-    "wheels": []
+    "wheels": [
+      {
+        "url": "https://files.pythonhosted.org/packages/71/43/1947f06babed6b3f1d7f38b0c767f52df66bfb2bc10b468c4a7de9eceff2/aiohappyeyeballs-2.7.1-py3-none-any.whl",
+        "sha256": "9243213661e29250eb41368e5daa826fc017156c3b8a11440826b2e3ed376472",
+        "arch": "any",
+        "filename": "aiohappyeyeballs-2.7.1-py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/19/b0/5aa186d56ce2334dabe29b70bd99dc8ae926ee44184c0de64a53d415a4f3/aiohttp-3.14.5-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "1eb8167961ec4dfcc8cb9dd50bd0ee72519f7ef496be95203e49e27b01618382",
+        "arch": "aarch64",
+        "filename": "aiohttp-3.14.5-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/a6/66/55a8904b3a129fafdf94f9cc0a2e4ca09a3c914650be52355db7ad0bbdb6/aiohttp-3.14.5-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "94684b879ac1d71e4238850c99b62dc1b28d9086b156a2555f082010b85a865c",
+        "arch": "x86_64",
+        "filename": "aiohttp-3.14.5-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/fb/76/641ae371508676492379f16e2fa48f4e2c11741bd63c48be4b12a6b09cba/aiosignal-1.4.0-py3-none-any.whl",
+        "sha256": "053243f8b92b990551949e63930a839ff0cf0b0ebbe0597b0f3fb19e1a0fe82e",
+        "arch": "any",
+        "filename": "aiosignal-1.4.0-py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl",
+        "sha256": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309",
+        "arch": "any",
+        "filename": "attrs-26.1.0-py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/6d/39/5eec3296860b94ac20bb8ed807725b88f6adfab3f343df592afd975f5f86/certifi-2026.11.20-py3-none-any.whl",
+        "sha256": "7422df25243767b9877031a2248cb14d09ddac9beee846f4cef3d5c9191d488f",
+        "arch": "any",
+        "filename": "certifi-2026.11.20-py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/67/b8/b42132ca113dc567d37684437b46ca1dafc885902b02a110a02d5b511857/cffi-2.1.1-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+        "sha256": "58acb8ab8e295e6c5ea12f888cbb13cf21511ef2a3303a23f4325c29d17fe5c1",
+        "arch": "aarch64",
+        "filename": "cffi-2.1.1-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/e9/02/4e7d553a7ac4b4238b38b3c1b80d486e9d4436f8d2acbf87a0997fe3f402/cffi-2.1.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+        "sha256": "b0431303acaea1089ad4b3e9ce4e6518193def1118d4073ca848635ee4ea2e96",
+        "arch": "x86_64",
+        "filename": "cffi-2.1.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/7f/72/9c5e7707b57c8ddfa9ddf7b0b1d009d7fbab9e9e887d5b721060f37e307d/charset_normalizer-3.5.2-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "8d86d6fc60743dc916eb79e2eb1ec4818e21e427731543af40a3021851174a13",
+        "arch": "aarch64",
+        "filename": "charset_normalizer-3.5.2-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/18/24/bad3ac4271589df29cf5ce2f5ae490518a5739358052bd0d61209e6fea54/charset_normalizer-3.5.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "34276fd796040bf0993ab33a369aa572e6979c7aab225a88893667ad8eac8f7a",
+        "arch": "x86_64",
+        "filename": "charset_normalizer-3.5.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/38/6b/61a3f8d8c5e1e49a6cddccafc4015cc1c0021360ab0acb4080e7a423644a/cryptography-50.0.2-cp311-abi3-manylinux_2_28_aarch64.whl",
+        "sha256": "f9f6143a8c75945eb960d9eb98905a441394abfa24afaae239d514ffb2586480",
+        "arch": "aarch64",
+        "filename": "cryptography-50.0.2-cp311-abi3-manylinux_2_28_aarch64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/1a/f1/b474e930c4d910328780e3940da76f5aa5cbc48ce1fc14e44d239d9ea9db/cryptography-50.0.2-cp311-abi3-manylinux_2_28_x86_64.whl",
+        "sha256": "4061c0079120205fb760c58acab6443e217307dcf05e3702cf970e0689972856",
+        "arch": "x86_64",
+        "filename": "cryptography-50.0.2-cp311-abi3-manylinux_2_28_x86_64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/a7/b2/fabede9fafd976b991e9f1b9c8c873ed86f202889b864756f240ce6dd855/frozenlist-1.8.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+        "sha256": "cba69cb73723c3f329622e34bdbf5ce1f80c21c290ff04256cff1cd3c2036ed2",
+        "arch": "x86_64",
+        "filename": "frozenlist-1.8.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/3a/3b/d9b1e0b0eed36e70477ffb8360c49c85c8ca8ef9700a4e6711f39a6e8b45/frozenlist-1.8.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "778a11b15673f6f1df23d9586f83c4846c471a8af693a22e066508b77d201ec8",
+        "arch": "aarch64",
+        "filename": "frozenlist-1.8.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-sticky-notes/wheels/http_ece-1.2.1-py2.py3-none-any.whl",
+        "sha256": "d6d2f19c12b9a80dfa2aa6492478ea45257bfa3cbe906a35a6ca78827fc3fdc1",
+        "arch": "any",
+        "filename": "http_ece-1.2.1-py2.py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+        "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+        "arch": "any",
+        "filename": "idna-3.20-py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/52/12/d6731ea19a185f76a1dc6b76f239fa3567732c8575188b47f7a715742c21/multidict-7.2.1-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "6efdeed2723431999cf3bcbc84c72dbe0f65d16bb1f84e15a657f5b60ff18ca6",
+        "arch": "aarch64",
+        "filename": "multidict-7.2.1-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/3b/8f/bff861e3bd5a7cc13bd1f040d22aee8aa32b4f2755bba29b0c31a1d2ae25/multidict-7.2.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "822a7fcd33f6922b650e1b26594f09d53c5d011fe655fea7ded27b2728ce2a1b",
+        "arch": "x86_64",
+        "filename": "multidict-7.2.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/f1/74/70ac8430e28f21e442c7bcb964eb46c4363f6881ade4aa0e978bfd8d503a/propcache-0.5.4-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "251c63dd46a0659bb875cb254dc4c1e79ee91a847c737cd62373295afc2235dc",
+        "arch": "aarch64",
+        "filename": "propcache-0.5.4-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/96/d3/e97cd6f5de2176bd90ed4076c7a9b5e09d0f0b9687d00a576507988bb62c/propcache-0.5.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "cc07876cfb079b6f6f36d21ce75784ad6c2c6b563eeac0ed26c2fa2669b85df9",
+        "arch": "x86_64",
+        "filename": "propcache-0.5.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/6b/46/8843d8e00eb4fcece8e12c109ecf5b17a3d4cc9355dab23c2585cb51ed3c/py_vapid-1.9.6-py2.py3-none-any.whl",
+        "sha256": "06d775951016f63f0d0d6dd8babd333fc2f831f0769fd5db2e1ec8cfbbccc70f",
+        "arch": "any",
+        "filename": "py_vapid-1.9.6-py2.py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/b6/ae/315bbeee126a769cbde43cf4908acb4b40408d8bf8bbf334dd7368d8dadf/pycparser-3.12-py3-none-any.whl",
+        "sha256": "a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e",
+        "arch": "any",
+        "filename": "pycparser-3.12-py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/65/fc/32c8902ce796e8b21c229fa50478fd70e2be2fe7c3ac2259771cf1d5aa07/pywebpush-2.5.0-py3-none-any.whl",
+        "sha256": "b5f5d45024223a04e73fe17f7a8e62540f35bbcc62b49e64d0a1080ff2dc26f2",
+        "arch": "any",
+        "filename": "pywebpush-2.5.0-py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl",
+        "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+        "arch": "any",
+        "filename": "requests-2.34.2-py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl",
+        "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+        "arch": "any",
+        "filename": "urllib3-2.8.0-py3-none-any.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/e5/5f/ed1538bcd06009fe990d6d283dd7667f639e62a81e35c6d8c6ef6c08fb3c/yarl-1.25.1-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+        "sha256": "77e5099b99b37f3cf79c246998ca9f7313a78054cd1809ec46bc1afad47e1c4c",
+        "arch": "aarch64",
+        "filename": "yarl-1.25.1-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl"
+      },
+      {
+        "url": "https://files.pythonhosted.org/packages/a2/be/415b00c0fe5a0615b062a456b26623d7ec91c2bee20faea1a14045aa0469/yarl-1.25.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+        "sha256": "30eec96e8a91bd588ce897c9543f6d5d8d34b28fbcba28a4dedf20ebeae9fe57",
+        "arch": "x86_64",
+        "filename": "yarl-1.25.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+      }
+    ]
   }
 }
