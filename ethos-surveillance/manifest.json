@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-surveillance",
   "name": "Cameras",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Surveillance Station for EthOS: live HLS wall, continuous or scheduled recording with retention, timeline playback and MP4 export, masked motion zones with Notification Center alerts, per-camera viewer access. The recording engine stays in EthOS so it keeps running headless.",
   "icon": "📹",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-surveillance/icon.svg",
@@ -16,7 +16,7 @@
     "mode": "native",
     "entry": "frontend/app.js"
   },
-  "changelog": "2.0.0: Surveillance Station rewrite. Live wall on HLS (one ffmpeg per camera, MJPEG fallback), continuous/scheduled recording with retention and disk quota, playback timeline with range export, motion zones with schedules and event snapshots, per-camera viewer access, admin-only management, /ws/surveillance status pushes. Requires EthOS 2.25.0. 1.0.2: renamed to Cameras as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: requires EthOS 2.0. 1.0.0: first release.",
+  "changelog": "2.0.1: shorter release notes in Package Center (no behaviour change). 2.0.0: Surveillance Station rewrite — HLS live wall (MJPEG fallback), recording with retention and quota, playback with export, motion zones, per-camera access (requires EthOS 2.25.0). 1.0.2: renamed to Cameras as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: requires EthOS 2.0. 1.0.0: first release.",
   "compose": null,
   "files": [
     {

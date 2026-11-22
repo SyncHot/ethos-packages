@@ -9,9 +9,9 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 |---|---|---|---|
 | `backup-manager` 🔄 | 1.0.3 | native | Versioned backups for folders and Docker Compose projects. Dated hardlink snapshots, GFS retention, quick/deep verify, a restore wizard and optional… |
 | `domains` 🌐 | 1.2.2 | native | Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another… |
-| `download-manager` ⬇️ | 1.1.0 | native | HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window. |
+| `download-manager` ⬇️ | 1.1.1 | native | HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window. |
 | `ethos-antivirus` 🛡️ | 2.1.6 | native | ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only… |
-| `ethos-books` 📚 | 1.2.0 | native | Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied… |
+| `ethos-books` 📚 | 1.2.1 | native | Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied… |
 | `ethos-cleaner` 🧹 | 1.0.1 | native | Find what is eating your disk: scans caches, thumbnails, logs, trash and old downloads, shows the biggest space users and lets you delete them safely… |
 | `ethos-docker` 🐳 | 1.0.5 | native | Engine status, containers, images, volumes and Compose projects in one place: start, stop, restart, inspect logs, prune and install Docker Engine on… |
 | `ethos-editor` ⌨️ | 1.0.1 | native | A VS Code-style workbench in the browser: single files or whole folders, tabs and breadcrumbs, search, Source Control with inline git gutters, split… |
@@ -26,12 +26,12 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `ethos-rss` 📰 | 1.0.1 | window 8085 | A news reader that lives on the NAS and keeps your feeds, read state and stars in one place instead of in a phone app's silo. FreshRSS fetches RSS/At… |
 | `ethos-shares` 📁 | 1.3.0 | native | Manage SMB shares, per-user and group access rules, and Samba credentials for existing Linux accounts. Includes permission masks, service status, and… |
 | `ethos-sticky-notes` 🗒️ | 2.0.0 | native | Per-account notes and checklist tasks: search, pin, archive, due dates, reminders with browser push, and a collapsible right-edge desktop ribbon. |
-| `ethos-surveillance` 📹 | 2.0.0 | native | Surveillance Station for EthOS: live HLS wall, continuous or scheduled recording with retention, timeline playback and MP4 export, masked motion zone… |
-| `ethos-sync` 🔁 | 1.0.1 | window 8384 | Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the midd… |
+| `ethos-surveillance` 📹 | 2.0.1 | native | Surveillance Station for EthOS: live HLS wall, continuous or scheduled recording with retention, timeline playback and MP4 export, masked motion zone… |
+| `ethos-sync` 🔁 | 1.0.2 | window 8384 | Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the midd… |
 | `ethos-video` 🎬 | 2.3.1 | native | Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for… |
 | `ethos-welcome` 🌅 | 1.0.4 | window 8090 | A tiny static welcome page for your NAS, served by nginx on port 8090. |
 | `tic-tac-toe` ❌ | 2.1.1 | native | A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port. |
-| `vmm` 🖥️ | 1.2.0 | native | Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO or boot a ready-made system image such as the… |
+| `vmm` 🖥️ | 1.2.1 | native | Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO or boot a ready-made system image such as the… |
 <!-- catalog:end -->
 
 Every manifest declares the EthOS version it needs (`min_ethos_version`, enforced at install
