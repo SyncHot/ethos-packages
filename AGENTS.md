@@ -137,8 +137,16 @@ contract, a copyable skeleton and the class inventory live in
 - **Definition of done**: rail 218 px with a text-only nav, status pill in the foot, panels/summary/
   tables/tags only, `ctx.progress` for long work, `ctx.modal` for confirms, responsive ≤780 px, light
   **and** dark screenshots checked. The checklist in `package-ui/SKILL.md` is the review gate.
-- **Legacy exceptions**: `ethos-welcome` (static page) and `tic-tac-toe` (single-card game) keep
-  their layouts. New packages and redesigns must not copy that exception.
+- **Legacy exceptions**: `ethos-welcome` (static page), `tic-tac-toe` (single-card game) and
+`ethos-video` (cinema/media exception) keep their layouts. New packages and redesigns must not
+copy any of these exceptions.
+- **`ethos-video` cinema exception**: a media library is browsed as artwork, not as a table. The
+window may use a full-bleed top nav (or a bottom tab bar on phones), a backdrop hero, poster
+shelves, a detail page and an immersive player. It must still use the EthOS theme variables,
+both light and dark palettes, `ctx.notifications`, `ctx.progress`, `ctx.modal.confirm`,
+`ctx.pickFolder` and `data-testid` on interactive elements. Its Settings and popovers keep the
+panel/tag/token vocabulary. No other package may copy this layout without the same documented
+approval.
 - Never copy another package's *content*; copy its *layout and tokens*.
 
 ## Logging (mandatory)

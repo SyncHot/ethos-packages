@@ -172,6 +172,11 @@ contract, not suggestions.
 
 ## Legacy exceptions
 
-`ethos-welcome` (static welcome page) and `tic-tac-toe` (single-card game) predate the shell and may
-keep their layout. Any **new** native package or redesign must follow this skill; do not extend the
-exception.
+`ethos-welcome` (static welcome page), `tic-tac-toe` (single-card game) and `ethos-video` (cinema
+media layout) may keep their own layout. Any **new** native package or redesign must follow this
+skill; do not extend the exception.
+
+`ethos-video` is the documented media exception: full-bleed top nav / bottom tab bar on phones,
+backdrop hero, poster shelves, detail page, immersive player. It still uses the EthOS theme
+variables and both palettes, `ctx.notifications`, `ctx.progress`, `ctx.modal.confirm`,
+`ctx.pickFolder` and `data-testid`; Settings and popovers keep the panel/tag/token vocabulary.

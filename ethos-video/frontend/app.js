@@ -1,2361 +1,2207 @@
-// EthOS NAS — Video Station (Package Center app)
-// Library of configured root folders with live browsing (no index):
-//   - sidebar: "All Videos" + top-level folders, breadcrumb navigation
-//   - grid/list cards with ffmpeg frame-grab thumbnails (icon fallback)
-//   - player: Range streaming via /api/videos/stream, ffprobe metadata chips,
-//     resume positions (auto-seek + throttled save), sibling .srt/.vtt subtitles
-//   - folder picker backed by /api/videos/browse to add root folders
+// ─────────────────────────────────────────────────────────────────────────────
+// Video Station — EthOS NAS media package (cinema layout, 2.0)
 //
-// The /api/videos/* API stays in the EthOS core (the Android Video app uses it);
-// this package owns the desktop UI only.
+// Documented media exception to the shared package shell: a full-bleed top nav,
+// backdrop hero, poster shelves and a bottom tab bar on phones. Settings and
+// popovers keep the EthOS panel/tag/token vocabulary; both themes are supported.
+//
+// The /api/videos/* API stays in the EthOS core (the Android app uses it).
+// This module owns the desktop UI only and must stay self-contained (the native
+// loader imports it as a blob, so relative imports are unavailable).
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ── Native-module shim ────────────────────────────────────────────────────────
-let _ctx = null;
-const escapeHtml = (value) => _ctx.escape.html(value);
-const escapeAttr = (value) => _ctx.escape.attr(value);
-const jsAttr = (value) => _ctx.escape.js(value);
-
-function getToken() {
-    return localStorage.getItem('token') || '';
-}
-
-function apiFetch(path, options) {
-    return _ctx.apiFetch(path, options);
-}
-
-async function readErrorDetail(res, fallback = '') {
-    let payload = null;
-    try { payload = await res.clone().json(); } catch (_) { /* non-JSON body */ }
-    const detail = payload?.detail ?? payload?.error ?? '';
-    const text = typeof detail === 'string' ? detail : JSON.stringify(detail);
-    return text || fallback || `HTTP ${res.status}`;
-}
-
-// Icon subset from core/icons.js — a blob module cannot import it.
-const ICONS = {
-    disk: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10.5h.01M9 10.5h.01"/><path d="M2.5 12.5h19"/>',
-    folder: '<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l2 2.5h8.5A1.5 1.5 0 0 1 20.5 10v7.5A1.5 1.5 0 0 1 19 19H4.5A1.5 1.5 0 0 1 3 17.5Z"/>',
-    check: '<path d="m4.5 12.5 5 5 10-11"/>',
-    alert: '<path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.5"/><path d="M12 17.2h.01"/>',
+const ICON = {
+    play: '<path d="M8 5.2 19 12 8 18.8V5.2Z"/>',
+    pause: '<path d="M8 5v14M16 5v14"/>',
+    back: '<path d="m15 5-7 7 7 7"/>',
+    chevron: '<path d="m9 5 7 7-7 7"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
     refresh: '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/>',
-    plus: '<path d="M12 5v14M5 12h14"/>',
-    download: '<path d="M12 4v10"/><path d="m7.5 10.5 4.5 4 4.5-4"/><path d="M4.5 19.5h15"/>',
-    subtitles: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6.5 14.5h5M13.5 14.5h4"/>',
+    folder: '<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4l2 2.5h8.5A1.5 1.5 0 0 1 20.5 10v7.5A1.5 1.5 0 0 1 19 19H4.5A1.5 1.5 0 0 1 3 17.5Z"/>',
+    film: '<rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7.5 4.5v15M16.5 4.5v15M3 12h18"/>',
+    tv: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="m8 3 4 3 4-3"/>',
+    grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/>',
+    list: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     volume: '<path d="M4 9.5h3.2L12 6v12l-4.8-3.5H4Z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path d="M18 6.8a7.5 7.5 0 0 1 0 10.4"/>',
-    film: '<rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7.5 4.5v15M16.5 4.5v15"/><path d="M3 12h18"/>',
-    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/>',
-    activity: '<path d="M3 12.5h3.6l2.2-6 3.4 12 2.4-8 1.6 2h4.8"/>',
-    play: '<path d="M8.5 5.5 18 12l-9.5 6.5v-13Z"/>',
+    mute: '<path d="M4 9.5h3.2L12 6v12l-4.8-3.5H4Z"/><path d="m16 9 5 6M21 9l-5 6"/>',
+    subtitles: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M6.5 14.5h5M13.5 14.5h4"/>',
+    full: '<path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5"/>',
+    pip: '<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="11" width="7" height="6" rx="1"/>',
+    stats: '<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>',
+    check: '<path d="m4.5 12.5 5 5 10-11"/>',
+    trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
+    alert: '<path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.5M12 17.2h.01"/>',
+    engine: '<path d="M4 8h16v9H4zM7 8V5h10v3M8 17v3M16 17v3M2 12h2M20 12h2"/>',
 };
 
-function uiIcon(name, size = 18, opts = {}) {
-    const d = ICONS[name];
-    if (!d) return '';
-    const stroke = opts.strokeWidth ?? 1.7;
-    const cls = opts.className ? ` class="${opts.className}"` : '';
-    const title = opts.title ? `<title>${String(opts.title).replace(/[<>&]/g, '')}</title>` : '';
-    return `<svg${cls} xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" `
-        + `viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" `
-        + `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" `
-        + `style="flex-shrink:0;vertical-align:-3px">${title}${d}</svg>`;
+function svg(name, size = 18) {
+    const path = ICON[name];
+    if (!path) return '';
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" `
+        + `stroke="currentColor" stroke-width="1.8" stroke-linecap="round" `
+        + `stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
 }
 
-// ── Module state ──────────────────────────────────────────────────────────────
-let _body = null;                 // .window-body element of this instance
-let _cfg = { roots: [], options: {
-    sort: 'name', view: 'grid', quality: 'balanced', audio_bitrate: '192k',
-    preferred_audio_lang: '', auto_subtitles: true, autoplay_next: true,
-}, tmdb: { api_key_set: false, api_key_masked: '', auto_fetch: true, language: 'pl-PL' } };
-let _tmdbFetching = false;        // a /tmdb/refresh request is in flight
-let _tmdbAutoDone = false;        // background auto-fetch already ran this session
-// _mode: 'home' | 'movies' | 'series' | 'browse' (folder / All Videos)
-let _mode = 'home';
-let _path = null;                  // browse mode only — null → "All Videos" walk
-let _q = '';                       // search query (server-side in browse, client-side elsewhere)
-let _preSearchMode = null;         // {mode,path} to restore when global search is cleared
-let _showDetail = null;            // show name when viewing a series detail page
-let _sidebarFolders = [];          // top-level folders, cached from the All-Videos walk
-let _listing = { path: null, parent: null, folders: [], videos: [] };
-let _viewVideos = [];              // items of the current grid/list view (click index → play)
-let _rowItems = [];                // home row cards (Continue Watching / Recently Added)
-let _showsList = [];               // series grid cards
-let _allVideos = [];               // full library walk cache for movies/series/home
-let _homeData = { continue_watching: [], recently_added: [] };
-let _resumes = {};                 // path → {time, duration} (card progress bars)
-let _myList = new Set();           // paths saved to "My List" (per user, localStorage)
-let _playerPath = null;            // video currently playing (null = library view)
-let _videoEl = null;               // HTMLVideoElement in the player
-let _pendingSeek = 0;              // resume position to apply on loadedmetadata
-let _lastResumeSave = 0;           // throttle for timeupdate saves
-let _transcoding = false;          // true while the current src is a live /transcode pipe
-let _knownDuration = 0;            // ffprobe duration — authoritative for fMP4 pipes
-let _pipeBase = 0;                 // absolute source time at video.currentTime=0 of the current pipe
-let _seekReload = null;            // {playing} set while reloading after an out-of-buffer seek
-let _endSaved = false;             // "finished" resume POST already sent for this play session
-let _playerItem = null;            // full item dict of the video being played
-let _subs = [];                    // sibling subtitle files for the current player item
-let _subIdx = 0;                   // selected index into _subs (-1 = off)
-let _subBlobUrl = null;            // object URL for a converted .srt track
-let _audioTracks = [];             // audio streams of the current item (from /info)
-let _audioIdx = 0;                 // selected audio track index (ffmpeg 0:a:<idx>)
-let _playerMode = 'direct';        // direct | processed (remux/transcode)
-let _playerMax = false;            // player maximized (sidebar/toolbar hidden)
-let _ctlBar = null;                // custom transport bar element (processed mode)
-let _searchTimer = null;
-let _keyOn = false;                // Escape keydown handler attached?
-
-const SORTS = [
-    { id: 'name', label: 'Name' },
-    { id: 'date_desc', label: 'Newest first' },
-    { id: 'size_desc', label: 'Largest first' },
-];
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function _active() { return !!(_body && _body.isConnected); }
-function _token() { return encodeURIComponent(getToken() || ''); }
-function _streamUrl(p) { return `/api/videos/stream?path=${encodeURIComponent(p)}&token=${_token()}`; }
-// Live transcode pipe (Intel QSV H.264 + AAC). `t` starts the stream at an
-// offset in seconds — used for resume and when re-requesting after a seek.
-function _transcodeUrl(p, t = 0, a = 0) {
-    const off = t > 0 ? `&t=${t.toFixed(3)}` : '';
-    const q = _cfg.options.quality || 'balanced';
-    return `/api/videos/transcode?path=${encodeURIComponent(p)}${off}&a=${a}&q=${q}&token=${_token()}`;
-}
-
-function _chanLabel(ch) {
-    if (ch === 2) return '2.0';
-    if (ch === 6) return '5.1';
-    if (ch === 8) return '7.1';
-    return '';
-}
-
-function _trackLabel(t) {
-    const lang = t.language ? `${t.language.toUpperCase()} · ` : '';
-    const ch = _chanLabel(t.channels);
-    return `${lang}${(t.codec || 'audio').toUpperCase()}${ch ? ' ' + ch : ''}`;
-}
-
-function _defaultAudioIdx(tracks) {
-    const pref = (_cfg.options.preferred_audio_lang || '').toLowerCase();
-    if (pref && tracks.length) {
-        for (const t of tracks) if ((t.language || '').startsWith(pref)) return t.index;
-    }
-    return 0;
-}
-
-// Seek target outside the buffered range → re-request the transcode pipe from
-// that point (a live pipe has no byte-range seek). In-buffer seeks stay native.
-// `t` is an ABSOLUTE source time; buffered ranges are relative to _pipeBase.
-function _seekReloadStart(video, t) {
-    if (_seekReload || !_transcoding) return;
-    let inBuf = false;
-    try {
-        for (let i = 0; i < video.buffered.length; i++) {
-            const s = video.buffered.start(i) + _pipeBase;
-            const e = video.buffered.end(i) + _pipeBase;
-            if (t >= s - 1.5 && t <= e + 1.5) { inBuf = true; break; }
-        }
-    } catch (_) {}
-    if (inBuf) return;
-    _seekReload = { playing: !video.paused };
-    _pipeBase = Math.max(0, t);
-    video.src = _transcodeUrl(_playerPath, _pipeBase, _audioIdx);
-}
-
-// Show/hide the custom transport bar (processed mode only — native controls
-// can't represent a live pipe's real duration).
-function _setCustomCtl(on) {
-    if (!_ctlBar || !_videoEl) return;
-    _ctlBar.style.display = on ? 'flex' : 'none';
-    _videoEl.controls = !on;
-}
-
-// Keep the custom transport in sync: ffprobe duration as max, absolute time.
-function _syncTransport() {
-    if (!_transcoding) return;
-    const video = _videoEl, ctl = _ctlBar;
-    if (!video || !ctl) return;
-    const seekEl = ctl.querySelector('[data-testid="vs-ctl-seek"]');
-    const curEl = ctl.querySelector('[data-testid="vs-ctl-cur"]');
-    const durEl = ctl.querySelector('[data-testid="vs-ctl-dur"]');
-    if (!seekEl) return;
-    const d = _effDuration(video);
-    seekEl.max = String(d > 0 ? d : 100);
-    durEl.textContent = d > 0 ? fmtTime(d) : '--:--';
-    curEl.textContent = fmtTime(_absTime(video));
-    if (!seekEl.matches(':active')) seekEl.value = String(_absTime(video));
-}
-function _thumbUrl(p, w = 480) { return `/api/videos/thumbnail?path=${encodeURIComponent(p)}&w=${w}&token=${_token()}`; }
-
-// TMDB (Phase 6): locally cached artwork + display titles. Files are never renamed —
-// tmdb.title is display-only, and the ffmpeg frame grab stays as image fallback.
-function _tmdbArtUrl(item, preferPoster = false) {
-    const t = item && item.tmdb;
-    if (!t) return '';
-    const f = preferPoster ? (t.poster_file || t.backdrop_file) : (t.backdrop_file || t.poster_file);
-    return f ? `/api/videos/tmdb/image?file=${encodeURIComponent(f)}&token=${_token()}` : '';
-}
-
-function _displayTitle(item) {
-    const tm = item && item.tmdb;
-    if (item.kind === 'episode') return item.title || `Episode ${item.episode}`;   // TMDB title is the show name, not the episode
-    return (tm && tm.title) || item.title || item.name;
-}
-
-function _artImgHtml(item, w = 480, preferPoster = false) {
-    const tmdb = _tmdbArtUrl(item, preferPoster);
-    const ff = _thumbUrl(item.path, w);
-    const src = tmdb || ff;
-    const alt = (tmdb && tmdb !== ff) ? ff : '';
-    return `<img data-alt="${escapeAttr(alt)}" src="${src}" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="if(this.dataset.alt&&!this.dataset.fb){this.src=this.dataset.alt;this.dataset.fb='1';}else{this.style.display='none';const n=this.nextElementSibling;if(n)n.style.display='flex'}">`;
-}
-function _rawUrl(p) { return `/api/files/raw?path=${encodeURIComponent(p)}&token=${_token()}`; }
-
-async function _api(path, options = {}) {
-    const resp = await apiFetch(path, options);
-    if (!resp.ok) {
-        throw new Error(await readErrorDetail(resp));
-    }
-    return resp.json();
-}
+// ── Formatting helpers ────────────────────────────────────────────────────────
 
 function fmtBytes(n) {
-    if (!n || n < 0) return '';
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let i = 0;
-    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
-    return `${n.toFixed(n >= 100 || i === 0 ? 0 : 1)} ${units[i]}`;
+    const v = Number(n) || 0;
+    if (v >= 1e12) return `${(v / 1e12).toFixed(2)} TB`;
+    if (v >= 1e9) return `${(v / 1e9).toFixed(2)} GB`;
+    if (v >= 1e6) return `${(v / 1e6).toFixed(0)} MB`;
+    if (v >= 1e3) return `${(v / 1e3).toFixed(0)} KB`;
+    return `${v} B`;
 }
 
-function fmtTime(sec) {
-    if (!sec || !isFinite(sec)) return '0:00';
-    sec = Math.floor(sec);
-    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    return `${m}:${String(s).padStart(2, '0')}`;
+function fmtTime(seconds) {
+    const s = Math.max(0, Math.floor(Number(seconds) || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return h ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+        : `${m}:${String(sec).padStart(2, '0')}`;
 }
 
-function fmtDate(ts) {
-    if (!ts) return '';
-    try { return new Date(ts * 1000).toLocaleDateString(); } catch (_) { return ''; }
+function pad2(n) { return String(n ?? 0).padStart(2, '0'); }
+function pct(value, total) { return total > 0 ? Math.min(100, Math.max(0, (value / total) * 100)) : 0; }
+
+function basename(path) {
+    const parts = String(path || '').split('/').filter(Boolean);
+    return parts[parts.length - 1] || '';
 }
 
-function _toast(msg, isError = false) {
-    if (window.showToast) window.showToast(msg, isError ? 'error' : 'success');
-    else console.warn('[video-station]', msg);
+function dirname(path) {
+    const parts = String(path || '').split('/').filter(Boolean);
+    parts.pop();
+    return '/' + parts.join('/');
 }
 
-// ── Config ────────────────────────────────────────────────────────────────────
-
-async function _loadConfig() {
+function jwtPayload() {
     try {
-        const d = await _api('/api/videos/config');
-        _cfg = { roots: d.roots || [], options: { ..._cfg.options, ...(d.options || {}) },
-                 tmdb: d.tmdb || { api_key_set: false, api_key_masked: '', auto_fetch: true, language: 'pl-PL' } };
-    } catch (e) {
-        console.warn('[video-station] config load failed:', e.message);
+        const tok = localStorage.getItem('token') || '';
+        const part = tok.split('.')[1];
+        if (!part) return {};
+        return JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+    } catch {
+        return {};
     }
 }
 
-function _saveCfg(patch) {
-    const payload = {
-        roots: patch.roots !== undefined ? patch.roots : _cfg.roots,
-        options: { ..._cfg.options, ...(patch.options || {}) },
-    };
-    if (patch.tmdb !== undefined) payload.tmdb = patch.tmdb;   // empty key keeps the stored one
-    return apiFetch('/api/videos/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    }).then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const d = await r.json();
-        _cfg.roots = d.roots || [];
-        _cfg.options = { sort: 'name', view: 'grid', ...(d.options || {}) };
-        _cfg.tmdb = d.tmdb || _cfg.tmdb;   // server returns the masked view
-    }).catch((e) => { _toast('Failed to save library settings: ' + e.message, true); throw e; });
+// ── App ───────────────────────────────────────────────────────────────────────
+
+export async function render(container, ctx) {
+    const app = new VideoStation(container, ctx);
+    await app.mount();
+    return app;
 }
 
-// ── Entry point ───────────────────────────────────────────────────────────────
+class VideoStation {
+    constructor(container, ctx) {
+        this.container = container;
+        this.ctx = ctx;
+        this.root = null;
+        this.main = null;
+        this.view = null;
+        this.abort = new AbortController();
+        this.keyHandler = null;
+        this.onScroll = null;
+        this.player = null;
+        this.searchTimer = null;
+        this._hlsPromise = null;
+        this.state = {
+            cfg: { roots: [], options: {}, tmdb: {} },
+            status: null,
+            home: { continue_watching: [], recently_added: [] },
+            resume: {},
+            list: new Set(),
+            library: null,
+            libraryAt: 0,
+            folder: null,
+            roots: [],
+            folders: [],
+            total: 0,
+            truncated: false,
+            mode: 'home',
+            path: null,
+            show: null,
+            detail: null,
+            back: null,
+            query: '',
+            sort: 'name',
+            quality: 'all',
+            genre: 'all',
+            layout: 'grid',
+            visible: 300,
+            folderLoading: false,
+            errors: [],
+            loading: true,
+        };
+        this.token = localStorage.getItem('token') || '';
+        this.esc = (v) => ctx.escape.html(String(v ?? ''));
+        this.attr = (v) => ctx.escape.attr(String(v ?? ''));
+    }
 
-export async function renderVideoStation(winBody) {
-    // Tear down any previous instance (player stream, subtitle blob, key handler).
-    if (_videoEl) { try { _videoEl.pause(); } catch (_) {} _videoEl = null; }
-    if (_subBlobUrl) { URL.revokeObjectURL(_subBlobUrl); _subBlobUrl = null; }
-    removeEventListener('keydown', _onKey); _keyOn = false;
-    const oldPk = document.getElementById('vs-picker'); if (oldPk) oldPk.remove();
+    // ── Mount / shell ────────────────────────────────────────────────────────
 
-    _body = winBody;
-    _path = null; _q = ''; _playerPath = null;
-    _playerMax = false;
-    _tmdbAutoDone = false;
-    _loadMyList();
-    _sidebarFolders = []; _resumes = {};
-    _listing = { path: null, parent: null, folders: [], videos: [] };
-    _viewVideos = [];
+    async mount() {
+        this.container.style.padding = '0';
+        this.container.style.overflow = 'hidden';
+        this.container.innerHTML = this.shellHtml();
+        this.root = this.container.querySelector('[data-testid="vd-root"]');
+        this.main = this.container.querySelector('[data-testid="vd-main"]');
+        this.view = this.container.querySelector('[data-testid="vd-view"]');
+        this.bind();
+        try {
+            this.ctx.windows.registerCloseGuard(this.ctx.pkg.id, () => {
+                this.destroy();
+                return true;
+            });
+        } catch { /* older core without close guards */ }
+        await this.loadBootstrap();
+        this.state.loading = false;
+        this.renderView();
+        this.ctx.log('info', 'Video Station opened');
+    }
 
-    winBody.innerHTML = `<div class="vs-skel-shell">
-        <div class="vs-skel" style="height:clamp(300px,48vh,520px);border-radius:0;"></div>
-        <div style="padding:34px 4% 0;"><div class="vs-skel" style="height:18px;width:190px;margin-bottom:14px;"></div>
-            <div style="display:flex;gap:9px;">${Array.from({ length: 7 }, () => '<div class="vs-skel" style="width:156px;aspect-ratio:2/3;"></div>').join('')}</div></div>
-        <div style="padding:30px 4% 0;"><div class="vs-skel" style="height:18px;width:150px;margin-bottom:14px;"></div>
-            <div style="display:flex;gap:9px;">${Array.from({ length: 5 }, () => '<div class="vs-skel" style="width:234px;aspect-ratio:16/9;"></div>').join('')}</div></div>
-    </div>`;
-    await _loadConfig();
-    if (!_active()) return;
-    _renderShell();
-}
+    destroy() {
+        this.abort.abort();
+        this.stopPlayer({ quiet: true });
+        if (this.keyHandler) document.removeEventListener('keydown', this.keyHandler);
+        if (this.onScroll && this.main) this.main.removeEventListener('scroll', this.onScroll);
+        if (this.pageHide) window.removeEventListener('pagehide', this.pageHide);
+        try { this.ctx.windows.registerCloseGuard(this.ctx.pkg.id, () => true); } catch { /* ignore */ }
+    }
 
-// ── Shell (sidebar + toolbar + content) ───────────────────────────────────────
-
-
-// ── Shell: Netflix-style top nav + content area ─────────────────────────────
-function _renderShell() {
-    if (!_body) return;
-    const css = `
-        /* Light is the default; :root.dark restores the cinematic palette.
-           Hero/player surfaces stay dark because they sit on artwork; the shell,
-           rows, cards and lists follow the EthOS theme. */
-        .vs-shell{
-            color-scheme:light;
-            --surface-0:#ffffff;--surface-1:#f4f5f7;--surface-2:#e8eaed;
-            --border:rgba(0,0,0,.1);--text-1:#141414;--text-2:#4b5563;--text-3:#6b7280;
-            --accent:#e50914;--accent-hover:#b20710;
-            --vs-card-bg:#ffffff;--vs-card-hover:#f1f1f1;--vs-hover:rgba(0,0,0,.07);
-            --vs-nav-bg:rgba(255,255,255,.94);--vs-nav-solid:#ffffff;
-            --vs-search-bg:#ffffff;--vs-search-border:rgba(0,0,0,.2);
-            --vs-rank-color:#ffffff;--vs-rank-stroke:rgba(0,0,0,.28);
-            --vs-pill-bg:#141414;--vs-pill-fg:#ffffff;
-            --vs-skel-1:#eceef1;--vs-skel-2:#f7f8fa;--vs-scroll:#b6bcc6;
-            background:var(--surface-0);color:var(--text-1);font-family:'Helvetica Neue',Helvetica,Arial,system-ui,sans-serif;
-        }
-        :root.dark .vs-shell{
-            color-scheme:dark;
-            --surface-0:#141414;--surface-1:#1b1b20;--surface-2:#2a2a31;
-            --border:rgba(255,255,255,.09);--text-1:#fff;--text-2:rgba(255,255,255,.72);--text-3:rgba(255,255,255,.45);
-            --accent:#e50914;--accent-hover:#ff2b36;
-            --vs-card-bg:#181818;--vs-card-hover:#232323;--vs-hover:rgba(255,255,255,.14);
-            --vs-nav-bg:linear-gradient(180deg, rgba(0,0,0,.72) 0%, rgba(0,0,0,.35) 60%, rgba(0,0,0,0) 100%);
-            --vs-nav-solid:#141414;
-            --vs-search-bg:rgba(0,0,0,.75);--vs-search-border:#fff;
-            --vs-rank-color:#141414;--vs-rank-stroke:rgba(255,255,255,.55);
-            --vs-pill-bg:#fff;--vs-pill-fg:#141414;
-            --vs-skel-1:#1b1b20;--vs-skel-2:#26262c;--vs-scroll:#4d4d4d;
-        }
-        .vs-shell ::-webkit-scrollbar{width:10px;height:10px}
-        .vs-shell ::-webkit-scrollbar-thumb{background:var(--vs-scroll);border-radius:8px;border:3px solid transparent;background-clip:content-box;}
-        .vs-shell ::-webkit-scrollbar-track{background:transparent}
-        /* white primary CTA (Netflix Play button) */
-        .vs-shell .btn-primary{background:var(--text-1);color:var(--surface-0);font-weight:700;border:none;}
-        .vs-shell .btn-primary:hover{opacity:.85;transform:none;}
-        #vs-nav { position:absolute; top:0; left:0; right:0; z-index:50; padding:0 4%;
-            transition:background .35s ease, box-shadow .35s ease;
-            background:var(--vs-nav-bg); }
-        #vs-nav.vs-solid { background:var(--vs-nav-solid); box-shadow:0 2px 10px rgba(0,0,0,.25); }
-        .vs-nav-inner { display:flex; align-items:center; gap:28px; height:58px; }
-        .vs-brand { color:#e50914; font-weight:900; font-size:19px; letter-spacing:.6px; cursor:pointer;
-            text-transform:uppercase; white-space:nowrap; user-select:none; line-height:1.2; }
-        .vs-links { display:flex; gap:18px; flex:1; min-width:0; overflow:hidden; }
-        .vs-link { font-size:13.5px; color:var(--text-2); opacity:.85; cursor:pointer; transition:opacity .2s, color .2s; white-space:nowrap; user-select:none; }
-        .vs-link:hover { opacity:1; }
-        .vs-link.active { color:var(--text-1); font-weight:600; opacity:1; }
-        .vs-nav-right { display:flex; align-items:center; gap:12px; margin-left:auto; flex-shrink:0; }
-        .vs-iconbtn { background:none; border:none; color:var(--text-1); cursor:pointer; padding:0; display:flex;
-            align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; transition:background .2s; }
-        .vs-iconbtn:hover { background:var(--vs-hover); }
-        .vs-search-wrap { display:flex; align-items:center; }
-        .vs-search-wrap input { width:0; opacity:0; border:1px solid transparent; background:var(--vs-search-bg); color:var(--text-1);
-            font-size:13px; padding:6px 0; margin-right:0; outline:none; transition:width .28s ease, opacity .2s ease, padding .28s ease, border-color .2s; }
-        .vs-search-wrap.open input { width:215px; opacity:1; padding:6px 10px; margin-right:8px; border-color:var(--vs-search-border); }
-        .vs-navcount { font-size:11.5px; color:var(--text-3); white-space:nowrap; user-select:none; }
-
-        #vs-main { position:absolute; inset:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:var(--vs-scroll) transparent; }
-        #vs-content { min-height:100%; display:flex; flex-direction:column; }
-        #vs-main.vs-player-mode { overflow:hidden; }
-        #vs-main.vs-player-mode > #vs-content { height:100%; min-height:0; }
-
-        /* Hero billboard */
-        .vs-hero { position:relative; flex-shrink:0; height:clamp(300px,48vh,520px); background:#0b0b0f; overflow:hidden; cursor:pointer; }
-        .vs-hero--detail { height:clamp(260px,40vh,420px); }
-        .vs-hero-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:brightness(.78) saturate(1.05); }
-        .vs-hero-grad { position:absolute; inset:0;
-            background:linear-gradient(180deg, rgba(20,20,20,.42) 0%, rgba(20,20,20,0) 32%, rgba(20,20,20,.9) 82%, #141414 100%),
-                       linear-gradient(90deg, rgba(20,20,20,.78) 0%, rgba(20,20,20,.25) 46%, rgba(20,20,20,0) 72%); }
-        .vs-hero-body { position:absolute; left:4%; right:4%; bottom:9vh; z-index:2; display:flex; flex-direction:column; gap:11px; max-width:660px; pointer-events:none; }
-        .vs-hero-eyebrow { display:flex; align-items:center; gap:8px; font-size:12.5px; letter-spacing:3px; color:#d8d8d8; font-weight:700; user-select:none; }
-        .vs-hero-eyebrow b { color:#e50914; font-size:15px; letter-spacing:.5px; }
-        .vs-hero-title { margin:0; font-size:clamp(26px,3.6vw,44px); line-height:1.06; font-weight:800; color:#fff; text-shadow:0 2px 16px rgba(0,0,0,.65); }
-        .vs-hero-meta { display:flex; align-items:center; gap:9px; flex-wrap:wrap; font-size:13.5px; color:#e8e8e8; font-weight:600; text-shadow:0 1px 6px rgba(0,0,0,.6); }
-        .vs-hero-meta .dot { opacity:.45; font-weight:400; }
-        .vs-hero-overview { margin:0; font-size:13.5px; line-height:1.5; color:rgba(255,255,255,.8); max-width:560px; text-shadow:0 1px 8px rgba(0,0,0,.7);
-            display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
-        .vs-hero-btns { display:flex; gap:10px; margin-top:4px; pointer-events:auto; }
-        .vs-btn-play { background:#fff; color:#000; border:none; font-size:15.5px; font-weight:700; padding:9px 26px; border-radius:4px; cursor:pointer;
-            display:inline-flex; align-items:center; gap:8px; transition:background .15s; }
-        .vs-btn-play:hover { background:rgba(255,255,255,.78); }
-        .vs-btn-info { background:rgba(109,109,110,.5); color:#fff; border:none; font-size:15.5px; font-weight:600; padding:9px 22px; border-radius:4px; cursor:pointer;
-            display:inline-flex; align-items:center; gap:8px; transition:background .15s; }
-        .vs-btn-info:hover { background:rgba(109,109,110,.32); }
-
-        /* Rows + cards */
-        .vs-rowsec { position:relative; margin-top:34px; flex-shrink:0; }
-        .vs-rowsech { display:flex; align-items:center; justify-content:space-between; padding:0 4%; margin-bottom:2px; }
-        .vs-rowtitle { font-size:16.5px; font-weight:700; color:var(--text-1); letter-spacing:.2px; margin:0; user-select:none; }
-        .vs-rowwrap { position:relative; }
-        .vs-row { display:flex; gap:9px; overflow-x:auto; padding:84px 4%; margin:-68px 0; scrollbar-width:none; scroll-behavior:smooth; }
-        .vs-row::-webkit-scrollbar { display:none; }
-        .vs-arrow { position:absolute; top:16px; bottom:16px; width:44px; z-index:25; border:none; background:rgba(20,20,20,.72); color:#fff; cursor:pointer;
-            display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .2s; }
-        .vs-arrow-l { left:0; border-radius:0 6px 6px 0; }
-        .vs-arrow-r { right:0; border-radius:6px 0 0 6px; }
-        .vs-rowwrap:hover .vs-arrow { opacity:1; }
-
-        .vs-card { position:relative; flex:0 0 auto; width:234px; cursor:pointer; background:var(--vs-card-bg); border-radius:6px; transition:z-index 0s; z-index:1; }
-        .vs-card-title { margin:7px 2px 0; font-size:12.5px; font-weight:600; color:var(--text-2); line-height:1.32;
-            display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-            word-break:break-word; transition:color .15s; }
-        .vs-card:hover .vs-card-title { color:var(--text-1); }
-        .vs-card--portrait { width:156px; }
-        .vs-card:hover { z-index:30; }
-        .vs-card-art { position:relative; aspect-ratio:16/9; border-radius:6px; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; }
-        .vs-card--portrait .vs-card-art { aspect-ratio:2/3; }
-        .vs-emoji-fb { display:none; width:100%; height:100%; align-items:center; justify-content:center; font-size:34px; }
-        .vs-chip-q { position:absolute; top:6px; right:6px; z-index:5; background:rgba(0,0,0,.72); color:#fff; font-size:10px; font-weight:700; letter-spacing:.4px; padding:2px 6px; border-radius:3px; }
-        .vs-prog { position:absolute; left:0; right:0; bottom:0; height:4px; background:rgba(255,255,255,.28); z-index:4; }
-        .vs-prog i { display:block; height:100%; background:#e50914; }
-        .vs-cw-x { position:absolute; top:6px; left:6px; z-index:6; width:22px; height:22px; border-radius:50%; border:none; cursor:pointer;
-            background:rgba(0,0,0,.72); color:#fff; font-size:12px; line-height:1; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; }
-        .vs-card:hover .vs-cw-x { opacity:1; }
-
-        /* Netflix-style hover popup panel */
-        .vs-card-panel { position:absolute; top:6px; left:-7%; width:114%; z-index:8; background:var(--vs-card-bg); border-radius:8px; padding:10px 12px 11px;
-            box-shadow:0 14px 30px rgba(0,0,0,.35); opacity:0; transform:scale(.9) translateY(8px); transform-origin:top center; pointer-events:none;
-            transition:opacity .16s ease .38s, transform .2s ease .38s; }
-        .vs-card:hover .vs-card-panel { opacity:1; transform:none; pointer-events:auto; }
-        .vs-cp-top { display:flex; align-items:center; gap:7px; margin-bottom:8px; }
-        .vs-cbtn { width:30px; height:30px; border-radius:50%; border:1.6px solid var(--border); background:var(--surface-2); color:var(--text-1); cursor:pointer;
-            display:flex; align-items:center; justify-content:center; padding:0; transition:border-color .15s, background .15s; }
-        .vs-cbtn:hover { border-color:var(--text-1); }
-        .vs-cbtn-play { background:var(--text-1); color:var(--surface-0); border-color:var(--text-1); font-size:12px; }
-        .vs-cbtn-play:hover { background:var(--vs-hover); }
-        .vs-cp-title { font-size:13px; font-weight:700; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
-        .vs-cp-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11.5px; color:var(--text-3); }
-        .vs-cp-meta .dot { opacity:.45; }
-
-        /* Page headers, grids, folders */
-        .vs-pagehead { padding:78px 4% 4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; user-select:none; }
-        .vs-pagehead h2 { font-size:25px; font-weight:800; margin:0; color:var(--text-1); letter-spacing:.2px; }
-        .vs-crumb { font-size:13.5px; color:var(--text-3); cursor:pointer; transition:color .15s; white-space:nowrap; }
-        .vs-crumb:hover { color:var(--text-1); text-decoration:underline; }
-        .vs-crumb.current { color:var(--text-1); font-weight:700; cursor:default; }
-        .vs-crumb-sep { color:var(--text-3); font-size:13px; user-select:none; }
-        .vs-folders { display:grid; grid-template-columns:repeat(auto-fill,minmax(205px,1fr)); gap:10px; padding:14px 4% 4px; align-content:start; }
-        .vs-folder-tile { position:relative; aspect-ratio:16/9; border-radius:6px; background:var(--vs-card-bg); border:1px solid var(--border); cursor:pointer; overflow:hidden; display:flex; flex-direction:column;
-            justify-content:center; gap:4px; padding:0 14px; transition:background .15s, transform .12s; }
-        .vs-folder-tile:hover { background:var(--vs-card-hover); transform:scale(1.02); z-index:5; }
-        .vs-ft-icon { font-size:26px; line-height:1; }
-        .vs-ft-name { font-size:13px; font-weight:600; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .vs-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:44px 12px; padding:18px 4% 46px; align-content:start; }
-        .vs-grid .vs-card { width:auto; }
-        .vs-grid--posters { display:grid; grid-template-columns:repeat(auto-fill,minmax(158px,1fr)); gap:22px 12px; padding:18px 4% 46px; align-content:start; }
-        .vs-pcard { cursor:pointer; min-width:0; }
-        .vs-pcard-art { position:relative; aspect-ratio:2/3; border-radius:6px; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center;
-            transition:transform .15s ease, box-shadow .15s ease; }
-        .vs-pcard:hover .vs-pcard-art { transform:scale(1.035); box-shadow:0 10px 26px rgba(0,0,0,.55); }
-        .vs-pcard-art .vs-emoji-fb { font-size:40px; }
-        .vs-pcard-play { position:absolute; inset:0; z-index:6; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; background:rgba(0,0,0,.25); }
-        .vs-pcard:hover .vs-pcard-play { opacity:1; }
-        .vs-pcard-play i { width:46px; height:46px; border-radius:50%; border:2px solid rgba(255,255,255,.8); background:rgba(20,20,20,.62);
-            display:flex; align-items:center; justify-content:center; color:#fff; }
-        .vs-pcard-tmdb { position:absolute; top:6px; right:6px; z-index:7; width:26px; height:26px; border-radius:50%; border:none; cursor:pointer;
-            background:rgba(0,0,0,.72); color:#fff; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s; }
-        .vs-pcard:hover .vs-pcard-tmdb { opacity:1; }
-        .vs-pcard-title { margin-top:7px; font-size:12.5px; font-weight:600; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .vs-pcard-meta { margin-top:2px; font-size:11px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .vs-list { display:flex; flex-direction:column; gap:5px; padding:10px 4% 36px; }
-        .vs-listrow { display:flex; align-items:center; gap:12px; padding:7px 10px; border-radius:8px; cursor:pointer; background:var(--vs-card-bg); border:1px solid var(--border); transition:background .15s; }
-        .vs-listrow:hover { background:var(--vs-card-hover); }
-
-        /* ── Cinematic shine: Ken Burns hero, ambient glow, hover sweep ── */
-        .vs-hero-bg { animation:vs-kenburns 38s ease-in-out infinite alternate; will-change:transform; }
-        @keyframes vs-kenburns { from { transform:scale(1.02); } to { transform:scale(1.1) translate3d(-1.2%,-1.5%,0); } }
-        .vs-hero::after { content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
-            background:radial-gradient(120% 85% at 16% 88%, rgba(229,9,20,.17) 0%, rgba(229,9,20,0) 58%); }
-        .vs-hero-meta span { background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.17);
-            border-radius:3px; padding:1px 7px; -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); }
-        .vs-hero-meta .dot { background:none; border:none; padding:0; }
-        .vs-card-art::after { content:''; position:absolute; inset:0; z-index:3; pointer-events:none; opacity:0;
-            background:linear-gradient(115deg, rgba(255,255,255,0) 34%, rgba(255,255,255,.17) 48%, rgba(255,255,255,0) 62%);
-            transform:translateX(-70%); }
-        .vs-card:hover .vs-card-art::after { opacity:1; animation:vs-sweep .8s ease-out forwards; }
-        @keyframes vs-sweep { from { transform:translateX(-70%); } to { transform:translateX(70%); } }
-        .vs-rowsec { animation:vs-fadeup .45s ease both; }
-        @keyframes vs-fadeup { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
-        .vs-rowsech:hover .vs-rowtitle { color:var(--text-1); }
-        .vs-rowtitle { transition:color .2s; }
-        .vs-btn-play, .vs-btn-info { transition:background .15s, transform .15s; }
-        .vs-btn-play:hover, .vs-btn-info:hover { transform:scale(1.03); }
-
-        /* Empty / welcome */
-        .vs-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--text-3); font-size:14px; padding:60px 20px; text-align:center; }
-
-        /* ── Netflix polish: hover zoom, rank numerals, NEW badge, shimmer ── */
-        .vs-card { transition:transform .18s ease, box-shadow .18s ease; }
-        .vs-card:hover { transform:scale(1.045); box-shadow:0 12px 30px rgba(0,0,0,.62); }
-        .vs-badge { position:absolute; top:6px; left:6px; z-index:7; background:#e50914; color:#fff; font-size:9.5px; font-weight:800;
-            letter-spacing:.7px; padding:2px 5px; border-radius:2px; text-transform:uppercase; pointer-events:none; }
-        .vs-in-list { border-color:var(--text-1) !important; background:var(--vs-pill-bg) !important; color:var(--vs-pill-fg) !important; }
-        .vs-top10 { position:relative; display:flex; align-items:flex-end; flex:0 0 auto; cursor:pointer; }
-        .vs-top10-num { font-family:'Helvetica Neue',Arial,sans-serif; font-weight:900; font-size:104px; line-height:.72; letter-spacing:-.07em;
-            color:var(--vs-rank-color); -webkit-text-stroke:3.5px var(--vs-rank-stroke); margin-right:-14px; user-select:none; transition:-webkit-text-stroke-color .2s; }
-        .vs-top10:hover .vs-top10-num { -webkit-text-stroke-color:var(--text-1); }
-        .vs-top10 .vs-card { margin-bottom:6px; }
-        .vs-skel { background:linear-gradient(90deg,var(--vs-skel-1) 25%,var(--vs-skel-2) 37%,var(--vs-skel-1) 63%); background-size:400% 100%;
-            animation:vs-shimmer 1.4s ease-in-out infinite; border-radius:6px; }
-        @keyframes vs-shimmer { 0% { background-position:100% 0; } 100% { background-position:-100% 0; } }
-        .vs-skel-shell { position:absolute; inset:0; background:var(--surface-0); overflow:hidden; }
-        .vs-pcard-list { right:38px !important; }
-        .vs-pcard-list.vs-in-list { opacity:1 !important; }
-    `;
-    _body.innerHTML = `<style>${css}</style>
-        <div data-testid="vs-shell" class="vs-shell" style="position:absolute;inset:0;">
-            <header id="vs-nav" data-testid="vs-nav">
-                <div class="vs-nav-inner">
-                    <span class="vs-brand" onclick="_vsGoHome()">Video Station</span>
-                    <nav class="vs-links">
-                        <span class="vs-link" data-mode="home" onclick="_vsGoHome()">Home</span>
-                        <span class="vs-link" data-mode="series" onclick="_vsGoSeries()">Series</span>
-                        <span class="vs-link" data-mode="movies" onclick="_vsGoMovies()">Movies</span>
-                        <span class="vs-link" data-mode="mylist" onclick="_vsOpenMyList()">My List</span>
-                        <span class="vs-link" data-mode="browse" onclick="_vsNavTo(null)">All Videos</span>
-                    </nav>
-                    <div class="vs-nav-right">
-                        <div id="vs-search-wrap" class="vs-search-wrap">
-                            <input id="vs-search-input" type="text" placeholder="Titles, shows…" oninput="_vsOnSearch(this.value)" />
-                            <button class="vs-iconbtn" onclick="_vsToggleSearch()" title="Search">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>
-                            </button>
-                        </div>
-                        <span data-testid="vs-count" class="vs-navcount"></span>
-                        <button class="vs-iconbtn" onclick="_vsShowPicker()" title="Add video folder">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                        </button>
-                        <button class="vs-iconbtn" data-testid="vs-settings-btn" onclick="_vsShowSettings()" title="Video Station settings">
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                        </button>
-                    </div>
+    shellHtml() {
+        return `<style>${this.css()}</style>
+        <div class="vd-root" data-testid="vd-root">
+            <header class="vd-top" data-testid="vd-top">
+                <button class="vd-brand" type="button" data-action="nav" data-mode="home" aria-label="Video Station home">
+                    <span class="vd-brand-mark">${svg('play', 18)}</span>
+                    <span class="vd-brand-text"><strong>VIDEO STATION</strong><small>EthOS media</small></span>
+                </button>
+                <nav class="vd-links" aria-label="Sections">
+                    <button type="button" class="vd-link" data-action="nav" data-mode="home" data-testid="vd-nav-home">Home</button>
+                    <button type="button" class="vd-link" data-action="nav" data-mode="movies" data-testid="vd-nav-movies">Movies</button>
+                    <button type="button" class="vd-link" data-action="nav" data-mode="series" data-testid="vd-nav-series">Series</button>
+                    <button type="button" class="vd-link" data-action="nav" data-mode="library" data-testid="vd-nav-library">Library</button>
+                    <button type="button" class="vd-link" data-action="nav" data-mode="mylist" data-testid="vd-nav-list">My List</button>
+                </nav>
+                <div class="vd-actions">
+                    <button type="button" class="vd-icon-btn" data-action="search" title="Search (Ctrl+K)" data-testid="vd-search-open">${svg('search')}</button>
+                    <span class="vd-engine" data-testid="vd-engine-chip" title="Media engine"></span>
+                    <button type="button" class="vd-icon-btn" data-action="nav" data-mode="settings" title="Settings" data-testid="vd-settings-open">${svg('settings')}</button>
                 </div>
             </header>
-            <main id="vs-main" data-testid="vs-main"><div id="vs-content" data-testid="vs-content"></div></main>
+            <main class="vd-main" data-testid="vd-main">
+                <div class="vd-view" data-testid="vd-view"></div>
+            </main>
+            <nav class="vd-bottom" aria-label="Sections">
+                <button type="button" data-action="nav" data-mode="home" data-testid="vd-bottom-home">${svg('play', 20)}<span>Home</span></button>
+                <button type="button" data-action="nav" data-mode="movies" data-testid="vd-bottom-movies">${svg('film', 20)}<span>Movies</span></button>
+                <button type="button" data-action="nav" data-mode="series" data-testid="vd-bottom-series">${svg('tv', 20)}<span>Series</span></button>
+                <button type="button" data-action="nav" data-mode="library" data-testid="vd-bottom-library">${svg('folder', 20)}<span>Library</span></button>
+                <button type="button" data-action="nav" data-mode="settings" data-testid="vd-bottom-settings">${svg('settings', 20)}<span>More</span></button>
+            </nav>
         </div>`;
-    const main = document.getElementById('vs-main');
-    if (main) main.addEventListener('scroll', () => _setNavSolid(main.scrollTop > 8 || !_navIsHome()), { passive: true });
-    _reloadView();
-}
-
-function _navIsHome() { return !_playerPath && _mode === 'home' && !_showDetail; }
-
-function _setNavSolid(solid) {
-    const n = document.getElementById('vs-nav');
-    if (n) n.classList.toggle('vs-solid', !!solid);
-}
-
-function _scrollTop() {
-    const m = document.getElementById('vs-main');
-    if (m) m.scrollTop = 0;
-}
-
-function _renderNavState() {
-    const active = _playerPath ? '' : (_mode === 'search' ? ((_preSearchMode && _preSearchMode.mode) || '') : (_showDetail ? 'series' : _mode));
-    document.querySelectorAll('#vs-nav .vs-link').forEach(el => el.classList.toggle('active', el.dataset.mode === active));
-    const m = document.getElementById('vs-main');
-    _setNavSolid(!m || m.scrollTop > 8 || !_navIsHome());
-}
-
-// ── Global search (client-side over the full library walk) ─────────────────
-function _toggleSearch() {
-    const w = document.getElementById('vs-search-wrap');
-    if (!w) return;
-    const open = w.classList.toggle('open');
-    const inp = document.getElementById('vs-search-input');
-    if (open && inp) setTimeout(() => inp.focus(), 80);
-}
-
-function _closeSearch() {
-    const w = document.getElementById('vs-search-wrap');
-    const inp = document.getElementById('vs-search-input');
-    if (w) w.classList.remove('open');
-    if (inp) inp.value = '';
-    if (_mode === 'search') {
-        _scrollTop();
-        _q = '';
-        const prev = _preSearchMode || { mode: 'home', path: null };
-        _preSearchMode = null;
-        _showDetail = null;
-        _mode = prev.mode || 'home';
-        _path = prev.path || null;
-        _reloadView();
     }
-}
 
-function _navReset() {
-    const w = document.getElementById('vs-search-wrap'); if (w) w.classList.remove('open');
-    const inp = document.getElementById('vs-search-input'); if (inp) inp.value = '';
-}
+    css() {
+        return `
+        .vd-root{color-scheme:light;--vd-bg:var(--surface-0,#f7f6f2);--vd-soft:var(--surface-1,#eeebe5);
+            --vd-panel:var(--surface-1,#f1eee8);--vd-solid:var(--surface-0,#fff);
+            --vd-text:var(--text-1,#171717);--vd-muted:var(--text-2,#5c5c5c);--vd-faint:var(--text-3,#8a8a8a);
+            --vd-border:var(--border,rgba(0,0,0,.12));--vd-accent:var(--ui-accent,#2563eb);
+            --vd-gold:#c98f2b;--vd-gold-soft:rgba(201,143,43,.14);--vd-ok:var(--ui-ok,#15803d);
+            --vd-bad:var(--ui-bad,#b91c1c);--vd-warn:var(--ui-warn,#b45309);
+            --vd-shadow:0 20px 60px rgba(0,0,0,.18);--vd-radius:16px;
+            position:absolute;inset:0;overflow:hidden;background:var(--vd-bg);color:var(--vd-text);
+            font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;}
+        :root.dark .vd-root{color-scheme:dark;--vd-bg:#0b0d10;--vd-soft:#12151a;--vd-panel:rgba(255,255,255,.06);
+            --vd-solid:#151820;--vd-text:#f2f0ea;--vd-muted:#a6a6a6;--vd-faint:#7b7b7b;
+            --vd-border:rgba(255,255,255,.13);--vd-gold:#e7b35a;--vd-gold-soft:rgba(231,179,90,.16);
+            --vd-shadow:0 24px 70px rgba(0,0,0,.55);}
+        .vd-root *{box-sizing:border-box}
+        .vd-root button{font:inherit;color:inherit}
+        .vd-root img{display:block}
+        .vd-root :focus-visible{outline:2px solid var(--vd-accent);outline-offset:2px}
+        .vd-main{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}
+        .vd-main::-webkit-scrollbar{width:10px}.vd-main::-webkit-scrollbar-thumb{background:var(--vd-border);border-radius:8px}
+        .vd-view{min-height:100%}
 
-function _onSearchInput(v) {
-    clearTimeout(_searchTimer);
-    const nv = (v || '').trim();
-    _searchTimer = setTimeout(async () => {
-        if (!_active()) return;
-        if (nv === '') { _closeSearch(); return; }
-        if (_q === nv && _mode === 'search') return;
-        if (_playerPath) _closePlayer();
-        if (_mode !== 'search') {
-            _preSearchMode = { mode: _showDetail ? 'series' : _mode, path: _path };
-            _mode = 'search'; _showDetail = null;
+        /* top nav */
+        .vd-top{position:absolute;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;gap:26px;
+            padding:14px clamp(16px,4vw,54px);color:#fff;background:linear-gradient(180deg,rgba(0,0,0,.72),rgba(0,0,0,0));
+            transition:background .3s,color .3s,border-color .3s;border-bottom:1px solid transparent}
+        .vd-top.is-solid{background:var(--vd-bg);color:var(--vd-text);border-bottom-color:var(--vd-border)}
+        .vd-brand{display:flex;align-items:center;gap:10px;border:0;background:none;cursor:pointer;padding:0;text-align:left}
+        .vd-brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--vd-gold);color:#16110a;
+            box-shadow:0 0 0 5px var(--vd-gold-soft)}
+        .vd-brand-text{display:flex;flex-direction:column;line-height:1.05}
+        .vd-brand-text strong{font-size:13px;letter-spacing:3px;font-weight:800;white-space:nowrap}
+        .vd-brand-text small{font-size:9px;letter-spacing:2px;opacity:.6;text-transform:uppercase}
+        .vd-links{display:flex;align-items:center;gap:4px;flex:1;min-width:0}
+        .vd-link{border:0;background:none;cursor:pointer;padding:8px 11px;border-radius:9px;font-size:13px;font-weight:600;
+            color:currentColor;opacity:.66;white-space:nowrap;transition:opacity .15s,background .15s}
+        .vd-link:hover{opacity:1;background:rgba(128,128,128,.16)}
+        .vd-link.is-active{opacity:1;background:var(--vd-gold-soft);color:var(--vd-gold)}
+        .vd-top.is-solid .vd-link.is-active{color:var(--vd-gold)}
+        .vd-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
+        .vd-icon-btn{width:38px;height:38px;display:grid;place-items:center;border:0;border-radius:50%;background:rgba(128,128,128,.16);
+            cursor:pointer;transition:background .15s,transform .15s}
+        .vd-icon-btn:hover{background:rgba(128,128,128,.3);transform:scale(1.05)}
+        .vd-engine{font-size:10px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;padding:6px 9px;border-radius:999px;
+            background:rgba(128,128,128,.16);white-space:nowrap}
+        .vd-engine[data-tone="ok"]{background:var(--vd-gold-soft);color:var(--vd-gold)}
+        .vd-engine[data-tone="warn"]{background:rgba(180,83,9,.16);color:var(--vd-warn)}
+        .vd-engine[data-tone="bad"]{background:rgba(185,28,28,.14);color:var(--vd-bad)}
+
+        /* hero */
+        .vd-hero{position:relative;min-height:min(62vh,640px);display:flex;align-items:flex-end;overflow:hidden;background:#08090c;color:#fff}
+        .vd-hero-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.72) saturate(1.04);transform:scale(1.02)}
+        .vd-hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+            background:linear-gradient(180deg,rgba(8,9,12,.5) 0%,rgba(8,9,12,.05) 35%,rgba(8,9,12,.72) 75%,var(--vd-bg) 100%),
+                       linear-gradient(90deg,rgba(8,9,12,.82) 0%,rgba(8,9,12,.28) 48%,rgba(8,9,12,0) 78%)}
+        .vd-hero-body{position:relative;z-index:2;max-width:760px;padding:120px clamp(18px,4vw,54px) 64px;display:flex;flex-direction:column;gap:13px}
+        .vd-eyebrow{display:flex;align-items:center;gap:9px;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--vd-gold);font-weight:800}
+        .vd-hero h1{margin:0;font-size:clamp(30px,4.8vw,60px);line-height:1.02;font-weight:850;letter-spacing:-.03em;text-shadow:0 4px 26px rgba(0,0,0,.55)}
+        .vd-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;font-weight:650;color:rgba(255,255,255,.82)}
+        .vd-meta .vd-dot{opacity:.4}
+        .vd-overview{margin:0;max-width:620px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.82);
+            display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+        .vd-hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+        .vd-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--vd-border);background:var(--vd-panel);
+            color:var(--vd-text);padding:10px 16px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;
+            transition:transform .15s,background .15s,border-color .15s;text-decoration:none}
+        .vd-btn:hover{transform:translateY(-1px);border-color:var(--vd-accent)}
+        .vd-btn.primary{background:var(--vd-gold);border-color:var(--vd-gold);color:#17110a}
+        .vd-btn.danger{color:var(--vd-bad);border-color:rgba(185,28,28,.35)}
+        .vd-btn.small{padding:5px 9px;font-size:11px;border-radius:8px}
+        .vd-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+        .vd-hero .vd-btn:not(.primary){background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.22);color:#fff}
+
+        /* stats */
+        .vd-stats{position:relative;z-index:3;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+            margin:-34px clamp(18px,4vw,54px) 0}
+        .vd-stat{background:var(--vd-solid);border:1px solid var(--vd-border);border-radius:14px;padding:13px 15px;box-shadow:var(--vd-shadow)}
+        .vd-stat b{display:block;font-size:22px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+        .vd-stat span{display:block;margin-top:3px;font-size:9px;letter-spacing:1.4px;text-transform:uppercase;color:var(--vd-faint);font-weight:700}
+
+        /* shelves */
+        .vd-shelf{margin-top:30px}
+        .vd-shelf-head{display:flex;align-items:baseline;gap:12px;padding:0 clamp(18px,4vw,54px);margin-bottom:10px}
+        .vd-shelf-head h2{margin:0;font-size:17px;font-weight:800;letter-spacing:-.01em}
+        .vd-shelf-head span{margin-left:auto;font-size:11px;color:var(--vd-faint)}
+        .vd-row{display:flex;gap:14px;overflow-x:auto;padding:4px clamp(18px,4vw,54px) 12px;scroll-snap-type:x proximity;scrollbar-width:none}
+        .vd-row::-webkit-scrollbar{display:none}
+        .vd-card{display:flex;flex-direction:column;align-items:stretch;flex:0 0 clamp(138px,15vw,188px);scroll-snap-align:start;border:0;background:none;padding:0;text-align:left;cursor:pointer;min-width:0}
+        .vd-card-art{position:relative;display:block;width:100%;aspect-ratio:2/3;border-radius:13px;overflow:hidden;background:var(--vd-soft);box-shadow:0 10px 28px rgba(0,0,0,.18);
+            transition:transform .18s,box-shadow .18s}
+        .vd-card-art img{width:100%;height:100%;object-fit:cover}
+        .vd-card:hover .vd-card-art{transform:translateY(-3px) scale(1.02);box-shadow:0 18px 38px rgba(0,0,0,.3)}
+        .vd-card-title{display:block;margin-top:8px;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .vd-card-sub{display:block;margin-top:2px;font-size:11px;color:var(--vd-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .vd-card-play{position:absolute;right:8px;bottom:8px;width:32px;height:32px;border-radius:50%;background:rgba(8,9,12,.7);
+            color:#fff;display:grid;place-items:center;opacity:0;transition:opacity .15s;backdrop-filter:blur(4px)}
+        .vd-card:hover .vd-card-play{opacity:1}
+        .vd-card-badge{position:absolute;top:8px;left:8px;max-width:calc(100% - 16px);padding:3px 7px;border-radius:6px;background:rgba(8,9,12,.76);
+            color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase}
+        .vd-progress{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.25)}
+        .vd-progress i{display:block;height:100%;background:var(--vd-gold)}
+
+        /* page + toolbar */
+        .vd-page{padding:104px clamp(18px,4vw,54px) 70px;min-height:100vh}
+        .vd-page-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+        .vd-page-head h1{margin:0;font-size:clamp(26px,3.4vw,38px);font-weight:850;letter-spacing:-.03em}
+        .vd-page-head p{margin:4px 0 0;font-size:12.5px;color:var(--vd-muted)}
+        .vd-page-head .vd-grow{flex:1}
+        .vd-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+        .vd-input,.vd-select{background:var(--vd-solid);border:1px solid var(--vd-border);border-radius:10px;padding:9px 11px;
+            font-size:12.5px;color:var(--vd-text);min-height:38px}
+        .vd-input:focus,.vd-select:focus{outline:none;border-color:var(--vd-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--vd-accent) 20%,transparent)}
+        .vd-search-input{flex:1;min-width:180px}
+        .vd-spacer{flex:1}
+        .vd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:24px 14px}
+        .vd-grid .vd-card{width:auto}
+        .vd-empty{border:1px dashed var(--vd-border);border-radius:var(--vd-radius);padding:46px 24px;text-align:center;color:var(--vd-muted);font-size:13px}
+        .vd-empty b{display:block;color:var(--vd-text);font-size:15px;margin-bottom:5px}
+        .vd-error{border:1px solid rgba(185,28,28,.35);background:rgba(185,28,28,.08);color:var(--vd-bad);padding:12px 14px;border-radius:11px;font-size:12px;margin-bottom:14px}
+
+        /* table */
+        .vd-table{width:100%;border-collapse:collapse;background:var(--vd-solid);border:1px solid var(--vd-border);border-radius:14px;overflow:hidden}
+        .vd-table th{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--vd-faint);text-align:left;padding:10px 12px;border-bottom:1px solid var(--vd-border);font-weight:800}
+        .vd-table td{padding:8px 12px;border-bottom:1px solid var(--vd-border);font-size:11.5px;vertical-align:middle}
+        .vd-table tr:last-child td{border-bottom:0}
+        .vd-table tr:hover td{background:var(--vd-soft)}
+        .vd-table .vd-thumb{width:64px;height:36px;object-fit:cover;border-radius:6px;background:#000}
+        .vd-table .vd-title{font-weight:700;font-size:12px}
+        .vd-table .vd-path{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--vd-faint);max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .vd-table .vd-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+        .vd-table .vd-acts{text-align:right;white-space:nowrap}
+
+        /* folders + detail */
+        .vd-folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:22px}
+        .vd-folder{display:flex;align-items:center;gap:10px;border:1px solid var(--vd-border);background:var(--vd-solid);border-radius:12px;
+            padding:12px 13px;cursor:pointer;text-align:left;min-width:0}
+        .vd-folder:hover{border-color:var(--vd-gold)}
+        .vd-folder span{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .vd-crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--vd-muted);margin-bottom:12px}
+        .vd-crumbs button{border:0;background:none;padding:2px 3px;cursor:pointer;color:var(--vd-muted)}
+        .vd-crumbs button:hover{color:var(--vd-text)}
+        .vd-crumbs b{color:var(--vd-text)}
+        .vd-detail-hero{position:relative;min-height:min(54vh,540px);display:flex;align-items:flex-end;color:#fff;background:#08090c}
+        .vd-detail-hero .vd-hero-bg{filter:brightness(.62) saturate(1.02)}
+        .vd-detail-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,9,12,.58),rgba(8,9,12,.16) 35%,var(--vd-bg) 100%)}
+        .vd-detail-body{position:relative;z-index:2;display:flex;gap:22px;align-items:flex-end;padding:120px clamp(18px,4vw,54px) 40px;width:100%}
+        .vd-detail-poster{flex:0 0 150px;aspect-ratio:2/3;border-radius:13px;overflow:hidden;background:#000;box-shadow:var(--vd-shadow)}
+        .vd-detail-poster img{width:100%;height:100%;object-fit:cover}
+        .vd-detail-copy{min-width:0;flex:1;display:flex;flex-direction:column;gap:10px}
+        .vd-detail-copy h1{margin:0;font-size:clamp(28px,4vw,50px);line-height:1.03;letter-spacing:-.03em;font-weight:850;text-shadow:0 3px 20px rgba(0,0,0,.5)}
+        .vd-detail-copy .vd-overview{color:rgba(255,255,255,.86);-webkit-line-clamp:5}
+        .vd-tags{display:flex;gap:6px;flex-wrap:wrap}
+        .vd-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:var(--vd-soft);border:1px solid var(--vd-border);
+            font-size:10px;font-weight:750;letter-spacing:.4px;color:var(--vd-muted);white-space:nowrap}
+        .vd-tag.ok{background:rgba(21,128,61,.12);border-color:rgba(21,128,61,.3);color:var(--vd-ok)}
+        .vd-tag.warn{background:rgba(180,83,9,.1);border-color:rgba(180,83,9,.28);color:var(--vd-warn)}
+        .vd-tag.bad{background:rgba(185,28,28,.1);border-color:rgba(185,28,28,.3);color:var(--vd-bad)}
+        .vd-tag.gold{background:var(--vd-gold-soft);border-color:var(--vd-gold-soft);color:var(--vd-gold)}
+        .vd-detail-extra{padding:20px clamp(18px,4vw,54px) 70px;display:grid;grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:18px}
+        .vd-panel{background:var(--vd-solid);border:1px solid var(--vd-border);border-radius:var(--vd-radius);padding:18px}
+        .vd-panel h2{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:1.4px;color:var(--vd-faint);font-weight:800}
+        .vd-panel p{margin:0 0 10px;font-size:12.5px;line-height:1.6;color:var(--vd-muted)}
+        .vd-kv{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:11.5px}
+        .vd-kv dt{color:var(--vd-faint)}
+        .vd-kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+
+        /* settings */
+        .vd-settings{max-width:980px;margin:0 auto;padding:104px clamp(18px,4vw,54px) 90px;display:flex;flex-direction:column;gap:14px}
+        .vd-settings-head h1{margin:0;font-size:32px;font-weight:850;letter-spacing:-.03em}
+        .vd-settings-head p{margin:5px 0 0;color:var(--vd-muted);font-size:12.5px}
+        .vd-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .vd-field{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:700;color:var(--vd-muted)}
+        .vd-field.full{grid-column:1/-1}
+        .vd-field label{letter-spacing:.6px;text-transform:uppercase;font-size:9.5px}
+        .vd-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--vd-text)}
+        .vd-check input{width:16px;height:16px;accent-color:var(--vd-gold)}
+        .vd-actionsbar{display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--vd-border);margin-top:6px}
+        .vd-rootrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--vd-border);font-size:11.5px}
+        .vd-rootrow:last-child{border-bottom:0}
+        .vd-rootrow code{font-size:10.5px;color:var(--vd-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+        .vd-engine-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+        .vd-engine-grid div{background:var(--vd-soft);border:1px solid var(--vd-border);border-radius:10px;padding:10px}
+        .vd-engine-grid b{display:block;font-size:13px;letter-spacing:.2px}
+        .vd-engine-grid span{display:block;margin-top:2px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--vd-faint)}
+
+        /* search overlay */
+        .vd-searchbar{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;padding:10px 0 14px;background:var(--vd-bg)}
+        .vd-searchbar .vd-search-input{font-size:16px}
+        .vd-recent{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
+        .vd-recent button{border:1px solid var(--vd-border);background:var(--vd-solid);border-radius:999px;padding:6px 11px;font-size:11px;cursor:pointer}
+
+        /* bottom nav */
+        .vd-bottom{display:none}
+
+        /* player */
+        .vd-root.is-player .vd-top,.vd-root.is-player .vd-bottom{display:none}
+        .vd-player{position:absolute;inset:0;background:#000;color:#fff;display:flex;flex-direction:column;overflow:hidden}
+        .vd-player video{width:100%;height:100%;object-fit:contain;background:#000}
+        .vd-player-ui{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;
+            opacity:1;transition:opacity .25s;pointer-events:none}
+        .vd-player-ui.hidden{opacity:0}
+        .vd-player-ui > *{pointer-events:auto}
+        .vd-player-top{display:flex;align-items:center;gap:10px;padding:14px 18px;background:linear-gradient(180deg,rgba(0,0,0,.72),transparent)}
+        .vd-player-top .vd-title{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+        .vd-player-top .vd-tag{color:#fff;background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.2)}
+        .vd-player-top .vd-tag.gold{color:var(--vd-gold);background:rgba(231,179,90,.16);border-color:rgba(231,179,90,.3)}
+        .vd-player-center{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+        .vd-player-center button{pointer-events:auto;width:76px;height:76px;border-radius:50%;border:1px solid rgba(255,255,255,.28);
+            background:rgba(0,0,0,.45);display:grid;place-items:center;color:#fff;cursor:pointer;backdrop-filter:blur(8px);opacity:0;transition:opacity .2s}
+        .vd-player-center button.show{opacity:1}
+        .vd-player-bottom{padding:16px 18px calc(18px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.82) 38%)}
+        .vd-seek-wrap{position:relative;height:22px;display:flex;align-items:center;margin-bottom:8px}
+        .vd-seek-buffer{position:absolute;left:0;right:0;height:4px;border-radius:2px;background:rgba(255,255,255,.18);overflow:hidden;pointer-events:none}
+        .vd-seek-buffer i{display:block;height:100%;background:rgba(255,255,255,.38)}
+        .vd-seek{position:relative;width:100%;height:4px;margin:0;appearance:none;background:transparent;cursor:pointer;z-index:2}
+        .vd-seek::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--vd-gold) var(--vd-fill,0%),rgba(255,255,255,.18) var(--vd-fill,0%))}
+        .vd-seek::-moz-range-track{height:4px;border-radius:2px;background:rgba(255,255,255,.18)}
+        .vd-seek::-moz-range-progress{height:4px;border-radius:2px;background:var(--vd-gold)}
+        .vd-seek::-webkit-slider-thumb{appearance:none;width:14px;height:14px;margin-top:-5px;border-radius:50%;background:var(--vd-gold);box-shadow:0 0 0 4px rgba(231,179,90,.18)}
+        .vd-seek::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:var(--vd-gold)}
+        .vd-player-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+        .vd-player-row .vd-time{font-size:11.5px;font-variant-numeric:tabular-nums;min-width:82px;color:rgba(255,255,255,.8)}
+        .vd-player-btn{width:38px;height:38px;border-radius:50%;border:0;background:transparent;color:#fff;display:grid;place-items:center;cursor:pointer}
+        .vd-player-btn:hover{background:rgba(255,255,255,.12)}
+        .vd-player-btn.primary{background:var(--vd-gold);color:#17110a;width:42px;height:42px}
+        .vd-player-row select{background:rgba(20,20,20,.7);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:7px 8px;font-size:11.5px;max-width:170px}
+        .vd-player-row .vd-grow{flex:1}
+        .vd-player-stats{position:absolute;right:18px;bottom:96px;z-index:5;background:rgba(6,8,12,.86);border:1px solid rgba(255,255,255,.16);
+            border-radius:12px;padding:12px 14px;font-size:11px;line-height:1.6;min-width:230px;display:none;backdrop-filter:blur(10px)}
+        .vd-player-stats.show{display:block}
+        .vd-player-stats b{color:var(--vd-gold)}
+        .vd-next{position:absolute;right:18px;bottom:110px;z-index:6;background:rgba(10,12,16,.92);border:1px solid rgba(255,255,255,.18);
+            border-radius:14px;padding:14px;display:none;max-width:300px;box-shadow:var(--vd-shadow)}
+        .vd-next.show{display:block}
+        .vd-next p{margin:0 0 10px;font-size:11.5px;color:rgba(255,255,255,.72)}
+        .vd-next strong{display:block;font-size:13px;margin-bottom:10px}
+
+        /* responsive */
+        @media (max-width:820px){
+            .vd-top{padding:10px 14px;gap:10px}
+            .vd-links{display:none}
+            .vd-brand-text small{display:none}
+            .vd-engine{display:none}
+            .vd-main{padding-bottom:70px}
+            .vd-hero{min-height:52vh}
+            .vd-hero-body{padding:88px 18px 48px}
+            .vd-hero h1{font-size:clamp(28px,8vw,40px)}
+            .vd-overview{-webkit-line-clamp:3;font-size:13px}
+            .vd-stats{grid-template-columns:1fr 1fr;margin:-22px 14px 0;gap:8px}
+            .vd-stat{padding:10px 12px}
+            .vd-stat b{font-size:18px}
+            .vd-shelf{margin-top:22px}
+            .vd-shelf-head,.vd-row{padding-left:14px;padding-right:14px}
+            .vd-card{flex-basis:132px}
+            .vd-page{padding:82px 14px 90px;min-height:calc(100vh - 60px)}
+            .vd-grid{grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:18px 10px}
+            .vd-table .vd-thumb{width:52px;height:30px}
+            .vd-table .vd-path{max-width:150px}
+            .vd-table .vd-hide-mobile{display:none}
+            .vd-detail-body{padding:92px 14px 26px;gap:14px;align-items:flex-end}
+            .vd-detail-poster{flex-basis:104px}
+            .vd-detail-copy h1{font-size:27px}
+            .vd-detail-extra{grid-template-columns:1fr;padding:16px 14px 90px}
+            .vd-settings{padding:84px 14px 96px}
+            .vd-fields{grid-template-columns:1fr}
+            .vd-engine-grid{grid-template-columns:1fr 1fr}
+            .vd-bottom{display:flex;position:absolute;bottom:0;left:0;right:0;z-index:60;background:var(--vd-bg);
+                border-top:1px solid var(--vd-border);padding:5px 6px calc(5px + env(safe-area-inset-bottom));justify-content:space-around}
+            .vd-bottom button{border:0;background:none;color:var(--vd-muted);display:flex;flex-direction:column;align-items:center;gap:3px;
+                padding:6px 10px;border-radius:10px;font-size:9.5px;font-weight:700;cursor:pointer;min-width:54px}
+            .vd-bottom button.is-active{color:var(--vd-gold);background:var(--vd-gold-soft)}
+            .vd-player-top{padding:10px 12px}
+            .vd-player-top .vd-tag{display:none}
+            .vd-player-bottom{padding:10px 12px calc(14px + env(safe-area-inset-bottom))}
+            .vd-player-row{gap:4px}
+            .vd-player-row select{max-width:105px;font-size:10.5px;padding:6px}
+            .vd-player-btn{width:34px;height:34px}
+            .vd-player-stats{right:10px;bottom:120px;left:10px;min-width:0}
+            .vd-next{right:10px;left:10px;bottom:130px;max-width:none}
+            .vd-search-input{font-size:16px}
         }
-        _q = nv;
-        if (!_allVideos.length) await _loadAllVideos();
-        if (!_active()) return;
-        _viewVideos = _sortVideos(_searchResults(), 'name');
-        _renderContent();
-    }, 250);
-}
-
-function _searchResults() {
-    const q = (_q || '').toLowerCase();
-    if (!q) return [];
-    return _allVideos.filter(v => {
-        const hay = [v.title, v.name, v.show, (v.tmdb && v.tmdb.title), v.folder].filter(Boolean).join(' ').toLowerCase();
-        if (hay.includes(q)) return true;
-        if (v.kind === 'episode' && q.length >= 2) {
-            const ep = `s${String(v.season || 0)}e${String(v.episode || 0)}`.replace(/\s/g, '');
-            if (q.replace(/\s/g, '').includes(ep)) return true;
+        @media (hover:none){
+            .vd-card-play{opacity:1}
+            .vd-card:hover .vd-card-art{transform:none}
         }
-        return false;
-    });
-}
+        @media (prefers-reduced-motion:reduce){
+            .vd-root *{animation:none!important;transition:none!important}
+        }`;
+    }
 
-// ── Navigation actions ───────────────────────────────────────────────────────
-function _goHome() {
-    if (_playerPath) _closePlayer();
-    _mode = 'home'; _showDetail = null; _path = null; _q = ''; _preSearchMode = null;
-    _navReset(); _scrollTop(); _reloadView();
-}
+    // ── Data ─────────────────────────────────────────────────────────────────
 
-function _goMovies() {
-    if (_playerPath) _closePlayer();
-    _mode = 'movies'; _showDetail = null; _path = null; _q = ''; _preSearchMode = null;
-    _navReset(); _scrollTop(); _reloadView();
-}
-
-function _goSeries() {
-    if (_playerPath) _closePlayer();
-    _mode = 'series'; _showDetail = null; _path = null; _q = ''; _preSearchMode = null;
-    _navReset(); _scrollTop(); _reloadView();
-}
-
-function _openShow(i) {
-    const s = _showsList[i];
-    if (!s) return;
-    _openShowByKey(s.show);
-}
-
-async function _openShowByKey(key) {
-    if (!key) return;
-    if (_playerPath) _closePlayer();
-    _mode = 'series'; _showDetail = key; _q = ''; _preSearchMode = null;
-    _navReset(); _scrollTop();
-    await _loadAllVideos();
-    if (!_active()) return;
-    _renderContent();
-}
-
-function _backToSeries() {
-    _showDetail = null; _q = ''; _preSearchMode = null;
-    _navReset(); _scrollTop(); _renderContent();   // grid re-renders from cached walk
-}
-
-function _navTo(path) {
-    if (_playerPath) _closePlayer();
-    _mode = 'browse'; _showDetail = null; _q = ''; _preSearchMode = null;
-    _path = path || null;
-    _navReset(); _scrollTop(); _reloadView();
-}
-
-// ── Data loading / views ──────────────────────────────────────────────────────
-async function _loadHomeData() {
-    const [h, res] = await Promise.all([
-        _api('/api/videos/home?limit=12'),
-        _api('/api/videos/resume/all').catch(() => ({ resumes: {} })),
-    ]);
-    if (!_active()) return;
-    _homeData = { continue_watching: h.continue_watching || [], recently_added: h.recently_added || [] };
-    _resumes = res.resumes || {};
-}
-
-async function _loadAllVideos() {
-    const [lib, res] = await Promise.all([
-        _api('/api/videos/library'),
-        _api('/api/videos/resume/all').catch(() => ({ resumes: {} })),
-    ]);
-    if (!_active()) return;
-    _allVideos = lib.videos || [];
-    _resumes = res.resumes || {};
-}
-
-async function _reloadView() {
-    if (!_active()) return;
-    try {
-        if (_mode === 'home') {
-            await Promise.all([_loadHomeData(), _allVideos.length ? Promise.resolve() : _loadAllVideos()]);
-        } else if (_mode === 'movies' || _mode === 'series' || _mode === 'mylist') {
-            await _loadAllVideos();
-        } else if (_mode === 'search') {
-            if (!_allVideos.length) await _loadAllVideos();
-        } else {
-            const params = new URLSearchParams();
-            if (_path) params.set('path', _path);
-            const qs = params.toString();
-            const [lib, res] = await Promise.all([
-                _api('/api/videos/library' + (qs ? '?' + qs : '')),
-                _api('/api/videos/resume/all').catch(() => ({ resumes: {} })),
-            ]);
-            if (!_active()) return;
-            _listing = { path: lib.path ?? null, parent: lib.parent || null, folders: lib.folders || [], videos: lib.videos || [] };
-            _resumes = res.resumes || {};
+    async apiJson(path, options = {}) {
+        const res = await this.ctx.apiFetch(path, { signal: this.abort.signal, ...options });
+        if (!res.ok) {
+            let detail = `HTTP ${res.status}`;
+            try {
+                const payload = await res.clone().json();
+                detail = payload?.detail || payload?.error || detail;
+                if (typeof detail !== 'string') detail = JSON.stringify(detail);
+            } catch { /* non-JSON error */ }
+            const err = new Error(detail);
+            err.status = res.status;
+            throw err;
         }
-        if (!_active()) return;
-        _applySort();
-        _maybeAutoTmdbFetch();
-    } catch (e) {
-        console.warn('[video-station] reload failed:', e.message);
-        const c = document.getElementById('vs-content');
-        if (c) c.innerHTML = `<div style="padding:24px;color:#f87171;font-size:13px;">Failed to load library: ${escapeHtml(e.message)}</div>`;
+        return res.json();
     }
-}
 
-function _sortVideos(videos, sortKey) {
-    const sort = sortKey || _cfg.options.sort || 'name';
-    const v = [...videos];
-    if (sort === 'date_desc') v.sort((a, b) => (b.modified || 0) - (a.modified || 0));
-    else if (sort === 'size_desc') v.sort((a, b) => (b.size || 0) - (a.size || 0));
-    else v.sort((a, b) => String(a.title || a.name).localeCompare(String(b.title || a.name), undefined, { sensitivity: 'base' }));
-    return v;
-}
-
-function _applySort() {
-    if (_mode === 'movies' || _mode === 'series' || _mode === 'mylist') { _renderContent(); return; }   // these views compute their own lists
-    if (_mode === 'search') { _viewVideos = _sortVideos(_searchResults(), 'name'); _renderContent(); return; }
-    _viewVideos = _sortVideos(_listing.videos);
-    _renderContent();
-}
-
-function _onSortChange(v) {
-    _cfg.options.sort = v;
-    _saveCfg({ options: { sort: v } }).catch(() => {});
-    _applySort();
-}
-
-function _onViewToggle(v) {
-    _cfg.options.view = v;
-    _saveCfg({ options: { view: v } }).catch(() => {});
-    _renderContent();
-}
-
-function _renderContent() {
-    const c = document.getElementById('vs-content');
-    if (!c || !_active()) return;
-    const m = document.getElementById('vs-main');
-    if (m) m.classList.toggle('vs-player-mode', !!_playerPath);
-    if (!_cfg.roots.length) { _renderWelcome(c); }
-    else if (_playerPath) { _renderPlayer(c); }
-    else if (_mode === 'home') { _renderHome(c); }
-    else if (_mode === 'movies') { _renderMovies(c); }
-    else if (_mode === 'series' && _showDetail) { _renderShowDetail(c); }
-    else if (_mode === 'series') { _renderSeriesGrid(c); }
-    else if (_mode === 'search') { _renderSearchResults(c); }
-    else if (_mode === 'mylist') { _renderMyList(c); }
-    else { _renderLibrary(c); }
-    _renderNavState();
-}
-
-// ── Shared presentation helpers ──────────────────────────────────────────────
-function _setCount(t) {
-    const el = document.querySelector('[data-testid="vs-count"]');
-    if (el) el.textContent = t;
-}
-
-function _qualityChip(q) {
-    if (!q) return '';
-    return `<span class="vs-chip-q">${escapeHtml(String(q).toUpperCase())}</span>`;
-}
-
-function _resumeBarHtml(path) {
-    const r = _resumes[path];
-    if (!r || !r.duration || r.time < 5 || r.time >= r.duration * 0.97) return '';
-    const pct = Math.min(100, (r.time / r.duration) * 100).toFixed(1);
-    return `<div class="vs-prog" title="Resume at ${fmtTime(r.time)} of ${fmtTime(r.duration)}"><i style="width:${pct}%"></i></div>`;
-}
-
-function _resumeInfo(item) {
-    if (item && item.resume_time != null) return { time: item.resume_time, duration: item.resume_duration };
-    return (_resumes[item.path] || null);
-}
-
-// ── My List (per-user watchlist, kept in localStorage like the desktop layout) ─
-function _listUser() {
-    try {
-        const t = getToken() || '';
-        return JSON.parse(atob(t.split('.')[1])).username || 'anon';
-    } catch (_) { return 'anon'; }
-}
-
-function _listKey() { return 'ethos-vs-list:' + _listUser(); }
-
-function _loadMyList() {
-    _myList = new Set();
-    try {
-        const arr = JSON.parse(localStorage.getItem(_listKey()) || '[]');
-        if (Array.isArray(arr)) for (const p of arr) if (typeof p === 'string' && p) _myList.add(p);
-    } catch (_) { /* ignore corrupt cache */ }
-}
-
-function _saveMyList() {
-    try { localStorage.setItem(_listKey(), JSON.stringify([..._myList])); } catch (_) { /* quota */ }
-}
-
-function _listBtnHtml(path, size = 13, extraClass = '') {
-    const on = _myList.has(path);
-    return `<button class="vs-cbtn ${extraClass}${on ? ' vs-in-list' : ''}" data-list-btn="${escapeAttr(path)}"
-        title="${on ? 'Remove from My List' : 'Add to My List'}" onclick="_vsListToggle(event, this)">${uiIcon(on ? 'check' : 'plus', size)}</button>`;
-}
-
-function _itemTitleForPath(path) {
-    const pools = [_rowItems, _viewVideos, _allVideos, _homeData.continue_watching || [], _homeData.recently_added || []];
-    for (const pool of pools) {
-        const hit = (pool || []).find(v => v && v.path === path);
-        if (hit) return _displayTitle(hit);
-    }
-    return '';
-}
-
-// Called from inline onclick with (event, buttonElement).
-function _onListToggle(ev, btn) {
-    if (ev && ev.stopPropagation) ev.stopPropagation();
-    const path = btn && btn.getAttribute ? btn.getAttribute('data-list-btn') : '';
-    if (!path) return;
-    _toggleList(ev, path, _itemTitleForPath(path));
-}
-
-function _toggleList(ev, path, title) {
-    if (ev && ev.stopPropagation) ev.stopPropagation();
-    if (!path) return;
-    const adding = !_myList.has(path);
-    if (adding) _myList.add(path); else _myList.delete(path);
-    _saveMyList();
-    const label = title ? ` “${title}”` : '';
-    _toast(adding ? `Added${label} to My List` : `Removed${label} from My List`);
-    document.querySelectorAll('[data-list-btn]').forEach(b => {
-        if (b.getAttribute('data-list-btn') !== path) return;
-        const ico = b.querySelector('.vs-hero-list-ico');
-        if (ico) ico.innerHTML = uiIcon(adding ? 'check' : 'plus', 16);
-        else b.innerHTML = uiIcon(adding ? 'check' : 'plus', 13);
-        b.title = adding ? 'Remove from My List' : 'Add to My List';
-        b.classList.toggle('vs-in-list', adding);
-    });
-    if (!adding && _mode === 'mylist') _renderContent();   // it no longer belongs in this view
-    else if (adding && _mode === 'home') _renderContent(); // My List row appears only once it has items
-}
-
-// ── Hero billboard ───────────────────────────────────────────────────────────
-let _heroItem = null;   // video item the hero's Play button opens (shows → first episode)
-
-function _pickHero() {
-    const cands = [...(_homeData.continue_watching || []), ...(_homeData.recently_added || [])];
-    if (!cands.length) return null;
-    for (const it of cands) if (_tmdbArtUrl(it)) return it;   // prefer a real backdrop
-    return cands[0];
-}
-
-function _heroHtml(it, opts = {}) {
-    const art = _tmdbArtUrl(it) || _thumbUrl(it.path, 1280);
-    const tm = it.tmdb || null;
-    const title = opts.title || ((tm && tm.title) || _displayTitle(it));
-    const meta = [];
-    if (it.kind === 'episode' && !opts.hideEpTag) meta.push(`S${String(it.season || 0).padStart(2, '0')}E${String(it.episode || 0).padStart(2, '0')}`);
-    if (tm && tm.year) meta.push(tm.year);
-    if (tm && tm.rating != null) meta.push(`★ ${tm.rating}`);
-    if (tm && Array.isArray(tm.genres) && tm.genres.length) meta.push(...tm.genres.slice(0, 2));
-    if (opts.extraMeta) meta.push(...opts.extraMeta);
-    if (it.quality) meta.push(it.quality.toUpperCase());
-    const r = _resumeInfo(it);
-    let resumeTxt = '';
-    if (r && r.duration > 0 && r.time > 5 && r.time < r.duration * 0.97) resumeTxt = ` · Resume at ${fmtTime(r.time)}`;
-    const overview = tm && tm.overview ? `<p class="vs-hero-overview" data-testid="vs-hero-overview">${escapeHtml(tm.overview)}</p>` : '';
-    return `
-        <div data-testid="vs-hero" class="vs-hero${opts.compact ? ' vs-hero--detail' : ''}" onclick="_vsPlayHero()">
-            <img class="vs-hero-bg" src="${art}" alt="" onerror="this.style.display='none'">
-            <div class="vs-hero-grad"></div>
-            <div class="vs-hero-body">
-                <div class="vs-hero-eyebrow"><b>VS</b><span>${escapeHtml(opts.eyebrow || 'VIDEO')}</span></div>
-                <h2 data-testid="vs-hero-title">${escapeHtml(title)}</h2>
-                <div data-testid="vs-hero-meta" class="vs-hero-meta" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:13.5px;color:#e8e8e8;font-weight:600;">${meta.map(m => `<span>${escapeHtml(String(m))}</span>`).join('<span class="dot">·</span>')}</div>
-                ${overview}
-                <div class="vs-hero-btns" onclick="event.stopPropagation()">
-                    <button data-testid="vs-hero-play" class="vs-btn-play" onclick="_vsPlayHero()"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4.5v15l13-7.5z"/></svg> Play${resumeTxt}</button>
-                    <button data-testid="vs-hero-details" class="vs-btn-info" onclick="_vsHeroDetails()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M12 11v5"/></svg> More Info</button>
-                    <button data-testid="vs-hero-list" class="vs-btn-info" data-list-btn="${escapeAttr(it.path)}" onclick="_vsListToggle(event, this)"><span class="vs-hero-list-ico" style="display:flex;">${uiIcon(_myList.has(it.path) ? 'check' : 'plus', 16)}</span> My List</button>
-                </div>
-            </div>
-        </div>`;
-}
-
-// ── Cards (rows + grids) with Netflix hover popup ────────────────────────────
-function _cardMetaBits(item) {
-    const bits = [];
-    const tm = item.tmdb || null;
-    if (tm && tm.rating != null) bits.push(`★ ${tm.rating}`);
-    if (tm && tm.year) bits.push(String(tm.year));
-    if (item.quality) bits.push(item.quality.toUpperCase());
-    if (item.duration > 0) bits.push(fmtTime(item.duration));
-    else if (item.size) bits.push(fmtBytes(item.size));
-    return bits;
-}
-
-function _cardHtml(item, idx, opts = {}) {
-    const playFn = opts.play || '_vsPlayRow';
-    const arrName = opts.arr || 'row';
-    const r = _resumeInfo(item);
-    let bar = '';
-    if (opts.cw && r && r.duration > 0) {
-        const pct = Math.min(100, (r.time / r.duration) * 100).toFixed(1);
-        bar = `<div class="vs-prog" title="Resume at ${fmtTime(r.time)} of ${fmtTime(r.duration)}"><i style="width:${pct}%"></i></div>`;
-    } else if (opts.cw && r && r.duration > 0 && r.time >= r.duration * 0.97) {
-        bar = `<div class="vs-prog" title="Finished"><i style="width:100%"></i></div>`;
-    }
-    const removeBtn = opts.cw ? `<button class="vs-cw-x" title="Remove from Continue Watching" onclick="_vsRemoveCw(event, ${idx})">${uiIcon('close', 12)}</button>` : '';
-    const newBadge = opts.isNew ? '<span class="vs-badge">New</span>' : '';
-    const panelTitle = _cardPanelTitle(item);
-    const metaBits = _cardMetaBits(item);
-    return `
-        <div class="vs-card${opts.portrait ? ' vs-card--portrait' : ''}" data-testid="${opts.cw ? 'vs-cw-card' : 'vs-item'}-${idx}" onclick="${playFn}(${idx})" title="${escapeAttr(item.name)}">
-            <div class="vs-card-art">
-                ${_artImgHtml(item, opts.portrait ? 342 : 480, opts.portrait)}
-                <div class="vs-emoji-fb">🎬</div>
-                ${newBadge}
-                ${(opts.cw || opts.portrait) ? '' : _qualityChip(item.quality)}
-                ${bar}${removeBtn}
-            </div>
-            <div class="vs-card-title">${escapeHtml(panelTitle)}</div>
-            <div class="vs-card-panel">
-                <div class="vs-cp-top">
-                    <button class="vs-cbtn vs-cbtn-play" title="Play" onclick="${playFn}(${idx})"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4.5v15l13-7.5z"/></svg></button>
-                    ${_listBtnHtml(item.path)}
-                    <button class="vs-cbtn" title="${item.kind === 'episode' ? 'Show details' : 'Info'}" onclick="_vsCardInfo(event, '${arrName}', ${idx})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M12 11v5"/></svg></button>
-                    ${opts.tmdb ? `<button class="vs-cbtn" title="Fetch metadata from TMDB (display only — file name is not changed)" onclick="_vsCardTmdb(event, '${arrName}', ${idx})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>` : ''}
-                </div>
-                <div class="vs-cp-title">${escapeHtml(panelTitle)}</div>
-                ${metaBits.length ? `<div class="vs-cp-meta">${metaBits.map(b => `<span>${escapeHtml(String(b))}</span>`).join('<span class="dot">·</span>')}</div>` : ''}
-            </div>
-        </div>`;
-}
-
-function _cardPanelTitle(item) {
-    let t = _displayTitle(item);
-    if (item.kind === 'episode') {
-        const show = ((item.tmdb && item.tmdb.title) || item.show || '');
-        t = `${show ? show + ' · ' : ''}S${String(item.season || 0).padStart(2, '0')}E${String(item.episode || 0).padStart(2, '0')}`;
-    }
-    return t;
-}
-
-// Poster-wall card (grid views) — portrait 2:3, TMDB poster first, title always visible.
-function _posterCardHtml(item, idx, opts = {}) {
-    const playFn = opts.play || '_vsPlayRow';
-    const arrName = opts.arr || 'row';
-    const metaBits = _cardMetaBits(item).slice(0, 3);
-    const tmdbBtn = opts.tmdb ? `<button class="vs-pcard-tmdb" title="Fetch metadata from TMDB (display only — file name is not changed)" onclick="_vsCardTmdb(event, '${arrName}', ${idx})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>` : '';
-    const listBtn = `<button class="vs-pcard-tmdb vs-pcard-list${_myList.has(item.path) ? ' vs-in-list' : ''}" data-list-btn="${escapeAttr(item.path)}"
-        title="${_myList.has(item.path) ? 'Remove from My List' : 'Add to My List'}"
-        onclick="_vsListToggle(event, this)">${uiIcon(_myList.has(item.path) ? 'check' : 'plus', 13)}</button>`;
-    return `
-        <div class="vs-pcard" data-testid="${opts.testid || 'vs-item'}-${idx}" onclick="${playFn}(${idx})" title="${escapeAttr(item.name)}">
-            <div class="vs-pcard-art">
-                ${_artImgHtml(item, 342, true)}
-                <div class="vs-emoji-fb">🎬</div>
-                <div class="vs-pcard-play"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4.5v15l13-7.5z"/></svg></i></div>
-                ${tmdbBtn}
-                ${listBtn}
-            </div>
-            <div class="vs-pcard-title">${escapeHtml(_cardPanelTitle(item))}</div>
-            ${metaBits.length ? `<div class="vs-pcard-meta">${metaBits.map(b => escapeHtml(String(b))).join(' · ')}</div>` : ''}
-        </div>`;
-}
-
-function _cardItem(arrName, i) { return (arrName === 'view' ? _viewVideos : _rowItems)[i]; }
-
-function _cardTmdb(ev, arrName, i) {
-    if (ev && ev.stopPropagation) ev.stopPropagation();
-    const it = _cardItem(arrName, i);
-    if (!it || !it.path) return;
-    if (window._vsTmdbRefreshCard) window._vsTmdbRefreshCard(ev, it.path);
-}
-
-function _infoBits(it) {
-    const tm = it.tmdb || null;
-    return [fmtBytes(it.size), fmtDate(it.modified),
-            tm && Array.isArray(tm.genres) && tm.genres.length ? tm.genres.join(', ') : '',
-            tm && Array.isArray(tm.cast) && tm.cast.length ? 'Cast: ' + tm.cast.slice(0, 3).join(', ') : '']
-        .filter(Boolean);
-}
-
-function _cardInfo(ev, arrName, i) {
-    if (ev && ev.stopPropagation) ev.stopPropagation();
-    const it = _cardItem(arrName, i);
-    if (!it) return;
-    if (it.kind === 'episode') { _openShowByKey(_showKey(it)); return; }
-    const bits = _infoBits(it).join(' · ');
-    _toast(`${_displayTitle(it)}${bits ? ' — ' + bits : ''}`);
-}
-
-function _rowScroll(btn, dir) {
-    const row = btn.parentElement.querySelector('.vs-row');
-    if (row) row.scrollBy({ left: dir * row.clientWidth * 0.9, behavior: 'smooth' });
-}
-
-async function _removeCw(ev, i) {
-    if (ev && ev.stopPropagation) ev.stopPropagation();
-    const it = _rowItems[i];
-    if (!it || !it.path) return;
-    try {
-        await apiFetch('/api/videos/resume', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: it.path, time: 0, duration: 0 }),
+    apiPost(path, body) {
+        return this.apiJson(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
         });
-        const cw = _homeData.continue_watching || [];
-        const j = cw.findIndex(x => x.path === it.path);
-        if (j >= 0) cw.splice(j, 1);
-        delete _resumes[it.path];
-        _toast('Removed from Continue Watching');
-        if (_active()) { _rowItems = [...cw, ...(_homeData.recently_added || [])]; _renderContent(); }
-    } catch (e) { _toast('Could not remove: ' + e.message, true); }
-}
-
-function _rowSection(title, testid, cardsHtml) {
-    return `
-        <div class="vs-rowsec">
-            <div class="vs-rowsech"><h3 class="vs-rowtitle">${escapeHtml(title)}</h3></div>
-            <div class="vs-rowwrap">
-                <button class="vs-arrow vs-arrow-l" onclick="_vsRowScroll(this, -1)" title="Scroll left"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-                <div class="vs-row" data-testid="${testid}">${cardsHtml}</div>
-                <button class="vs-arrow vs-arrow-r" onclick="_vsRowScroll(this, 1)" title="Scroll right"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
-            </div>
-        </div>`;
-}
-
-// ── Home view (hero billboard + Netflix-style category rows) ─────────────────
-
-// Most-watched heuristic: resume order first, then fresh arrivals, then top rated.
-function _top10Items(cw, ra, lib) {
-    const seen = new Set(); const out = [];
-    const push = it => {
-        if (!it || !it.path || seen.has(it.path) || out.length >= 10) return;
-        seen.add(it.path); out.push(it);
-    };
-    [...cw].sort((a, b) => (b.resume_time || 0) - (a.resume_time || 0)).forEach(push);
-    ra.forEach(push);
-    [...lib].filter(v => v.kind === 'movie')
-        .sort((a, b) => ((b.tmdb && b.tmdb.rating) ?? -1) - ((a.tmdb && a.tmdb.rating) ?? -1)).forEach(push);
-    lib.forEach(push);
-    return out;
-}
-
-// Genre shelves built from cached TMDB metadata (only genres with enough titles).
-function _genreRows(lib) {
-    const counts = new Map();
-    for (const v of lib) {
-        const gs = (v.tmdb && Array.isArray(v.tmdb.genres)) ? v.tmdb.genres : [];
-        for (const g of gs) if (typeof g === 'string' && g) counts.set(g, (counts.get(g) || 0) + 1);
-    }
-    return [...counts.entries()]
-        .filter(([, n]) => n >= 4)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([genre]) => ({
-            genre,
-            items: lib.filter(v => v.tmdb && Array.isArray(v.tmdb.genres) && v.tmdb.genres.includes(genre))
-                .sort((a, b) => ((b.tmdb && b.tmdb.rating) ?? -1) - ((a.tmdb && a.tmdb.rating) ?? -1))
-                .slice(0, 18),
-        }));
-}
-
-// "Because you watched X" — same-genre suggestions seeded from what was watched.
-function _becauseRow(cw, lib) {
-    const seeds = cw.filter(v => v.tmdb && Array.isArray(v.tmdb.genres) && v.tmdb.genres.length);
-    for (const seed of seeds) {
-        const gs = seed.tmdb.genres;
-        const items = lib.filter(v => v.path !== seed.path && v.tmdb && Array.isArray(v.tmdb.genres)
-                && v.tmdb.genres.some(g => gs.includes(g)))
-            .sort((a, b) => ((b.tmdb && b.tmdb.rating) ?? -1) - ((a.tmdb && a.tmdb.rating) ?? -1))
-            .slice(0, 18);
-        if (items.length < 3) continue;
-        let t = _displayTitle(seed);
-        if (t.length > 42) t = t.slice(0, 41) + '…';
-        return { title: `Because you watched ${t}`, items };
-    }
-    return null;
-}
-
-function _renderHome(c) {
-    const cw = _homeData.continue_watching || [];
-    const ra = _homeData.recently_added || [];
-    const lib = _allVideos || [];
-    if (!cw.length && !ra.length && !lib.length) {
-        c.innerHTML = `
-            <div style="height:clamp(300px,48vh,520px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--surface-1);">
-                <div style="font-size:48px;">🍿</div>
-                <div style="color:var(--text-3);font-size:14.5px;max-width:380px;text-align:center;line-height:1.5;">Nothing here yet — start watching something and it will show up on your home screen.</div>
-                <button class="vs-btn-play" style="margin-top:6px;" onclick="_vsNavTo(null)">Browse All Videos</button>
-            </div>`;
-        _setCount('');
-        return;
     }
 
-    // Continue Watching / Recently Added keep their original indices (testids + handlers).
-    _rowItems = [...cw, ...ra];
-
-    let html = '';
-    const heroIt = _pickHero() || lib[0] || null;
-    if (heroIt) { _heroItem = heroIt; html += _heroHtml(heroIt, {}); }
-    else { _heroItem = null; }
-
-    if (cw.length) {
-        html += _rowSection('Continue Watching', 'vs-row-cw',
-            cw.map((it, i) => _cardHtml(it, i, { cw: true, portrait: true, tmdb: true })).join(''));
-    }
-
-    // Top 10 — giant rank numerals, Netflix style
-    const top = _top10Items(cw, ra, lib);
-    if (top.length >= 3) {
-        const off = _rowItems.length;
-        for (const it of top) _rowItems.push(it);
-        html += _rowSection('Top 10 on this server', 'vs-row-top10', top.map((it, i) =>
-            `<div class="vs-top10"><span class="vs-top10-num">${i + 1}</span>${_cardHtml(it, off + i, { portrait: true, tmdb: true })}</div>`).join(''));
-    }
-
-    if (ra.length) {
-        html += _rowSection('Recently Added', 'vs-row-ra',
-            ra.map((it, i) => _cardHtml(it, cw.length + i, { portrait: true, tmdb: true, isNew: true })).join(''));
-    }
-
-    const because = _becauseRow(cw, lib);
-    if (because) {
-        const off = _rowItems.length;
-        for (const it of because.items) _rowItems.push(it);
-        html += _rowSection(because.title, 'vs-row-because',
-            because.items.map((it, i) => _cardHtml(it, off + i, { tmdb: true })).join(''));
-    }
-
-    const myItems = lib.filter(v => _myList.has(v.path)).slice(0, 18);
-    if (myItems.length) {
-        const off = _rowItems.length;
-        for (const it of myItems) _rowItems.push(it);
-        html += _rowSection('My List', 'vs-row-mylist',
-            myItems.map((it, i) => _cardHtml(it, off + i, { portrait: true, tmdb: true })).join(''));
-    }
-
-    const movies = lib.filter(v => v.kind === 'movie')
-        .sort((a, b) => ((b.tmdb && b.tmdb.rating) ?? -1) - ((a.tmdb && a.tmdb.rating) ?? -1)
-            || String(a.title || a.name).localeCompare(String(b.title || b.name)))
-        .slice(0, 18);
-    if (movies.length) {
-        const off = _rowItems.length;
-        for (const it of movies) _rowItems.push(it);
-        html += _rowSection('Movies', 'vs-row-movies',
-            movies.map((it, i) => _cardHtml(it, off + i, { tmdb: true })).join(''));
-    }
-
-    // One card per series — clicking opens the episode list instead of playing.
-    const shows = lib.some(v => v.kind === 'episode') ? _groupShows().slice(0, 18) : [];
-    if (shows.length) {
-        const off = _rowItems.length;
-        for (const s of shows) _rowItems.push(s.latest);
-        html += _rowSection('Series', 'vs-row-series', shows.map((s, i) =>
-            _cardHtml(s.latest, off + i, { portrait: true, tmdb: true, play: '_vsRowShow' })).join(''));
-    }
-
-    for (const g of _genreRows(lib)) {
-        const off = _rowItems.length;
-        for (const it of g.items) _rowItems.push(it);
-        html += _rowSection(g.genre, 'vs-row-genre',
-            g.items.map((it, i) => _cardHtml(it, off + i, { tmdb: true })).join(''));
-    }
-
-    c.innerHTML = html;
-    _setCount(lib.length ? `${lib.length} in library` : `${cw.length + ra.length} items`);
-}
-
-// ── My List view ────────────────────────────────────────────────────────────
-function _renderMyList(c) {
-    const items = (_allVideos || []).filter(v => _myList.has(v.path));
-    _viewVideos = items;
-    if (!items.length) {
-        c.innerHTML = `<div class="vs-pagehead"><h2>My List</h2></div>
-            <div class="vs-empty"><div style="color:var(--text-3);display:flex;">${uiIcon('plus', 44)}</div>
-            <div>Nothing saved yet — hover any title and press the <b style="color:var(--text-1);">+</b> button to add it here.</div>
-            <button class="vs-btn-info" onclick="_vsGoHome()" style="margin-top:6px;">Browse Home</button></div>`;
-        _setCount('0 titles');
-        return;
-    }
-    c.innerHTML = `<div class="vs-pagehead"><h2>My List</h2>
-            <span style="font-size:12.5px;color:var(--text-3);margin-left:8px;">saved by ${escapeHtml(_listUser())}</span></div>
-        <div class="vs-grid--posters" data-testid="vs-mylist-grid">${items.map((v, i) =>
-            _posterCardHtml(v, i, { play: '_vsOpenPlayer', arr: 'view', tmdb: true })).join('')}</div>`;
-    _setCount(`${items.length} saved`);
-}
-
-function _openMyList() {
-    if (_playerPath) _closePlayer();
-    _mode = 'mylist'; _showDetail = null; _path = null; _q = ''; _preSearchMode = null;
-    _navReset(); _scrollTop(); _reloadView();
-}
-
-// ── Media engine status (Settings → Media Engine) ────────────────────────────
-async function _renderEngineStatus(force = false) {
-    const st = document.getElementById('vs-settings-status');
-    if (!st) return;
-    const chip = (txt, bad = false) => `<span style="background:var(--surface-2);padding:3px 10px;border-radius:10px;font-size:12px;color:${bad ? '#f87171' : 'var(--text-2)'};">${escapeHtml(txt)}</span>`;
-    try {
-        const s = await _api('/api/videos/status' + (force ? '?refresh=1' : ''));
-        if (!document.getElementById('vs-settings-status')) return;
-        const hwe = (s.hw && s.hw.encoder) || (s.qsv ? 'qsv' : null);
-        const label = hwe === 'qsv' ? 'Hardware encode: Intel QuickSync'
-            : hwe === 'vaapi' ? `Hardware encode: VA-API (${(s.hw && s.hw.device) || '/dev/dri/renderD128'})`
-            : 'Software encode: libx264';
-        st.innerHTML = chip(`ffmpeg ${s.ffmpeg ? 'ok' : 'missing'}`, !s.ffmpeg)
-            + chip(`ffprobe ${s.ffprobe ? 'ok' : 'missing'}`, !s.ffprobe)
-            + chip(label, !hwe)
-            + (s.hw && s.hw.reason
-                ? `<span style="font-size:11.5px;color:${hwe ? 'var(--text-3)' : '#f87171'};flex-basis:100%;line-height:1.55;">${escapeHtml(s.hw.reason)}</span>`
-                : '');
-    } catch (e) {
-        st.innerHTML = `<span style="font-size:12px;color:#f87171;">${escapeHtml(e.message)}</span>`;
-    }
-}
-
-function _recheckEngine() {
-    _renderEngineStatus(true).then(() => _toast('Hardware encoder re-probed'));
-}
-
-// ── Movies view (poster grid with hero) ──────────────────────────────────────
-function _movieList() {
-    let v = _allVideos.filter(x => x.kind === 'movie');
-    const q = (_q || '').toLowerCase();
-    if (q) v = v.filter(x => ((x.title || '') + ' ' + x.name + ' ' + ((x.tmdb && x.tmdb.title) || '')).toLowerCase().includes(q));
-    return _sortVideos(v);
-}
-
-function _renderMovies(c) {
-    const movies = _movieList();
-    _viewVideos = movies;
-    if (!movies.length) {
-        c.innerHTML = `<div class="vs-empty"><div style="font-size:46px;">🎬</div>No movies in the library yet.</div>`;
-        _setCount('0 videos');
-        return;
-    }
-    let html = '';
-    const rated = [...movies].filter(m => m.tmdb && m.tmdb.rating != null).sort((a, b) => (b.tmdb.rating - a.tmdb.rating));
-    const heroIt = (rated[0] && _tmdbArtUrl(rated[0])) ? rated[0] : (_tmdbArtUrl(movies[0]) ? movies[0] : null);
-    if (heroIt) {
-        _heroItem = heroIt;
-        html += _heroHtml(heroIt, { eyebrow: 'FILM' });
-    } else {
-        _heroItem = null;
-    }
-    html += `<div class="vs-grid--posters" data-testid="vs-movies-grid">${movies.map((v, i) => _posterCardHtml(v, i, { play: '_vsOpenPlayer', arr: 'view', tmdb: true })).join('')}</div>`;
-    c.innerHTML = html;
-    _setCount(`${movies.length} movies`);
-}
-
-// ── Series view (portrait poster grid + show detail pages) ───────────────────
-function _showKey(v) {
-    if (v.show) return v.show;
-    const seg = String(v.folder || '').split('/').filter(Boolean).pop();
-    return seg || 'Unknown';
-}
-
-function _groupShows() {
-    const q = (_q || '').toLowerCase();
-    const map = new Map();
-    for (const v of _allVideos) {
-        if (v.kind !== 'episode') continue;
-        const key = _showKey(v);
-        if (q && !(key.toLowerCase().includes(q) || ((v.title || '') + ' ' + v.name).toLowerCase().includes(q))) continue;
-        let g = map.get(key);
-        if (!g) { g = { show: key, episodes: [] }; map.set(key, g); }
-        g.episodes.push(v);
-    }
-    const shows = [...map.values()];
-    for (const s of shows) {
-        s.episodes.sort((a, b) => (a.season || 0) - (b.season || 0) || (a.episode || 0) - (b.episode || 0));
-        s.latest = s.episodes[s.episodes.length - 1];
-    }
-    shows.sort((a, b) => a.show.localeCompare(b.show, undefined, { sensitivity: 'base' }));
-    return shows;
-}
-
-function _showArt(s) {
-    for (const e of [s.latest, ...s.episodes]) {
-        const u = _tmdbArtUrl(e, true);   // poster wall — prefer the TMDB poster
-        if (u) return u;
-    }
-    return s.latest ? _thumbUrl(s.latest.path, 300) : '';
-}
-
-function _showCardHtml(s, i) {
-    const art = _showArt(s);
-    const tm = (s.latest && s.latest.tmdb) || null;
-    const metaBits = [];
-    if (tm && tm.rating != null) metaBits.push(`★ ${tm.rating}`);
-    if (tm && tm.year) metaBits.push(String(tm.year));
-    metaBits.push(`${s.episodes.length} ep${s.episodes.length === 1 ? '' : 's'}`);
-    return `
-        <div class="vs-pcard" data-testid="vs-show-${i}" onclick="_vsOpenShow(${i})">
-            <div class="vs-pcard-art">
-                ${art ? `<img src="${art}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';const n=this.nextElementSibling;if(n)n.style.display='flex'">` : ''}
-                <div class="vs-emoji-fb">📺</div>
-                <div class="vs-pcard-play"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4.5v15l13-7.5z"/></svg></i></div>
-            </div>
-            <div class="vs-pcard-title">${escapeHtml(s.show)}</div>
-            <div class="vs-pcard-meta">${metaBits.map(b => escapeHtml(String(b))).join(' · ')}</div>
-        </div>`;
-}
-
-function _renderSeriesGrid(c) {
-    const shows = _groupShows();
-    _showsList = shows;
-    if (!shows.length) {
-        c.innerHTML = `<div class="vs-empty"><div style="font-size:46px;">📺</div>No series in the library yet.</div>`;
-        _setCount('0 videos');
-        return;
-    }
-    let html = '';
-    const heroShow = shows.slice().sort((a, b) => {
-        const ra = (a.latest && a.latest.tmdb && a.latest.tmdb.rating != null) ? a.latest.tmdb.rating : -1;
-        const rb = (b.latest && b.latest.tmdb && b.latest.tmdb.rating != null) ? b.latest.tmdb.rating : -1;
-        return rb - ra || b.episodes.length - a.episodes.length;
-    })[0];
-    if (heroShow && _showArt(heroShow)) {
-        _heroItem = heroShow.episodes[0];
-        html += _heroHtml(heroShow.episodes[0], { eyebrow: 'SERIES', title: heroShow.show, hideEpTag: true, extraMeta: [`${heroShow.episodes.length} episodes`] });
-    } else {
-        _heroItem = null;
-    }
-    html += `<div class="vs-grid--posters">${shows.map((s, i) => _showCardHtml(s, i)).join('')}</div>`;
-    c.innerHTML = html;
-    _setCount(`${shows.length} series`);
-}
-
-function _renderShowDetail(c) {
-    const key = _showDetail;
-    const eps = _allVideos.filter(v => v.kind === 'episode' && _showKey(v) === key);
-    if (!eps.length) {
-        c.innerHTML = `<div class="vs-empty"><div style="font-size:46px;">📺</div>Episodes for “${escapeHtml(key)}” not found.
-            <button class="vs-btn-info" onclick="_vsBackToSeries()">‹ Back to Series</button></div>`;
-        _setCount('');
-        return;
-    }
-    eps.sort((a, b) => (a.season || 0) - (b.season || 0) || (a.episode || 0) - (b.episode || 0));
-    _rowItems = eps;
-    const first = eps[0];
-    let html = '';
-    _heroItem = first;
-    html += _heroHtml(first, { eyebrow: 'SERIES', title: key, compact: true, hideEpTag: true, extraMeta: [`${eps.length} episodes`] });
-    const seasons = new Map();
-    for (const e of eps) {
-        const sn = String(e.season || 1);
-        if (!seasons.has(sn)) seasons.set(sn, []);
-        seasons.get(sn).push(e);
-    }
-    let gi = 0;
-    for (const [sn, list] of seasons) {
-        html += _rowSection(`Season ${escapeHtml(sn)}`, `vs-row-season-${gi++}`, list.map(e => _cardHtml(e, eps.indexOf(e), { portrait: true, tmdb: true })).join(''));
-    }
-    c.innerHTML = html;
-    _setCount(`${eps.length} episodes`);
-}
-
-// ── Search results view ──────────────────────────────────────────────────────
-function _renderSearchResults(c) {
-    const items = _viewVideos;
-    if (!items.length) {
-        c.innerHTML = `<div class="vs-empty"><div style="font-size:46px;">🔍</div>No results for “${escapeHtml(_q)}”.</div>`;
-        _setCount('0 videos');
-        return;
-    }
-    const html = `
-        <div class="vs-pagehead"><h2>Results for “${escapeHtml(_q)}”</h2><span style="color:var(--text-3);font-size:13px;">${items.length} video${items.length === 1 ? '' : 's'}</span></div>
-        <div class="vs-grid--posters">${items.map((v, i) => _posterCardHtml(v, i, { play: '_vsOpenPlayer', arr: 'view', tmdb: true })).join('')}</div>`;
-    c.innerHTML = html;
-    _setCount(`${items.length} videos`);
-}
-
-// ── Browse view (All Videos / folders — breadcrumbs + folder tiles) ──────────
-function _crumbsArr() {
-    const arr = [{ label: 'All Videos', path: null }];
-    if (_path) {
-        const segs = _path.split('/').filter(Boolean);
-        let acc = '';
-        for (const s of segs) { acc += '/' + s; arr.push({ label: s, path: acc }); }
-    }
-    return arr;
-}
-
-function _crumbsHtml() {
-    const arr = _crumbsArr();
-    return arr.map((cr, i) => {
-        const last = i === arr.length - 1;
-        const sep = i > 0 ? '<span class="vs-crumb-sep">/</span>' : '';
-        return `${sep}<span data-testid="vs-crumb-${i}" class="vs-crumb${last ? ' current' : ''}" ${last ? '' : `onclick="_vsCrumb(${i})"`}>${escapeHtml(cr.label)}</span>`;
-    }).join('');
-}
-
-function _crumbNav(i) {
-    const arr = _crumbsArr();
-    const cr = arr[i];
-    if (cr && i > 0) _navTo(cr.path);
-    else _navTo(null);
-}
-
-function _openFolder(i) {
-    const f = (_listing.folders || [])[i];
-    if (f) _navTo(f.path);
-}
-
-function _renderLibrary(c) {
-    const countEl = document.querySelector('[data-testid="vs-count"]');
-    // In the root "All Videos" view (!_path) the walk is recursive, so every
-    // file inside per-movie folders already appears in the grid below — skip
-    // the redundant folder tiles there. Subfolder views keep them for navigation.
-    const showFolders = !!_path && (_listing.folders || []).length > 0;
-    if (!_viewVideos.length && !showFolders) {
-        c.innerHTML = `<div class="vs-empty"><div style="font-size:46px;">🍿</div>No videos found in this folder.</div>`;
-        _setCount('0 videos');
-        return;
-    }
-    let html = `<div class="vs-pagehead">${_crumbsHtml()}</div>`;
-    if (showFolders) {
-        html += `<div class="vs-folders">${_listing.folders.map((f, i) => `
-            <div class="vs-folder-tile" data-testid="vs-folder-${i}" onclick="_vsOpenFolder(${i})">
-                <div class="vs-ft-icon" style="display:flex;justify-content:center;color:var(--text-2);">${uiIcon('folder', 24)}</div>
-                <div class="vs-ft-name">${escapeHtml(f.name)}</div>
-            </div>`).join('')}</div>`;
-    }
-    if (!_viewVideos.length) {
-        c.innerHTML = html + `<div style="padding:26px 4%;color:var(--text-3);font-size:13.5px;">No videos in this folder — open a subfolder above.</div>`;
-        _setCount(`${_listing.folders.length} folders`);
-        return;
-    }
-    const view = _cfg.options.view || 'grid';
-    if (view === 'list') {
-        html += `<div class="vs-list" data-testid="vs-list">${_viewVideos.map((v, i) => `
-            <div class="vs-listrow" data-testid="vs-item-${i}" onclick="_vsOpenPlayer(${i})" title="${escapeAttr(v.name)}">
-                <div style="position:relative;width:96px;height:54px;flex-shrink:0;background:#000;border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-                    ${_artImgHtml(v, 160)}<div class="vs-emoji-fb" style="font-size:20px;">🎬</div>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(_displayTitle(v))}</div>
-                    <div style="font-size:11.5px;color:var(--text-3);margin-top:2px;">${v.tmdb && v.tmdb.rating != null ? `★ ${v.tmdb.rating} · ` : ''}${fmtBytes(v.size)} · ${fmtDate(v.modified)}${v.folder ? ' · ' + escapeHtml(v.folder) : ''}</div>
-                </div>
-            </div>`).join('')}</div>`;
-    } else {
-        html += `<div class="vs-grid--posters" data-testid="vs-grid">${_viewVideos.map((v, i) => _posterCardHtml(v, i, { play: '_vsOpenPlayer', arr: 'view', tmdb: true })).join('')}</div>`;
-    }
-    c.innerHTML = html;
-    if (countEl) countEl.textContent = `${_viewVideos.length} video${_viewVideos.length === 1 ? '' : 's'}`;
-    _setCount(`${_viewVideos.length} videos`);
-}
-
-// ── Welcome (no library folders yet) ────────────────────────────────────────
-function _renderWelcome(c) {
-    c.innerHTML = `
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px 24px;text-align:center;background:var(--surface-1);">
-            <div class="vs-brand" style="font-size:30px;">Video Station</div>
-            <div style="color:var(--text-2);font-size:15px;max-width:420px;line-height:1.6;">Your library is empty. Add a folder with videos to get started — movies, series and everything in between.</div>
-            <button class="vs-btn-play" onclick="_vsShowPicker()">＋ Add Your First Folder</button>
-        </div>`;
-    _setCount('');
-}
-
-function _syncKeyHandler() {
-    const need = !!(_active() && (_playerPath || document.getElementById('vs-picker')
-        || document.getElementById('vs-settings')));
-    if (need && !_keyOn) { addEventListener('keydown', _onKey); _keyOn = true; }
-    else if (!need && _keyOn) { removeEventListener('keydown', _onKey); _keyOn = false; }
-}
-
-function _openPlayer(item) {
-    if (!item || !_active()) return;
-    // Reset per-video state.
-    if (_videoEl) { try { _videoEl.pause(); } catch (_) {} _videoEl = null; }
-    if (_subBlobUrl) { URL.revokeObjectURL(_subBlobUrl); _subBlobUrl = null; }
-    _playerPath = item.path;
-    _playerItem = item;
-    _subs = [];
-    _subIdx = -1;
-    _audioTracks = [];
-    _audioIdx = 0;
-    _playerMode = 'direct';
-    _pendingSeek = 0;
-    _lastResumeSave = 0;
-    _transcoding = false;
-    _knownDuration = 0;
-    _pipeBase = 0;
-    _seekReload = null;
-    _endSaved = false;
-    _syncKeyHandler();
-    _renderContent();
-}
-
-function _maxIconSvg(expanded) {
-    const common = 'width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
-    return expanded
-        ? `<svg ${common}><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>`
-        : `<svg ${common}><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>`;
-}
-
-function _applyPlayerMax() {
-    for (const el of [document.getElementById('vs-nav')]) {
-        if (!el) continue;
-        if (_playerMax) {
-            if (!el.dataset.origDisplay) el.dataset.origDisplay = el.style.display || 'flex';
-            el.style.display = 'none';
-        } else if (el.dataset.origDisplay) {
-            el.style.display = el.dataset.origDisplay;
-            delete el.dataset.origDisplay;
-        }
-    }
-    const btn = document.querySelector('[data-testid="vs-player-max"]');
-    if (btn) {
-        btn.innerHTML = _maxIconSvg(_playerMax);
-        btn.title = _playerMax ? 'Restore player' : 'Maximize player';
-    }
-}
-
-function _togglePlayerMax() {
-    if (!_playerPath) return;
-    _playerMax = !_playerMax;
-    _applyPlayerMax();
-}
-
-function _closePlayer() {
-    if (_videoEl) { try { _saveResume(true); _videoEl.pause(); } catch (_) {} _videoEl = null; }
-    if (_subBlobUrl) { URL.revokeObjectURL(_subBlobUrl); _subBlobUrl = null; }
-    if (_playerMax) { _playerMax = false; _applyPlayerMax(); }
-    _playerPath = null;
-    _playerItem = null;
-    _subs = [];
-    _subIdx = -1;
-    _audioTracks = [];
-    _audioIdx = 0;
-    _playerMode = 'direct';
-    _pendingSeek = 0;
-    _transcoding = false;
-    _knownDuration = 0;
-    _pipeBase = 0;
-    _seekReload = null;
-    _endSaved = false;
-    _syncKeyHandler();
-    _renderContent();
-}
-
-// fMP4 transcode pipes report a finite-but-wrong video.duration (only what is
-// buffered so far), so the ffprobe duration is authoritative in processed mode.
-function _effDuration(v) {
-    if (_transcoding && _knownDuration > 0) return _knownDuration;
-    return (isFinite(v.duration) && v.duration > 0) ? v.duration : _knownDuration;
-}
-
-// Absolute position within the source file. The live pipe always restarts its
-// clock at ~0, so add back the offset we requested when opening it.
-function _absTime(v) {
-    return (_transcoding && _pipeBase > 0) ? _pipeBase + (v.currentTime || 0) : (v.currentTime || 0);
-}
-
-function _saveResume(force = false) {
-    const v = _videoEl;
-    if (!v || !_playerPath) return;
-    const dur = _effDuration(v);
-    if (!(dur > 0)) return;
-    const now = Date.now();
-    if (!force && now - _lastResumeSave < 5000) return;
-    _lastResumeSave = now;
-    apiFetch('/api/videos/resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: _playerPath, time: _absTime(v), duration: dur }),
-    }).catch(() => {});
-}
-
-// Display label for a video item (parsed title + S/E badge, Jellyfin-style).
-function _itemLabel(item) {
-    const tm = item.tmdb || null;
-    if (item.kind === 'episode') {
-        const show = (tm && tm.title) || item.show || '';
-        const t = item.title || `Episode ${item.episode}`;
-        return `${show ? show + ' · ' : ''}S${String(item.season || 0).padStart(2, '0')}E${String(item.episode || 0).padStart(2, '0')} ${t}`.trim();
-    }
-    const t = (tm && tm.title) || item.title || item.name;
-    const y = (tm && tm.year) || item.year;
-    return y ? `${t} (${y})` : t;
-}
-
-// Next episode in the same show (by S/E order), for autoplay on ended.
-function _nextEpisode(item) {
-    if (!item || item.kind !== 'episode' || !_allVideos.length) return null;
-    const key = _showKey(item);
-    const eps = _allVideos.filter(v => v.kind === 'episode' && _showKey(v) === key);
-    eps.sort((a, b) => (a.season || 0) - (b.season || 0) || (a.episode || 0) - (b.episode || 0));
-    for (let i = 0; i < eps.length - 1; i++) if (eps[i].path === item.path) return eps[i + 1];
-    return null;
-}
-
-function _renderPlayer(c) {
-    const item = _playerItem || { name: (_playerPath || '').split('/').pop(), path: _playerPath };
-    c.innerHTML = `
-        <div data-testid="vs-player" style="display:flex;flex-direction:column;height:100%;">
-            <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0a0a0a;border-bottom:1px solid #232323;">
-                <button data-testid="vs-player-back" onclick="_vsClosePlayer()" class="btn-ghost" style="font-size:13px;font-weight:600;padding:5px 14px;border-radius:6px;color:#fff;background:none;border:none;cursor:pointer;">‹ Library</button>
-                <span data-testid="vs-player-title" title="${escapeAttr(item.name)}" style="flex:1;font-size:13.5px;font-weight:600;color: var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(_itemLabel(item))}</span>
-                <button data-testid="vs-player-max" onclick="_vsTogglePlayerMax()" class="btn-ghost" title="Maximize player" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border-radius:8px;color: var(--text-2);">${_maxIconSvg(_playerMax)}</button>
-            </div>
-            <div data-testid="vs-player-stage" style="flex:1;display:flex;align-items:center;justify-content:center;background:#000;min-height:0;position:relative;overflow:hidden;"></div>
-            <div data-testid="vs-player-meta" style="display:flex;align-items:center;gap:8px;padding:8px 16px;border-top:1px solid var(--border);background:var(--surface-1);flex-wrap:wrap;font-size:11.5px;color: var(--text-3);">
-                <span>Loading metadata…</span>
-            </div>
-        </div>`;
-
-    const stage = c.querySelector('[data-testid="vs-player-stage"]');
-    const video = document.createElement('video');
-    video.controls = true;
-    video.preload = 'metadata';
-    // No src yet — we wait for ffprobe info so files the browser can't decode
-    // (AC3/EAC3/DTS audio, HEVC video, MKV containers) go through live transcode.
-    stage.appendChild(video);
-    _videoEl = video;
-
-    // Custom transport bar for processed (fMP4 pipe) mode. Native controls can't
-    // work there: video.duration is only what's buffered so far, so the seek bar
-    // shows a wrong "length" and can't scrub past the buffer. The ffprobe
-    // duration is authoritative; out-of-buffer seeks re-request the pipe from
-    // that offset (see _seekReloadStart).
-    const ctl = document.createElement('div');
-    ctl.setAttribute('data-testid', 'vs-player-ctl');
-    ctl.style.cssText = 'position:absolute;left:0;right:0;bottom:0;z-index:2;display:none;align-items:center;gap:10px;padding:8px 14px;background:linear-gradient(transparent, rgba(0,0,0,.78));';
-    ctl.innerHTML = `
-        <button data-testid="vs-ctl-play" title="Play/Pause" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;padding:2px 6px;line-height:1;">⏸</button>
-        <span data-testid="vs-ctl-cur" style="color:#fff;font-size:11.5px;font-variant-numeric:tabular-nums;min-width:48px;text-align:right;">0:00</span>
-        <input type="range" data-testid="vs-ctl-seek" min="0" max="100" step="0.1" value="0" style="flex:1;height:4px;cursor:pointer;">
-        <span data-testid="vs-ctl-dur" style="color:#fff;font-size:11.5px;font-variant-numeric:tabular-nums;min-width:48px;">--:--</span>`;
-    stage.appendChild(ctl);
-    _ctlBar = ctl;
-
-    const seekEl = ctl.querySelector('[data-testid="vs-ctl-seek"]');
-    const playBtn = ctl.querySelector('[data-testid="vs-ctl-play"]');
-
-    playBtn.addEventListener('click', () => {
-        if (video.paused) video.play().catch(() => {}); else video.pause();
-    });
-    video.addEventListener('play', () => { playBtn.textContent = '⏸'; });
-    video.addEventListener('pause', () => { playBtn.textContent = '▶'; });
-    video.addEventListener('timeupdate', _syncTransport);
-
-    seekEl.addEventListener('input', () => {
-        ctl.querySelector('[data-testid="vs-ctl-cur"]').textContent = fmtTime(parseFloat(seekEl.value) || 0);
-    });
-    seekEl.addEventListener('change', () => {
-        const t = parseFloat(seekEl.value) || 0;   // absolute source time
-        let inBuf = false;
+    async loadBootstrap() {
+        this.state.errors = [];
         try {
-            for (let i = 0; i < video.buffered.length; i++) {
-                const s = video.buffered.start(i) + _pipeBase;
-                const e = video.buffered.end(i) + _pipeBase;
-                if (t >= s - 1.5 && t <= e + 1.5) { inBuf = true; break; }
+            const data = await this.apiJson('/api/videos/bootstrap?limit=12');
+            const s = this.state;
+            s.cfg = data.config || s.cfg;
+            s.status = data.status || null;
+            s.home = data.home || { continue_watching: [], recently_added: [] };
+            s.resume = data.resume || {};
+            s.list = new Set(data.list || []);
+            s.roots = data.roots || [];
+            s.folders = data.folders || [];
+            s.total = data.total || 0;
+            s.truncated = !!data.truncated;
+            s.sort = s.cfg?.options?.sort || 'name';
+            s.layout = s.cfg?.options?.view === 'list' ? 'list' : 'grid';
+            this.updateChrome();
+            this.migrateLocalList();
+            // Load the full library in the background for Movies/Series/Search.
+            this.ensureLibrary().then(() => {
+                if (this.state.mode !== 'player') this.renderView();
+            }).catch((err) => this.ctx.logger.warn('Library load failed', String(err)));
+        } catch (err) {
+            this.state.errors = [err.message || String(err)];
+            this.state.loading = false;
+            this.renderView();
+        }
+    }
+
+    async ensureLibrary(force = false) {
+        const s = this.state;
+        if (!force && s.library && Date.now() - s.libraryAt < 30_000) return s.library;
+        const data = await this.apiJson(`/api/videos/library${force ? '?refresh=1' : ''}`);
+        s.library = data;
+        s.libraryAt = Date.now();
+        s.total = (data.videos || []).length;
+        s.folders = data.folders || s.folders;
+        s.truncated = !!data.truncated;
+        return data;
+    }
+
+    async migrateLocalList() {
+        try {
+            const key = `ethos-vs-list:${jwtPayload().username || ''}`;
+            const raw = localStorage.getItem(key);
+            if (!raw) return;
+            const paths = JSON.parse(raw);
+            if (!Array.isArray(paths) || !paths.length) { localStorage.removeItem(key); return; }
+            const missing = paths.filter((p) => !this.state.list.has(p)).slice(0, 200);
+            for (const path of missing) {
+                try {
+                    await this.apiPost('/api/videos/list', { path, add: true });
+                    this.state.list.add(path);
+                } catch { /* old path may no longer exist */ }
             }
-        } catch (_) {}
-        if (inBuf) {
-            try { video.currentTime = Math.max(0, t - _pipeBase); } catch (_) {}
-        } else {
-            _seekReloadStart(video, t);
-        }
-    });
-
-    video.addEventListener('loadedmetadata', () => {
-        if (_pendingSeek > 5) {
-            const dur = _effDuration(video);
-            // Processed mode: the pipe was already requested from this offset
-            // (t= in its URL), so there is nothing to seek — just confirm.
-            if (!_transcoding && (!dur || _pendingSeek < dur * 0.97)) {
-                try { video.currentTime = _pendingSeek; } catch (_) {}
-            }
-            _toast(`Resumed at ${fmtTime(_pendingSeek)}`);
-        }
-        _pendingSeek = 0;
-    });
-    // Out-of-buffer seek on a live transcode pipe → re-request from that point.
-    video.addEventListener('seeking', () => {
-        if (_transcoding && !_seekReload) _seekReloadStart(video, _absTime(video));
-    });
-    // After a seek-triggered reload: clear the guard and resume playback.
-    video.addEventListener('loadeddata', () => {
-        if (!_seekReload) return;
-        const st = _seekReload;
-        _seekReload = null;
-        if (st.playing) video.play().catch(() => {});
-    });
-    video.addEventListener('timeupdate', () => {
-        _saveResume(false);
-        // fMP4 pipes may not fire 'ended' — detect the end from ffprobe duration.
-        const dur = _effDuration(video);
-        if (_transcoding && !_endSaved && dur > 0 && _absTime(video) >= dur - 1) {
-            _endSaved = true;
-            apiFetch('/api/videos/resume', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: _playerPath, time: dur, duration: dur }),
-            }).catch(() => {});
-        }
-    });
-    video.addEventListener('pause', () => _saveResume(true));
-    video.addEventListener('ended', () => {
-        // Mark finished → backend clears the resume position (≥97%).
-        const dur = _effDuration(video) || 0;
-        apiFetch('/api/videos/resume', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path: _playerPath, time: dur, duration: dur }),
-        }).catch(() => {});
-        // Jellyfin-style next-episode autoplay.
-        const nx = _nextEpisode(_playerItem);
-        if (nx && _cfg.options.autoplay_next !== false) {
-            const cur = _playerPath;
-            _toast(`Next up: ${_itemLabel(nx)}`);
-            setTimeout(() => { if (_active() && _playerPath === cur) _openPlayer(nx); }, 800);
-        }
-    });
-    video.addEventListener('error', () => {
-        if (!_transcoding || _seekReload) return;
-        const meta = c.querySelector('[data-testid="vs-player-meta"]');
-        if (meta) meta.insertAdjacentHTML('beforeend', '<span style="color:#f87171;display:inline-flex;align-items:center;gap:4px;">' + uiIcon('alert', 12) + ' Transcode failed — see server log</span>');
-    });
-
-    // Resume position + metadata + subtitles (independent fetches).
-    // Awaited before video.src is chosen below, so the saved position can't be
-    // lost to a /resume-vs-/info response race.
-    const resumeP = _api(`/api/videos/resume?path=${encodeURIComponent(_playerPath)}`).then((d) => {
-        const r = d.resume;
-        if (r && r.time > 5 && (!r.duration || r.time < r.duration * 0.97)) _pendingSeek = r.time;
-    }).catch(() => {});
-
-    _api(`/api/videos/info?path=${encodeURIComponent(_playerPath)}`).then(async (d) => {
-        if (!_active() || !_playerPath) return;
-        await resumeP;
-        const i = d.info || {};
-        _audioTracks = i.audio_tracks || [];
-        _audioIdx = _defaultAudioIdx(_audioTracks);
-        const mode = i.playback_mode || (i.needs_transcode ? 'transcode' : 'direct');
-        // Start playback now that we know how the browser should get this file.
-        if (!video.src) {
-            if (mode !== 'direct') {
-                // Server picks the lightest path: remux (video copy + AAC audio)
-                // or full transcode — see _playback_mode() in video_station.py.
-                _playerMode = 'processed';
-                _transcoding = true;
-                _knownDuration = i.duration || 0;
-                // Resume position goes straight into the pipe's start offset.
-                const t0 = _pendingSeek > 5 ? _pendingSeek : 0;
-                _pipeBase = t0;   // pipe clock starts at ~0 → remember the offset
-                video.src = _transcodeUrl(_playerPath, t0, _audioIdx);
-                _setCustomCtl(true);
-            } else {
-                video.src = _streamUrl(_playerPath);
-            }
-        }
-        const chips = [];
-        const tm = _playerItem && _playerItem.tmdb;
-        if (tm) {
-            if (tm.rating != null) chips.push(`★ ${tm.rating}`);
-            if (tm.year) chips.push(String(tm.year));
-            if (Array.isArray(tm.genres) && tm.genres.length) chips.push(tm.genres[0]);
-        }
-        if (i.duration) chips.push(fmtTime(i.duration));
-        if (i.width && i.height) chips.push(`${i.width}×${i.height}`);
-        if (i.video_codec) chips.push(i.video_codec.toUpperCase());
-        if (i.audio_codec) chips.push(mode !== 'direct' ? `${i.audio_codec.toUpperCase()} → AAC` : i.audio_codec.toUpperCase());
-        if (mode === 'remux') chips.push('REMUX · video copy');
-        else if (mode === 'transcode') chips.push('TRANSCODING');
-        if (i.bitrate) chips.push((i.bitrate / 1e6).toFixed(1) + ' Mbps');
-        if (i.size) chips.push(fmtBytes(i.size));
-        const meta = c.querySelector('[data-testid="vs-player-meta"]');
-        if (meta && chips.length) {
-            meta.innerHTML = chips.map(x => `<span style="background:var(--surface-2);padding:3px 9px;border-radius:10px;">${escapeHtml(String(x))}</span>`).join('') + '<span data-testid="vs-player-audio" style="margin-left:auto;"></span><span data-testid="vs-player-sub"></span>';
-        } else if (meta) {
-            meta.innerHTML = '<span>Metadata unavailable (ffprobe not installed?)</span><span data-testid="vs-player-audio" style="margin-left:auto;"></span><span data-testid="vs-player-sub"></span>';
-        }
-        _renderAudioPicker(c);
-        _renderSubPicker(c);   // subtitle list may have arrived before metadata
-    }).catch(() => {
-        // No ffprobe info — fall back to direct streaming so playback still starts.
-        if (!video.src) video.src = _streamUrl(_playerPath);
-        const meta = c.querySelector('[data-testid="vs-player-meta"]');
-        if (meta) meta.innerHTML = '<span>Metadata unavailable</span><span data-testid="vs-player-audio" style="margin-left:auto;"></span><span data-testid="vs-player-sub"></span>';
-        _renderAudioPicker(c);
-        _renderSubPicker(c);
-    });
-
-    _api(`/api/videos/subtitles?path=${encodeURIComponent(_playerPath)}`).then(async (d) => {
-        if (!_active() || !_playerPath) return;
-        _subs = d.subtitles || [];
-        const pref = _subs.findIndex(s => s.preferred);
-        if (_cfg.options.auto_subtitles === false) {
-            _subIdx = -1;  // auto-load disabled — picker stays available
-        } else {
-            _subIdx = pref >= 0 ? pref : (_subs.length ? 0 : -1);
-        }
-        _renderSubPicker(c);
-        if (_subs.length && _subIdx >= 0) await _loadSubtitleTrack();
-    }).catch(() => {});
-
-    // Start playback (play() may return undefined in non-browser environments).
-    try {
-        const p = video.play();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-    } catch (_) {}
-}
-
-// Subtitle track picker — shown in the player meta bar when the video has
-// sibling subtitle files; switching tracks swaps the attached <track> element.
-function _renderSubPicker(c) {
-    const subEl = c && c.querySelector('[data-testid="vs-player-sub"]');
-    if (!subEl || !_subs.length) return;
-    // Dropdown when there's a choice, or when auto-load is off (so subtitles
-    // can be turned on manually); otherwise a static label.
-    if (_subs.length > 1 || _cfg.options.auto_subtitles === false) {
-        subEl.innerHTML = `<select aria-label="Sub Select" data-testid="vs-sub-select" onchange="_vsSubChange(this.value)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color: var(--text-2);font-size:11.5px;padding:3px 6px;outline:none;">
-            <option value="-1" ${_subIdx < 0 ? 'selected' : ''}>Off</option>
-            ${_subs.map((s, i) => `<option value="${i}" ${i === _subIdx ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}</select>`;
-    } else {
-        subEl.innerHTML = `<span title="Subtitle" style="display:inline-flex;align-items:center;gap:4px;">${uiIcon('subtitles', 12)} ${escapeHtml(_subs[_subIdx >= 0 ? _subIdx : 0].name)}</span>`;
+            localStorage.removeItem(key);
+            this.ctx.notifications.toast(`My List moved to your account (${missing.length} titles)`, 'success');
+            this.renderView();
+        } catch { /* ignore migration problems */ }
     }
-}
 
-function _renderAudioPicker(c) {
-    const el = c && c.querySelector('[data-testid="vs-player-audio"]');
-    if (!el || !_audioTracks.length) return;
-    if (_audioTracks.length > 1) {
-        el.innerHTML = `<select aria-label="Audio Select" data-testid="vs-audio-select" onchange="_vsAudioChange(this.value)" title="Audio track" style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color: var(--text-2);font-size:11.5px;padding:3px 6px;outline:none;">
-            ${_audioTracks.map(t => `<option value="${t.index}" ${t.index === _audioIdx ? 'selected' : ''}>${escapeHtml(_trackLabel(t))}</option>`).join('')}</select>`;
-    } else {
-        el.innerHTML = `<span title="Audio track" style="display:inline-flex;align-items:center;gap:4px;">${uiIcon('volume', 12)} ${escapeHtml(_trackLabel(_audioTracks[0]))}</span>`;
-    }
-}
+    // ── Chrome / navigation ──────────────────────────────────────────────────
 
-function _onAudioChange(v) {
-    const video = _videoEl;
-    if (!video || !_playerPath) return;
-    _audioIdx = parseInt(v, 10) || 0;
-    // A live pipe can't swap tracks mid-stream — re-request from the current
-    // time. Switching away from direct play also flips us to processed mode.
-    const wasDirect = _playerMode === 'direct';
-    if (wasDirect) { _playerMode = 'processed'; _transcoding = true; }
-    // Absolute position — the pipe clock restarts at ~0 on every re-request.
-    const t = Math.max(0, wasDirect ? (video.currentTime || 0) : _absTime(video));
-    const wasPlaying = !video.paused;
-    _pipeBase = t;
-    video.src = _transcodeUrl(_playerPath, t, _audioIdx);
-    if (_playerMode === 'processed') { _setCustomCtl(true); _syncTransport(); }
-    if (wasPlaying) {
-        const h = () => { video.play().catch(() => {}); };
-        video.addEventListener('loadedmetadata', h, { once: true });
-    }
-}
-
-async function _loadSubtitleTrack() {
-    const video = _videoEl;
-    if (!video) return;
-    // Drop previously attached external tracks, then attach the selected one.
-    video.querySelectorAll('track').forEach(t => t.remove());
-    if (!_subs.length || _subIdx < 0 || _subIdx >= _subs.length) return;
-    const pick = _subs[_subIdx];
-    try {
-        let src, blobUrl = null;
-        if (pick.path.toLowerCase().endsWith('.vtt')) {
-            src = _rawUrl(pick.path);
-        } else {
-            // .srt → convert to WebVTT client-side (browsers only load VTT).
-            const resp = await apiFetch(_rawUrl(pick.path));
-            if (!resp.ok) return;
-            const text = await resp.text();
-            blobUrl = URL.createObjectURL(new Blob([_srtToVtt(text)], { type: 'text/vtt' }));
-            src = blobUrl;
+    updateChrome() {
+        if (!this.root) return;
+        const s = this.state;
+        const engine = this.root.querySelector('[data-testid="vd-engine-chip"]');
+        if (engine) {
+            const enc = s.status?.encoder;
+            const label = enc === 'vaapi' ? 'VA-API' : enc === 'qsv' ? 'QuickSync'
+                : enc === 'libx264' ? 'Software' : (s.status?.ffmpeg ? 'Software' : 'No ffmpeg');
+            engine.textContent = label;
+            engine.dataset.tone = enc === 'vaapi' || enc === 'qsv' ? 'ok' : s.status?.ffmpeg ? 'warn' : 'bad';
         }
-        const track = document.createElement('track');
-        track.kind = 'subtitles';
-        track.src = src;
-        track.label = pick.name;
-        track.default = true;
-        video.appendChild(track);
-        if (blobUrl) { if (_subBlobUrl) URL.revokeObjectURL(_subBlobUrl); _subBlobUrl = blobUrl; }
-    } catch (e) { console.warn('[video-station] subtitle load failed:', e.message); }
-}
-
-function _onSubChange(v) {
-    const video = _videoEl;
-    if (!video || !_subs.length) return;
-    _subIdx = parseInt(v, 10);   // -1 = Off
-    _loadSubtitleTrack();
-}
-
-// Minimal SRT → WebVTT conversion: strip BOM, normalise newlines, drop the
-// numeric index lines and switch millisecond separators from "," to ".".
-function _srtToVtt(text) {
-    let t = String(text || '').replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
-    if (/^WEBVTT/m.test(t)) return t;
-    const body = t.split(/\n{2,}/).map((block) => {
-        const lines = block.trim().split('\n').filter(Boolean);
-        if (!lines.length) return '';
-        let i = 0;
-        if (/^\d+$/.test(lines[0])) i = 1;                 // drop index line
-        const tsLine = lines[i] || '';
-        if (!tsLine.includes('-->')) return '';
-        const ts = tsLine.replace(/(\d+):(\d{1,2}):(\d{1,2})[,.](\d+)/g, (m, h, mi, se, ms) => `${h}:${mi}:${se}.${ms}`);
-        return [ts, ...lines.slice(i + 1)].join('\n');
-    }).filter(Boolean).join('\n\n');
-    return 'WEBVTT\n\n' + body;
-}
-
-// ── Folder picker (add root folders via /api/videos/browse) ───────────────────
-
-// ---------------------------------------------------------------- settings
-// Full-screen overlay (same pattern as the folder picker): library management,
-// playback options, and media-engine status.
-
-function _showSettings() {
-    if (!_body) return;
-    const old = document.getElementById('vs-settings'); if (old) old.remove();
-    const shell = _body.querySelector('[data-testid="vs-shell"]');
-    if (!shell) return;
-    const el = document.createElement('div');
-    el.id = 'vs-settings';
-    el.setAttribute('data-testid', 'vs-settings');
-    el.style.cssText = 'position:absolute;inset:0;z-index:30;background:var(--surface-0);display:flex;flex-direction:column;font-family:system-ui,sans-serif;color: var(--text-1);';
-    el.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);">
-            <span style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px;">${uiIcon('settings', 15)} Video Station Settings</span>
-            <button data-testid="vs-settings-close" onclick="_vsHideSettings()" style="margin-left:auto;border:none;background:transparent;color: var(--text-2);font-size:20px;cursor:pointer;">×</button>
-        </div>
-        <div id="vs-settings-body" data-testid="vs-settings-body" style="flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:24px;"></div>
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface-1);">
-            <button data-testid="vs-settings-save" onclick="_vsSaveSettings()" class="btn-primary" style="font-size:13px;padding:8px 20px;border-radius:8px;">${uiIcon('check', 13)} Save</button>
-        </div>`;
-    shell.appendChild(el);
-    _syncKeyHandler();
-    _renderSettingsBody();
-}
-
-function _hideSettings() {
-    const el = document.getElementById('vs-settings');
-    if (el) el.remove();
-    _syncKeyHandler();
-}
-
-async function _renderSettingsBody() {
-    const body = document.getElementById('vs-settings-body');
-    if (!body) return;
-    const o = _cfg.options || {};
-    const rootsHtml = _cfg.roots.length ? _cfg.roots.map((r, i) => `
-        <div data-testid="vs-root-${i}" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;font-size:12.5px;">
-            <span style="display:flex;color:var(--text-3);">${uiIcon('folder', 14)}</span>
-            <div style="flex:1;min-width:0;">
-                <div style="font-weight:600;color:var(--text-1);">${escapeHtml(r.split('/').filter(Boolean).pop() || r)}</div>
-                <div style="color: var(--text-3);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(r)}</div>
-            </div>
-            <button data-testid="vs-root-del-${i}" onclick="_vsRemoveRoot(${i})" title="Remove from library" style="border:none;background:transparent;color: var(--text-3);font-size:15px;cursor:pointer;padding:2px 6px;">${uiIcon('close', 13)}</button>
-        </div>`).join('')
-        : '<div style="font-size:12.5px;color: var(--text-3);">No library folders yet — add one below.</div>';
-
-    body.innerHTML = `
-        <section data-testid="vs-set-library">
-            <h3 style="font-size:13.5px;font-weight:700;margin:0 0 4px;">${uiIcon('folder', 14)} Library</h3>
-            <p style="margin:0 0 10px;font-size:12px;color: var(--text-3);">Folders scanned for videos (live scan — no index to rebuild).</p>
-            <div style="display:flex;flex-direction:column;gap:6px;">${rootsHtml}</div>
-            <button data-testid="vs-set-add-folder" onclick="_vsAddFolderFromSettings()" class="btn-ghost" style="margin-top:8px;font-size:12.5px;padding:7px 14px;border-radius:8px;">${uiIcon('plus', 13)} Add Folder</button>
-        </section>
-        <section data-testid="vs-set-playback">
-            <h3 style="font-size:13.5px;font-weight:700;margin:0 0 4px;">${uiIcon('play', 14)} Playback</h3>
-            <p style="margin:0 0 12px;font-size:12px;color: var(--text-3);">Files the browser can't decode (AC3/EAC3/DTS audio, HEVC video, MKV) are processed on the fly. H.264 sources with non-AAC audio use a lossless video copy — real-time.</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;max-width:560px;">
-                <label style="font-size:12.5px;color: var(--text-2);display:flex;flex-direction:column;gap:5px;">Transcode quality
-                    <select aria-label="Set Quality" id="vs-set-quality" data-testid="vs-set-quality" style="background:var(--surface-1);border:1px solid var(--border);border-radius:8px;color: var(--text-1);font-size:12.5px;padding:7px 9px;outline:none;">
-                        <option value="fast" ${o.quality === 'fast' ? 'selected' : ''}>Fast — ≤720p, low CPU</option>
-                        <option value="balanced" ${(o.quality || 'balanced') === 'balanced' ? 'selected' : ''}>Balanced — ≤1080p (default)</option>
-                        <option value="high" ${o.quality === 'high' ? 'selected' : ''}>High — source resolution</option>
-                    </select>
-                </label>
-                <label style="font-size:12.5px;color: var(--text-2);display:flex;flex-direction:column;gap:5px;">Audio bitrate (AAC)
-                    <select aria-label="Set Abr" id="vs-set-abr" data-testid="vs-set-abr" style="background:var(--surface-1);border:1px solid var(--border);border-radius:8px;color: var(--text-1);font-size:12.5px;padding:7px 9px;outline:none;">
-                        ${['96k', '128k', '160k', '192k', '256k'].map(b => `<option value="${b}" ${(o.audio_bitrate || '192k') === b ? 'selected' : ''}>${b}</option>`).join('')}
-                    </select>
-                </label>
-                <label style="font-size:12.5px;color: var(--text-2);display:flex;flex-direction:column;gap:5px;">Preferred audio language
-                    <input id="vs-set-lang" data-testid="vs-set-lang" type="text" placeholder="e.g. pol, eng (empty = first track)" value="${escapeAttr(o.preferred_audio_lang || '')}" style="background:var(--surface-1);border:1px solid var(--border);border-radius:8px;color: var(--text-1);font-size:12.5px;padding:7px 9px;outline:none;">
-                </label>
-                <div></div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;max-width:560px;">
-                <label data-testid="vs-set-autosub-label" style="font-size:12.5px;color: var(--text-2);display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input id="vs-set-autosub" data-testid="vs-set-autosub" type="checkbox" ${o.auto_subtitles !== false ? 'checked' : ''} style="width:15px;height:15px;"> Auto-load subtitles (sibling .srt/.vtt files)
-                </label>
-                <label data-testid="vs-set-autoplay-label" style="font-size:12.5px;color: var(--text-2);display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input id="vs-set-autoplay" data-testid="vs-set-autoplay" type="checkbox" ${o.autoplay_next !== false ? 'checked' : ''} style="width:15px;height:15px;"> Autoplay next episode
-                </label>
-            </div>
-        </section>
-        <section data-testid="vs-set-tmdb">
-            <h3 style="font-size:13.5px;font-weight:700;margin:0 0 4px;">${uiIcon('film', 14)} Metadata (TMDB)</h3>
-            <p style="margin:0 0 12px;font-size:12px;color: var(--text-3);">Display-only enrichment from The Movie Database — real titles, years, ratings and locally cached posters. Files are never renamed or moved.</p>
-            <div style="display:grid;grid-template-columns:1fr auto;gap:12px 18px;max-width:560px;align-items:end;">
-                <label style="font-size:12.5px;color: var(--text-2);display:flex;flex-direction:column;gap:5px;">API key${_cfg.tmdb && _cfg.tmdb.api_key_set ? ` (currently ${escapeHtml(_cfg.tmdb.api_key_masked)})` : ''}
-                    <input id="vs-set-tmdb-key" data-testid="vs-set-tmdb-key" type="password" placeholder="${_cfg.tmdb && _cfg.tmdb.api_key_set ? 'leave empty to keep current key' : 'paste TMDB API key'}" autocomplete="off" style="background:var(--surface-1);border:1px solid var(--border);border-radius:8px;color: var(--text-1);font-size:12.5px;padding:7px 9px;outline:none;">
-                </label>
-                <button data-testid="vs-tmdb-test" onclick="_vsTmdbTest()" class="btn-ghost" style="font-size:12.5px;padding:8px 14px;border-radius:8px;">${uiIcon('activity', 13)} Test</button>
-                <label style="font-size:12.5px;color: var(--text-2);display:flex;flex-direction:column;gap:5px;">Metadata language <span style="color:var(--text-3);">(TMDB code, e.g. pl-PL or en-US)</span>
-                    <input id="vs-set-tmdb-lang" data-testid="vs-set-tmdb-lang" type="text" placeholder="pl-PL" value="${escapeAttr((_cfg.tmdb && _cfg.tmdb.language) || 'pl-PL')}" autocomplete="off" spellcheck="false" style="background:var(--surface-1);border:1px solid var(--border);border-radius:8px;color: var(--text-1);font-size:12.5px;padding:7px 9px;outline:none;">
-                </label>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;max-width:560px;">
-                <label data-testid="vs-set-tmdb-autofetch-label" style="font-size:12.5px;color: var(--text-2);display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input id="vs-set-tmdb-autofetch" data-testid="vs-set-tmdb-autofetch" type="checkbox" ${(_cfg.tmdb && _cfg.tmdb.auto_fetch !== false) ? 'checked' : ''} style="width:15px;height:15px;"> Auto-fetch metadata for new videos (once per session, in the background)
-                </label>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;margin-top:12px;max-width:560px;">
-                <button data-testid="vs-tmdb-fetch" onclick="_vsTmdbFetchNow()" class="btn-primary" style="font-size:12.5px;padding:8px 14px;border-radius:8px;">${uiIcon('download', 13)} Fetch metadata now</button>
-                <span id="vs-tmdb-status-line" data-testid="vs-tmdb-status-line" style="font-size:12px;color: var(--text-3);"></span>
-            </div>
-        </section>
-        <section data-testid="vs-set-system">
-            <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px;">
-                <h3 style="font-size:13.5px;font-weight:700;margin:0;">${uiIcon('activity', 14)} Media Engine</h3>
-                <button class="btn-ghost btn-sm" data-testid="vs-engine-recheck" onclick="_vsRecheckEngine()" title="Probe the GPU again">${uiIcon('refresh', 12)} Re-check</button>
-            </div>
-            <div id="vs-settings-status" data-testid="vs-settings-status" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"><span style="font-size:12px;color: var(--text-3);">Checking…</span></div>
-        </section>`;
-
-    await _renderEngineStatus();
-
-    try {
-        const t = await _api('/api/videos/tmdb/status');
-        if (!document.getElementById('vs-settings')) return;
-        const line = document.getElementById('vs-tmdb-status-line');
-        if (line) line.textContent = t.api_key_set ? `${t.matched_count} titles matched · key ${t.api_key_masked}` : 'No API key set';
-    } catch (_) { /* tmdb status is optional */ }
-}
-
-function _removeRoot(i) {
-    const r = _cfg.roots[i];
-    if (!r) return;
-    _cfg.roots.splice(i, 1);
-    _saveCfg({ roots: [..._cfg.roots] }).then(() => {
-        _toast(`Removed ${r.split('/').pop() || r} from library`);
-        if (document.getElementById('vs-settings')) _renderSettingsBody();
-        else _reloadView();
-    }).catch(() => {});
-}
-
-function _addFolderFromSettings() { _hideSettings(); _showPicker(); }
-
-async function _saveSettings() {
-    const o = { ...(_cfg.options || {}) };
-    const q = document.getElementById('vs-set-quality');
-    const ab = document.getElementById('vs-set-abr');
-    const lg = document.getElementById('vs-set-lang');
-    const asu = document.getElementById('vs-set-autosub');
-    const ap = document.getElementById('vs-set-autoplay');
-    if (q) o.quality = q.value;
-    if (ab) o.audio_bitrate = ab.value;
-    if (lg) o.preferred_audio_lang = lg.value.trim().toLowerCase();
-    if (asu) o.auto_subtitles = asu.checked;
-    if (ap) o.autoplay_next = ap.checked;
-    const tk = document.getElementById('vs-set-tmdb-key');
-    const tf = document.getElementById('vs-set-tmdb-autofetch');
-    const tl = document.getElementById('vs-set-tmdb-lang');
-    let tmdbPatch;
-    if (tk || tf || tl) {
-        // Partial patch — the server keeps previously stored values for any
-        // field not sent here (empty key → keep the stored one).
-        tmdbPatch = {};
-        if (tk && tk.value.trim()) tmdbPatch.api_key = tk.value.trim();
-        if (tf) tmdbPatch.auto_fetch = tf.checked;
-        if (tl) tmdbPatch.language = tl.value.trim();
-    }
-    try {
-        await _saveCfg({ options: o, ...(tmdbPatch ? { tmdb: tmdbPatch } : {}) });
-        _toast('Settings saved');
-        _hideSettings();
-    } catch (_) { /* _saveCfg already toasted */ }
-}
-
-let _pickerPath = null;          // null → show allowed roots
-let _pickerRoots = [];           // [{path,name,folders}] from the no-path browse
-let _pickerFolders = [];         // folder names at _pickerPath
-
-async function _showPicker() {
-    if (!_body) return;
-    // Prefer the shared EthOS picker (it cannot leave the backend roots); the
-    // in-window browser below stays as a fallback for older cores.
-    if (typeof _ctx.pickFolder === 'function') {
-        const picked = await _ctx.pickFolder({
-            title: 'Add video folder',
-            startPath: (_cfg.roots && _cfg.roots[0]) || '/home',
-            roots: ['/home', '/mnt', '/media'],
-            acceptLabel: 'Add folder',
+        const active = s.mode === 'detail' ? (s.detail?.kind === 'episode' ? 'series' : 'movies') : s.mode;
+        this.root.querySelectorAll('[data-action="nav"]').forEach((btn) => {
+            const isNav = btn.classList.contains('vd-link') || btn.closest('.vd-bottom');
+            if (!isNav) return;
+            btn.classList.toggle('is-active', btn.dataset.mode === active);
         });
-        if (picked) await _addRoot(picked);
-        return;
+        this.root.classList.toggle('is-player', s.mode === 'player');
+        const top = this.root.querySelector('[data-testid="vd-top"]');
+        if (top) top.classList.toggle('is-solid', s.mode !== 'home' || (this.main?.scrollTop || 0) > 12);
     }
-    _pickerPath = null; _pickerRoots = []; _pickerFolders = [];
-    const old = document.getElementById('vs-picker'); if (old) old.remove();
-    const shell = _body.querySelector('[data-testid="vs-shell"]');
-    if (!shell) return;
-    const el = document.createElement('div');
-    el.id = 'vs-picker';
-    el.setAttribute('data-testid', 'vs-picker');
-    el.style.cssText = 'position:absolute;inset:0;z-index:30;background:var(--surface-0);display:flex;flex-direction:column;font-family:system-ui,sans-serif;color: var(--text-1);';
-    el.innerHTML = `
-        <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);">
-            <span style="font-size:15px;font-weight:700;">${uiIcon('folder', 15)} Add Video Folder</span>
-            <span style="font-size:12px;color: var(--text-3);">Double-click to open · add the folder you land on</span>
-            <button data-testid="vs-picker-close" onclick="_vsHidePicker()" style="margin-left:auto;border:none;background:transparent;color: var(--text-2);font-size:20px;cursor:pointer;">×</button>
-        </div>
-        <div id="vs-picker-bc" data-testid="vs-picker-bc" style="padding:8px 18px;font-size:13px;color: var(--text-2);background:var(--surface-1);display:flex;align-items:center;gap:4px;flex-wrap:wrap;"></div>
-        <div id="vs-picker-list" data-testid="vs-picker-list" style="flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-content:start;"></div>
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface-1);">
-            <button data-testid="vs-picker-add" onclick="_vsPickerAddCurrent()" class="btn-primary" style="font-size:13px;padding:8px 18px;border-radius:8px;">＋ Add This Folder</button>
-        </div>`;
-    shell.appendChild(el);
-    _syncKeyHandler();
-    _pickerLoad(null);
-}
 
-function _hidePicker() {
-    const el = document.getElementById('vs-picker');
-    if (el) el.remove();
-    _syncKeyHandler();
-}
+    navigate(mode, extra = {}) {
+        if (this.state.mode === 'player') this.stopPlayer();
+        Object.assign(this.state, {
+            mode,
+            path: extra.path ?? null,
+            show: extra.show ?? null,
+            detail: extra.detail ?? null,
+            back: extra.back ?? this.state.back,
+        });
+        if (mode !== 'search') this.state.query = '';
+        this.main.scrollTop = 0;
+        this.updateChrome();
+        this.renderView();
+    }
 
-async function _pickerLoad(path) {
-    const list = document.getElementById('vs-picker-list');
-    const bc = document.getElementById('vs-picker-bc');
-    if (!list || !bc) return;
-    try {
-        const d = path ? await _api(`/api/videos/browse?path=${encodeURIComponent(path)}`) : await _api('/api/videos/browse');
-        // Abort if the picker was closed while we were fetching.
-        if (!document.getElementById('vs-picker')) return;
-        if (!path) {
-            _pickerPath = null;
-            _pickerRoots = d.roots || [];
-            bc.innerHTML = '<span style="color: var(--text-3);">Allowed locations</span>';
-            list.innerHTML = _pickerRoots.map((r, i) => `
-                <div data-testid="vs-picker-root-${i}" ondblclick="_vsPickerOpen('${jsAttr(r.path)}')" onclick="this.style.outline=this.style.outline?'':'2px solid #3b82f6'"
-                     style="padding:14px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;">
-                    <span style="font-size:20px;display:flex;color:var(--text-2);">${uiIcon('disk', 20)}</span><div><div>${escapeHtml(r.name)}</div><div style="font-size:11px;color: var(--text-3);">${r.folders.length} folders</div></div>
-                </div>`).join('') || '<div style="color: var(--text-3);font-size:13px;">No accessible locations</div>';
+    goBack() {
+        const back = this.state.back;
+        if (!back) return this.navigate('home');
+        this.state.back = null;
+        this.navigate(back.mode, back);
+    }
+
+    // ── Rendering dispatcher ─────────────────────────────────────────────────
+
+    renderView() {
+        if (!this.view) return;
+        const s = this.state;
+        if (s.mode === 'player') return; // player renders its own layer
+        if (s.loading) {
+            this.view.innerHTML = this.skeletonHtml();
             return;
         }
-        _pickerPath = d.path;
-        _pickerFolders = d.folders || [];
-        const segs = d.path.split('/').filter(Boolean);
-        let acc = '';
-        bc.innerHTML = `<span style="color: var(--text-3);cursor:pointer;" onclick="_vsPickerLoad(null)">Locations</span>` + segs.map((s, i) => {
-            acc += '/' + s;
-            const last = i === segs.length - 1;
-            return `<span>/</span><span style="cursor:${last ? 'default' : 'pointer'};color:${last ? 'var(--text-1)' : 'var(--text-2)'};font-weight:${last ? 700 : 400};" ${last ? '' : `onclick="_vsPickerLoad('${jsAttr(acc)}')"`}>${escapeHtml(s)}</span>`;
-        }).join('');
-        list.innerHTML = _pickerFolders.map((f, i) => {
-            const full = d.path.endsWith('/') ? d.path + f : d.path + '/' + f;
-            return `<div data-testid="vs-picker-folder-${i}" ondblclick="_vsPickerOpen('${jsAttr(full)}')" onclick="this.style.outline=this.style.outline?'':'2px solid #3b82f6'"
-                style="padding:14px;border-radius:10px;background:var(--surface-1);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:9px;font-size:13px;">
-                <span style="font-size:18px;display:flex;color:var(--text-2);">${uiIcon('folder', 18)}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f)}</span></div>`;
-        }).join('') || '<div style="color: var(--text-3);font-size:13px;">No subfolders — add this folder.</div>';
-    } catch (e) {
-        list.innerHTML = `<div style="color:#f87171;font-size:13px;">${escapeHtml(e.message)}</div>`;
-    }
-}
-
-function _pickerOpen(path) { _pickerLoad(path); }
-
-async function _addRoot(path) {
-    try {
-        await _saveCfg({ roots: [..._cfg.roots, path] });
-        _toast(`Added ${path.split('/').pop() || path} to library`);
-        _path = null; _q = '';
-        await _reloadView();
-    } catch (e) { /* _saveCfg already toasted */ }
-}
-
-async function _pickerAddCurrent() {
-    if (!_pickerPath) { _toast('Open a location first', true); return; }
-    await _addRoot(_pickerPath);
-    _hidePicker();
-}
-
-// ── Keyboard ──────────────────────────────────────────────────────────────────
-
-function _onKey(e) {
-    if (!_active()) { removeEventListener('keydown', _onKey); _keyOn = false; return; }
-    if (e.key !== 'Escape') return;
-    const st = document.getElementById('vs-settings');
-    if (st) { _hideSettings(); return; }
-    const pk = document.getElementById('vs-picker');
-    if (pk) { _hidePicker(); return; }
-    const sw = document.getElementById('vs-search-wrap');
-    if (sw && sw.classList.contains('open')) { _closeSearch(); return; }
-    if (_playerPath) {
-        if (_playerMax) { _togglePlayerMax(); return; }   // first Esc restores, second closes
-        _closePlayer();
-    }
-}
-
-// ── Window-scope handlers (inline onclick/onchange targets) ───────────────────
-
-// ── TMDB metadata (Phase 6) ───────────────────────────────────────────────────
-
-async function _startTmdbRefresh(userInitiated) {
-    if (_tmdbFetching) return null;
-    _tmdbFetching = true;
-    try {
-        const d = await _api('/api/videos/tmdb/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
-        if (userInitiated) {
-            const msg = d.aborted ? `TMDB: ${d.aborted}`
-                : `TMDB: ${d.titles_matched}/${d.titles_checked} titles matched (${d.files_matched} files)` + (d.errors ? `, ${d.errors} errors` : '');
-            _toast(msg, !!d.aborted || (d.errors > 0 && !d.titles_matched));
-        } else if (!d.aborted && d.files_matched > 0) {
-            // Background auto-fetch found posters — refresh the current view once.
-            setTimeout(() => { if (_active()) _reloadView(); }, 50);
+        const errors = s.errors.length
+            ? `<div class="vd-error">${s.errors.map((e) => this.esc(e)).join('<br>')}</div>` : '';
+        let html = '';
+        switch (s.mode) {
+            case 'movies': html = this.moviesHtml(); break;
+            case 'series': html = s.show ? this.showDetailHtml(s.show) : this.seriesHtml(); break;
+            case 'library': html = this.libraryHtml(); break;
+            case 'mylist': html = this.myListHtml(); break;
+            case 'search': html = this.searchHtml(); break;
+            case 'settings': html = this.settingsHtml(); break;
+            case 'detail': html = this.detailHtml(); break;
+            default: html = this.homeHtml();
         }
-        return d;
-    } catch (e) {
-        if (userInitiated) _toast('TMDB refresh failed: ' + e.message, true);
-        return null;
-    } finally {
-        _tmdbFetching = false;
-    }
-}
-
-function _maybeAutoTmdbFetch() {
-    const t = _cfg.tmdb || {};
-    if (_tmdbFetching || _tmdbAutoDone) return;
-    if (!t.api_key_set || t.auto_fetch === false) return;
-    _tmdbAutoDone = true;   // at most once per app session, even on failure
-    _startTmdbRefresh(false);
-}
-
-window._vsNavTo = (p) => _navTo(p);
-window._vsOpenPlayer = (i) => { const v = _viewVideos[i]; if (v) _openPlayer(v); };
-window._vsGoHome = () => _goHome();
-window._vsGoMovies = () => _goMovies();
-window._vsGoSeries = () => _goSeries();
-window._vsOpenShow = (i) => _openShow(i);
-window._vsBackToSeries = () => _backToSeries();
-window._vsPlayRow = (i) => { const it = _rowItems[i]; if (it) _openPlayer(it); };
-window._vsRowShow = (i) => {
-    const it = _rowItems[i];
-    if (!it) return;
-    if (it.kind === 'episode') _openShowByKey(_showKey(it)); else _openPlayer(it);
-};
-window._vsListToggle = (ev, btn) => _onListToggle(ev, btn);
-window._vsOpenMyList = () => _openMyList();
-window._vsRecheckEngine = () => _recheckEngine();
-window._vsPlayHero = () => { if (_heroItem) _openPlayer(_heroItem); };
-window._vsHeroDetails = async () => {
-    const it = _heroItem;
-    if (!it) return;
-    if (it.kind === 'episode') { await _openShowByKey(_showKey(it)); return; }
-    const bits = _infoBits(it).join(' · ');
-    _toast(`${_displayTitle(it)}${bits ? ' — ' + bits : ''}`);
-};
-window._vsSubChange = (v) => _onSubChange(v);
-window._vsClosePlayer = () => _closePlayer();
-window._vsTogglePlayerMax = () => _togglePlayerMax();
-window._vsOnSearch = (v) => _onSearchInput(v);
-window._vsOnSort = (v) => _onSortChange(v);
-window._vsOnView = (v) => _onViewToggle(v);
-window._vsToggleSearch = () => _toggleSearch();
-window._vsRowScroll = (btn, dir) => _rowScroll(btn, dir);
-window._vsRemoveCw = (ev, i) => _removeCw(ev, i);
-window._vsOpenFolder = (i) => _openFolder(i);
-window._vsCrumb = (i) => _crumbNav(i);
-window._vsCardInfo = (ev, arr, i) => _cardInfo(ev, arr, i);
-window._vsCardTmdb = (ev, arr, i) => _cardTmdb(ev, arr, i);
-window._vsShowPicker = () => _showPicker();
-window._vsHidePicker = () => _hidePicker();
-window._vsPickerLoad = (p) => _pickerLoad(p || null);
-window._vsPickerOpen = (p) => _pickerOpen(p);
-window._vsPickerAddCurrent = () => _pickerAddCurrent();
-window._vsSrtToVtt = (t) => _srtToVtt(t);
-window._vsShowSettings = () => _showSettings();
-window._vsHideSettings = () => _hideSettings();
-window._vsRemoveRoot = (i) => _removeRoot(i);
-window._vsAddFolderFromSettings = () => _addFolderFromSettings();
-window._vsSaveSettings = () => _saveSettings();
-window._vsAudioChange = (v) => _onAudioChange(v);
-
-// TMDB: test the stored key, batch refresh from settings, per-card single-file refresh.
-window._vsTmdbTest = async () => {
-    const line = document.getElementById('vs-tmdb-status-line');
-    if (line) line.textContent = 'Testing…';
-    try {
-        // If a new key was typed, save it first so the server can validate it.
-        const inp = document.getElementById('vs-set-tmdb-key');
-        if (inp && inp.value.trim()) await _saveCfg({ tmdb: { api_key: inp.value.trim() } }).catch(() => {});
-        const d = await _api('/api/videos/tmdb/test');
-        if (line) line.textContent = d.message || 'OK';
-    } catch (e) {
-        if (line) line.textContent = e.message;
-    }
-};
-
-window._vsTmdbFetchNow = async () => {
-    const btn = document.getElementById('vs-tmdb-fetch');
-    const line = document.getElementById('vs-tmdb-status-line');
-    if (btn) btn.disabled = true;
-    if (line) line.textContent = 'Fetching metadata…';
-    const d = await _startTmdbRefresh(true);
-    if (btn) btn.disabled = false;
-    if (d && line) line.textContent = `${d.titles_matched}/${d.titles_checked} titles matched · ${d.files_matched} files`;
-    if (_active()) _reloadView();
-};
-
-window._vsTmdbRefreshCard = async (ev, path) => {
-    if (ev && ev.stopPropagation) ev.stopPropagation();
-    try {
-        const d = await _api('/api/videos/tmdb/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path, force: true }) });
-        const m = d.match;
-        // Update the item in place so the card re-renders with poster/title.
-        for (const arr of [_allVideos, _viewVideos]) {
-            const it = arr.find(x => x.path === path);
-            if (it) { if (m) it.tmdb = m; else delete it.tmdb; }
+        this.view.innerHTML = errors + html;
+        this.updateChrome();
+        if (s.mode === 'search') {
+            requestAnimationFrame(() => this.view.querySelector('[data-role="search-input"]')?.focus());
         }
-        _toast(m ? `Matched: ${m.title}${m.year ? ' (' + m.year + ')' : ''}` : 'No TMDB match found', !m);
-        if (_active()) _renderContent();
-    } catch (e) { _toast('TMDB refresh failed: ' + e.message, true); }
-};
+    }
 
-// ── Package entry point ───────────────────────────────────────────────────────
-export async function render(container, ctx) {
-    _ctx = ctx;
-    ctx.log('info', 'Video Station opened');
-    await renderVideoStation(container);
+    skeletonHtml() {
+        return `<div class="vd-page"><div class="vd-empty"><b>Loading your library…</b>Reading folders and media metadata.</div></div>`;
+    }
+
+    // ── Home ─────────────────────────────────────────────────────────────────
+
+    homeHtml() {
+        const s = this.state;
+        const cw = s.home.continue_watching || [];
+        const recent = s.home.recently_added || [];
+        const library = s.library?.videos || [];
+        const movies = library.filter((v) => v.kind !== 'episode');
+        const shows = this.groupShows(library);
+        const hero = cw[0] || recent[0] || movies[0] || library[0] || null;
+        const continuePct = cw.length;
+        const engine = s.status?.encoder === 'vaapi' ? 'VA-API' : s.status?.encoder === 'qsv' ? 'QuickSync'
+            : s.status?.ffmpeg ? 'Software' : '—';
+        const stats = `<div class="vd-stats">
+            <div class="vd-stat"><b>${s.total || library.length || 0}</b><span>Titles</span></div>
+            <div class="vd-stat"><b>${shows.length}</b><span>Series</span></div>
+            <div class="vd-stat"><b>${continuePct}</b><span>Continue watching</span></div>
+            <div class="vd-stat"><b>${this.esc(engine)}</b><span>Media engine</span></div>
+        </div>`;
+        if (!hero) {
+            return `<div class="vd-page">
+                <div class="vd-empty">
+                    <b>Your cinema is empty</b>
+                    Add a folder with videos in Settings, or pick one now.<br><br>
+                    <button class="vd-btn primary" type="button" data-action="add-folder">${svg('plus')} Add a folder</button>
+                </div>
+            </div>`;
+        }
+        const genres = this.genreShelves(library);
+        return `${this.heroHtml(hero, cw.length > 0)}
+            ${stats}
+            ${this.shelfHtml('Continue watching', cw, 'cw')}
+            ${this.shelfHtml('Recently added', recent)}
+            ${this.shelfHtml('Movies', this.sortItems(movies, 'date_desc').slice(0, 18))}
+            ${shows.length ? `<section class="vd-shelf">
+                <div class="vd-shelf-head"><h2>Series</h2><span>${shows.length} shows</span></div>
+                <div class="vd-row">${shows.slice(0, 18).map((g) => this.showCardHtml(g)).join('')}</div>
+            </section>` : ''}
+            ${genres.map(([genre, items]) => this.shelfHtml(genre, items.slice(0, 18))).join('')}
+            <div style="height:50px"></div>`;
+    }
+
+    heroHtml(item, resume) {
+        const tm = item.tmdb || {};
+        const title = this.displayTitle(item);
+        const meta = [
+            tm.rating != null ? `★ ${tm.rating}` : '',
+            this.itemYear(item),
+            item.quality,
+            tm.runtime ? `${tm.runtime} min` : '',
+            item.kind === 'episode' ? this.episodeLabel(item) : '',
+        ].filter(Boolean);
+        const overview = tm.overview || item.overview || '';
+        return `<section class="vd-hero" data-testid="vd-hero">
+            <img class="vd-hero-bg" src="${this.attr(this.artUrl(item, 'backdrop'))}" alt="" loading="eager" fetchpriority="high">
+            <div class="vd-hero-body">
+                <div class="vd-eyebrow"><span>Video Station</span><span>·</span><span>${this.esc(item.kind === 'episode' ? 'Series' : 'Feature')}</span></div>
+                <h1>${this.esc(title)}</h1>
+                ${meta.length ? `<div class="vd-meta">${meta.map((m, i) => `${i ? '<span class="vd-dot">·</span>' : ''}<span>${this.esc(m)}</span>`).join('')}</div>` : ''}
+                ${overview ? `<p class="vd-overview">${this.esc(overview)}</p>` : ''}
+                <div class="vd-hero-actions">
+                    <button class="vd-btn primary" type="button" data-action="play" data-path="${this.attr(item.path)}" data-testid="vd-hero-play">${svg('play')} ${resume ? 'Resume' : 'Play'}</button>
+                    <button class="vd-btn" type="button" data-action="details" data-path="${this.attr(item.path)}" data-testid="vd-hero-details">More info</button>
+                </div>
+            </div>
+        </section>`;
+    }
+
+    shelfHtml(title, items, kind = '') {
+        if (!items || !items.length) return '';
+        return `<section class="vd-shelf">
+            <div class="vd-shelf-head"><h2>${this.esc(title)}</h2><span>${items.length} titles</span></div>
+            <div class="vd-row">${items.map((item) => this.cardHtml(item, kind)).join('')}</div>
+        </section>`;
+    }
+
+    cardHtml(item, kind = '') {
+        const tm = item.tmdb || {};
+        const title = this.displayTitle(item);
+        const sub = [this.itemYear(item), item.quality, item.kind === 'episode' ? this.episodeLabel(item) : '']
+            .filter(Boolean).join(' · ');
+        const resume = this.state.resume[item.path];
+        const progress = resume && resume.duration ? pct(resume.time, resume.duration) : 0;
+        return `<button class="vd-card" type="button" data-action="details" data-path="${this.attr(item.path)}"
+            data-testid="vd-card" aria-label="${this.attr(title)}">
+            <span class="vd-card-art">
+                <img src="${this.attr(this.artUrl(item, 'poster'))}" alt="" loading="lazy" decoding="async">
+                ${item.quality ? `<span class="vd-card-badge">${this.esc(item.quality)}</span>` : ''}
+                <span class="vd-card-play">${svg('play', 16)}</span>
+                ${progress > 0 ? `<span class="vd-progress"><i style="width:${progress.toFixed(1)}%"></i></span>` : ''}
+            </span>
+            <span class="vd-card-title">${this.esc(title)}</span>
+            <span class="vd-card-sub">${this.esc(sub || tm.tagline || '')}</span>
+        </button>`;
+    }
+
+    showCardHtml(group) {
+        const item = group.poster || group.items[0];
+        const sub = `${group.items.length} episodes`;
+        const resume = this.state.resume[group.latest.path];
+        const progress = resume && resume.duration ? pct(resume.time, resume.duration) : 0;
+        return `<button class="vd-card" type="button" data-action="show" data-show="${this.attr(group.show)}"
+            data-testid="vd-show-card" aria-label="${this.attr(group.show)}">
+            <span class="vd-card-art">
+                <img src="${this.attr(this.artUrl(item, 'poster'))}" alt="" loading="lazy" decoding="async">
+                <span class="vd-card-play">${svg('play', 16)}</span>
+                ${progress > 0 ? `<span class="vd-progress"><i style="width:${progress.toFixed(1)}%"></i></span>` : ''}
+            </span>
+            <span class="vd-card-title">${this.esc(group.show)}</span>
+            <span class="vd-card-sub">${this.esc(sub)}</span>
+        </button>`;
+    }
+
+    // ── Movies ───────────────────────────────────────────────────────────────
+
+    moviesHtml() {
+        const s = this.state;
+        if (!s.library) return this.libraryLoadingHtml('Movies');
+        const all = (s.library.videos || []).filter((v) => v.kind !== 'episode');
+        const items = this.filterItems(all);
+        return `<div class="vd-page" data-testid="vd-movies">
+            <div class="vd-page-head">
+                <div><h1>Movies</h1><p>${all.length} features in your library.</p></div>
+                <div class="vd-grow"></div>
+                ${this.toolbarHtml(items)}
+            </div>
+            ${this.collectionHtml(items, 'movie')}
+        </div>`;
+    }
+
+    toolbarHtml(source) {
+        const s = this.state;
+        const genres = [...new Set(source.flatMap((v) => v.tmdb?.genres || []))].sort();
+        const qualities = [...new Set(source.map((v) => v.quality).filter(Boolean))].sort();
+        return `<div class="vd-toolbar">
+            <select class="vd-select" data-action="sort" data-testid="vd-sort">
+                ${[['name', 'Title'], ['date_desc', 'Recently added'], ['year_desc', 'Newest year'], ['rating_desc', 'Rating'], ['size_desc', 'Largest']]
+                    .map(([v, l]) => `<option value="${v}" ${s.sort === v ? 'selected' : ''}>${l}</option>`).join('')}
+            </select>
+            <select class="vd-select" data-action="quality" data-testid="vd-quality-filter">
+                <option value="all">All quality</option>
+                ${qualities.map((q) => `<option value="${this.attr(q)}" ${s.quality === q ? 'selected' : ''}>${this.esc(q)}</option>`).join('')}
+            </select>
+            <select class="vd-select" data-action="genre" data-testid="vd-genre-filter">
+                <option value="all">All genres</option>
+                ${genres.map((g) => `<option value="${this.attr(g)}" ${s.genre === g ? 'selected' : ''}>${this.esc(g)}</option>`).join('')}
+            </select>
+            <div class="vd-spacer"></div>
+            <button class="vd-icon-btn" type="button" data-action="layout" data-layout="grid" title="Grid" data-testid="vd-layout-grid">${svg('grid')}</button>
+            <button class="vd-icon-btn" type="button" data-action="layout" data-layout="list" title="List" data-testid="vd-layout-list">${svg('list')}</button>
+        </div>`;
+    }
+
+    filterItems(items) {
+        const s = this.state;
+        let out = items;
+        if (s.quality !== 'all') out = out.filter((v) => v.quality === s.quality);
+        if (s.genre !== 'all') out = out.filter((v) => (v.tmdb?.genres || []).includes(s.genre));
+        if (s.query.trim()) {
+            const q = s.query.trim().toLowerCase();
+            out = out.filter((v) => this.searchText(v).includes(q));
+        }
+        return this.sortItems(out, s.sort);
+    }
+
+    sortItems(items, sort) {
+        const out = [...items];
+        const cmp = {
+            name: (a, b) => this.displayTitle(a).localeCompare(this.displayTitle(b)),
+            date_desc: (a, b) => (b.modified || 0) - (a.modified || 0),
+            year_desc: (a, b) => (Number(this.itemYear(b)) || 0) - (Number(this.itemYear(a)) || 0),
+            rating_desc: (a, b) => (b.tmdb?.rating || 0) - (a.tmdb?.rating || 0),
+            size_desc: (a, b) => (b.size || 0) - (a.size || 0),
+        }[sort] || ((a, b) => this.displayTitle(a).localeCompare(this.displayTitle(b)));
+        return out.sort(cmp);
+    }
+
+    collectionHtml(items, kind) {
+        const s = this.state;
+        if (!items.length) return `<div class="vd-empty"><b>Nothing here yet</b>Try a different filter or add a folder.</div>`;
+        const shown = items.slice(0, s.visible);
+        if (s.layout === 'list') {
+            return `<table class="vd-table" data-testid="vd-list">
+                <thead><tr><th></th><th>Title</th><th class="vd-hide-mobile">Quality</th><th class="vd-hide-mobile">Added</th><th class="vd-num">Size</th><th></th></tr></thead>
+                <tbody>${shown.map((item) => `<tr>
+                    <td><img class="vd-thumb" src="${this.attr(this.artUrl(item, 'poster'))}" alt="" loading="lazy"></td>
+                    <td><div class="vd-title">${this.esc(this.displayTitle(item))}</div><div class="vd-path">${this.esc(item.path)}</div></td>
+                    <td class="vd-hide-mobile">${item.quality ? `<span class="vd-tag">${this.esc(item.quality)}</span>` : '—'}</td>
+                    <td class="vd-hide-mobile">${this.esc(item.modified ? new Date(item.modified * 1000).toLocaleDateString() : '—')}</td>
+                    <td class="vd-num">${this.esc(fmtBytes(item.size))}</td>
+                    <td class="vd-acts"><button class="vd-btn small primary" type="button" data-action="play" data-path="${this.attr(item.path)}">${svg('play', 12)} Play</button></td>
+                </tr>`).join('')}</tbody>
+            </table>
+            ${items.length > shown.length ? `<div style="text-align:center;margin-top:18px"><button class="vd-btn" type="button" data-action="more">Show more (${items.length - shown.length})</button></div>` : ''}`;
+        }
+        return `<div class="vd-grid" data-testid="vd-grid">${shown.map((item) => this.cardHtml(item, kind)).join('')}</div>
+            ${items.length > shown.length ? `<div style="text-align:center;margin-top:22px"><button class="vd-btn" type="button" data-action="more">Show more (${items.length - shown.length})</button></div>` : ''}`;
+    }
+
+    // ── Series ───────────────────────────────────────────────────────────────
+
+    seriesHtml() {
+        const s = this.state;
+        if (!s.library) return this.libraryLoadingHtml('Series');
+        const shows = this.groupShows(s.library.videos || []);
+        const filtered = s.query.trim()
+            ? shows.filter((g) => g.show.toLowerCase().includes(s.query.trim().toLowerCase()))
+            : shows;
+        return `<div class="vd-page" data-testid="vd-series">
+            <div class="vd-page-head">
+                <div><h1>Series</h1><p>${shows.length} shows · ${shows.reduce((n, g) => n + g.items.length, 0)} episodes.</p></div>
+                <div class="vd-grow"></div>
+                <button class="vd-btn" type="button" data-action="search">${svg('search')} Search</button>
+            </div>
+            ${filtered.length ? `<div class="vd-grid">${filtered.map((g) => this.showCardHtml(g)).join('')}</div>`
+                : `<div class="vd-empty"><b>No series found</b>Episode files are grouped by their SxxEyy name or folder.</div>`}
+        </div>`;
+    }
+
+    showDetailHtml(show) {
+        const s = this.state;
+        const group = this.groupShows(s.library?.videos || []).find((g) => g.show === show);
+        if (!group) return `<div class="vd-page"><div class="vd-empty"><b>Series not found</b><button class="vd-btn" data-action="back">Back</button></div></div>`;
+        const item = group.poster || group.items[0];
+        const tm = item.tmdb || {};
+        const seasons = [...new Set(group.items.map((v) => v.season ?? 0))].sort((a, b) => a - b);
+        return `<div data-testid="vd-detail">
+        <div class="vd-detail-hero">
+            <img class="vd-hero-bg" src="${this.attr(this.artUrl(item, 'backdrop'))}" alt="">
+            <div class="vd-detail-body">
+                <div class="vd-detail-poster"><img src="${this.attr(this.artUrl(item, 'poster'))}" alt=""></div>
+                <div class="vd-detail-copy">
+                    <div class="vd-eyebrow"><span>Series</span><span>·</span><span>${seasons.length} seasons</span></div>
+                    <h1>${this.esc(show)}</h1>
+                    <div class="vd-tags">
+                        ${tm.rating != null ? `<span class="vd-tag gold">★ ${this.esc(tm.rating)}</span>` : ''}
+                        <span class="vd-tag">${group.items.length} episodes</span>
+                        ${(tm.genres || []).slice(0, 4).map((g) => `<span class="vd-tag">${this.esc(g)}</span>`).join('')}
+                    </div>
+                    ${tm.overview ? `<p class="vd-overview">${this.esc(tm.overview)}</p>` : ''}
+                    <div class="vd-hero-actions">
+                        <button class="vd-btn primary" type="button" data-action="play-next" data-show="${this.attr(show)}">${svg('play')} Play next</button>
+                        <button class="vd-btn" type="button" data-action="back">${svg('back')} Back</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="vd-detail-extra" style="grid-template-columns:1fr">
+            ${seasons.map((season) => {
+                const eps = group.items.filter((v) => (v.season ?? 0) === season);
+                return `<section class="vd-panel"><h2>Season ${this.esc(season || '—')}</h2>
+                    <table class="vd-table"><thead><tr><th></th><th>Episode</th><th class="vd-num">Duration</th><th class="vd-num">Size</th><th></th></tr></thead><tbody>
+                    ${eps.map((ep) => {
+                        const r = s.resume[ep.path];
+                        const p = r && r.duration ? pct(r.time, r.duration) : 0;
+                        return `<tr>
+                            <td><img class="vd-thumb" src="${this.attr(this.artUrl(ep, 'poster'))}" alt="" loading="lazy"></td>
+                            <td><div class="vd-title">${this.esc(this.episodeLabel(ep))}${ep.title ? ` · ${this.esc(ep.title)}` : ''}</div>
+                                ${p > 0 ? `<div class="vd-progress" style="position:static;margin-top:5px;width:120px;border-radius:3px"><i style="width:${p.toFixed(1)}%;background:var(--vd-gold)"></i></div>` : ''}</td>
+                            <td class="vd-num">${this.esc(fmtTime(ep.tmdb?.runtime ? ep.tmdb.runtime * 60 : 0) || '—')}</td>
+                            <td class="vd-num">${this.esc(fmtBytes(ep.size))}</td>
+                            <td class="vd-acts"><button class="vd-btn small primary" type="button" data-action="play" data-path="${this.attr(ep.path)}">${svg('play', 12)} Play</button></td>
+                        </tr>`;
+                    }).join('')}</tbody></table></section>`;
+            }).join('')}
+        </div>
+        </div>`;
+    }
+
+    // ── Library / folders ────────────────────────────────────────────────────
+
+    libraryHtml() {
+        const s = this.state;
+        if (s.path) {
+            if (!s.folder || s.folder.path !== s.path) {
+                if (!s.folderLoading) {
+                    s.folderLoading = true;
+                    this.loadFolder(s.path);
+                }
+                return this.libraryLoadingHtml('Folder');
+            }
+            return this.folderHtml(s.folder);
+        }
+        if (!s.library) return this.libraryLoadingHtml('Library');
+        const roots = s.roots || [];
+        const folders = s.library.folders || s.folders || [];
+        return `<div class="vd-page" data-testid="vd-library">
+            <div class="vd-page-head">
+                <div><h1>Library</h1><p>${s.total} videos · ${roots.length} roots${s.truncated ? ' · listing truncated at the safety cap' : ''}</p></div>
+                <div class="vd-grow"></div>
+                <button class="vd-btn" type="button" data-action="refresh">${svg('refresh')} Refresh</button>
+                <button class="vd-btn primary" type="button" data-action="add-folder">${svg('plus')} Add folder</button>
+            </div>
+            ${roots.length ? `<section class="vd-panel" style="margin-bottom:16px"><h2>Roots</h2>
+                ${roots.map((r) => `<div class="vd-rootrow"><code>${this.esc(r)}</code>
+                    <button class="vd-btn small" type="button" data-action="open-folder" data-path="${this.attr(r)}">Open</button>
+                </div>`).join('')}</section>` : ''}
+            ${folders.length ? `<div class="vd-folders">${folders.map((f) => `<button class="vd-folder" type="button" data-action="open-folder" data-path="${this.attr(f.path)}">
+                ${svg('folder', 20)}<span>${this.esc(f.name)}</span></button>`).join('')}</div>` : ''}
+            <div class="vd-toolbar">${this.toolbarHtml(s.library.videos || [])}</div>
+            ${this.collectionHtml(this.filterItems(s.library.videos || []), 'library')}
+        </div>`;
+    }
+
+    async loadFolder(path) {
+        try {
+            const data = await this.apiJson(`/api/videos/library?path=${encodeURIComponent(path)}`);
+            this.state.folder = data;
+            this.state.errors = [];
+            if (this.state.mode === 'library' && this.state.path === path) this.renderView();
+        } catch (err) {
+            this.state.errors = [err.message || String(err)];
+            this.renderView();
+        } finally {
+            this.state.folderLoading = false;
+        }
+    }
+
+    folderHtml(folder) {
+        const s = this.state;
+        return `<div class="vd-page" data-testid="vd-folder">
+            <div class="vd-crumbs">
+                <button type="button" data-action="nav" data-mode="library">Library</button>
+                <span>/</span><b>${this.esc(basename(folder.path))}</b>
+            </div>
+            <div class="vd-page-head">
+                <div><h1>${this.esc(basename(folder.path))}</h1><p>${(folder.videos || []).length} videos · ${(folder.folders || []).length} folders</p></div>
+                <div class="vd-grow"></div>
+                <button class="vd-btn" type="button" data-action="back">${svg('back')} Back</button>
+            </div>
+            ${folder.folders?.length ? `<div class="vd-folders">${folder.folders.map((f) => `<button class="vd-folder" type="button" data-action="open-folder" data-path="${this.attr(f.path)}">
+                ${svg('folder', 20)}<span>${this.esc(f.name)}</span></button>`).join('')}</div>` : ''}
+            ${this.collectionHtml((folder.videos || []).map((v) => v), 'library')}
+        </div>`;
+    }
+
+    // ── My List / search ─────────────────────────────────────────────────────
+
+    myListHtml() {
+        const s = this.state;
+        if (!s.library) return this.libraryLoadingHtml('My List');
+        const videos = s.library.videos || [];
+        const items = [...s.list].map((path) => videos.find((v) => v.path === path) || { path, name: basename(path), title: basename(path), kind: 'movie' });
+        return `<div class="vd-page" data-testid="vd-mylist">
+            <div class="vd-page-head"><div><h1>My List</h1><p>${items.length} saved titles · synced with your account.</p></div></div>
+            ${items.length ? `<div class="vd-grid">${items.map((item) => this.cardHtml(item, 'mylist')).join('')}</div>`
+                : `<div class="vd-empty"><b>Your list is empty</b>Open a title and choose “My List” to save it here.</div>`}
+        </div>`;
+    }
+
+    searchHtml() {
+        const s = this.state;
+        const q = s.query.trim();
+        const source = s.library?.videos || [];
+        const results = q ? source.filter((v) => this.searchText(v).includes(q.toLowerCase())).slice(0, 200) : [];
+        const recent = this.recentSearches();
+        return `<div class="vd-page" data-testid="vd-search">
+            <div class="vd-page-head"><div><h1>Search</h1><p>Find a movie, series or episode across the whole library.</p></div></div>
+            <div class="vd-searchbar">
+                <input class="vd-input vd-search-input" data-role="search-input" data-action="search-input"
+                    placeholder="Title, show, genre…" value="${this.attr(s.query)}" autocomplete="off" data-testid="vd-search-input">
+                <button class="vd-btn" type="button" data-action="back">${svg('back')} Close</button>
+            </div>
+            ${!q && recent.length ? `<div class="vd-recent">${recent.map((r) => `<button type="button" data-action="recent-search" data-q="${this.attr(r)}">${this.esc(r)}</button>`).join('')}</div>` : ''}
+            ${q ? (results.length ? `<div class="vd-grid">${results.map((item) => this.cardHtml(item)).join('')}</div>`
+                : `<div class="vd-empty"><b>No matches</b>Nothing in the library matches “${this.esc(q)}”.</div>`) : ''}
+        </div>`;
+    }
+
+    recentSearches() {
+        try { return JSON.parse(localStorage.getItem('vd-recent-searches') || '[]').slice(0, 8); }
+        catch { return []; }
+    }
+
+    rememberSearch(q) {
+        if (!q) return;
+        const list = [q, ...this.recentSearches().filter((x) => x !== q)].slice(0, 8);
+        localStorage.setItem('vd-recent-searches', JSON.stringify(list));
+    }
+
+    // ── Detail ───────────────────────────────────────────────────────────────
+
+    detailHtml() {
+        const item = this.state.detail;
+        if (!item) return `<div class="vd-page"><div class="vd-empty"><b>Title not found</b></div></div>`;
+        const tm = item.tmdb || {};
+        const resume = this.state.resume[item.path];
+        const inList = this.state.list.has(item.path);
+        const title = this.displayTitle(item);
+        return `<div data-testid="vd-detail">
+            <div class="vd-detail-hero">
+                <img class="vd-hero-bg" src="${this.attr(this.artUrl(item, 'backdrop'))}" alt="">
+                <div class="vd-detail-body">
+                    <div class="vd-detail-poster"><img src="${this.attr(this.artUrl(item, 'poster'))}" alt=""></div>
+                    <div class="vd-detail-copy">
+                        <div class="vd-eyebrow"><span>${item.kind === 'episode' ? 'Episode' : 'Feature'}</span><span>·</span><span>${this.esc(item.quality || 'Video')}</span></div>
+                        <h1>${this.esc(title)}</h1>
+                        <div class="vd-tags">
+                            ${tm.rating != null ? `<span class="vd-tag gold">★ ${this.esc(tm.rating)}</span>` : ''}
+                            ${this.itemYear(item) ? `<span class="vd-tag">${this.esc(this.itemYear(item))}</span>` : ''}
+                            ${item.quality ? `<span class="vd-tag">${this.esc(item.quality)}</span>` : ''}
+                            ${item.kind === 'episode' ? `<span class="vd-tag">${this.esc(this.episodeLabel(item))}</span>` : ''}
+                            ${(tm.genres || []).slice(0, 5).map((g) => `<span class="vd-tag">${this.esc(g)}</span>`).join('')}
+                        </div>
+                        ${tm.overview ? `<p class="vd-overview">${this.esc(tm.overview)}</p>` : ''}
+                        <div class="vd-hero-actions">
+                            <button class="vd-btn primary" type="button" data-action="play" data-path="${this.attr(item.path)}">${svg('play')} ${resume ? `Resume ${fmtTime(resume.time)}` : 'Play'}</button>
+                            <button class="vd-btn" type="button" data-action="toggle-list" data-path="${this.attr(item.path)}">${inList ? `${svg('check')} In My List` : `${svg('plus')} My List`}</button>
+                            ${item.kind === 'episode' ? `<button class="vd-btn" type="button" data-action="show" data-show="${this.attr(item.show || '')}">${svg('tv')} Series</button>` : ''}
+                            <button class="vd-btn" type="button" data-action="back">${svg('back')} Back</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="vd-detail-extra">
+                <section class="vd-panel"><h2>Details</h2>
+                    <p>${tm.overview || 'No synopsis yet. Add a TMDB key in Settings to enrich titles, posters and ratings.'}</p>
+                    <dl class="vd-kv">
+                        <dt>File</dt><dd class="vd-path">${this.esc(item.name || basename(item.path))}</dd>
+                        <dt>Size</dt><dd>${this.esc(fmtBytes(item.size))}</dd>
+                        <dt>Modified</dt><dd>${this.esc(item.modified ? new Date(item.modified * 1000).toLocaleString() : '—')}</dd>
+                        <dt>Video</dt><dd>${this.esc((item.video_codec || '').toUpperCase() || '—')}</dd>
+                        <dt>Audio</dt><dd>${this.esc((item.audio_codec || '').toUpperCase() || '—')}</dd>
+                    </dl>
+                </section>
+                <section class="vd-panel"><h2>Cast</h2>
+                    ${(tm.cast || []).length ? `<div class="vd-tags">${tm.cast.map((c) => `<span class="vd-tag">${this.esc(c)}</span>`).join('')}</div>` : '<p>No cast metadata.</p>'}
+                    ${tm.runtime ? `<dl class="vd-kv" style="margin-top:12px"><dt>Runtime</dt><dd>${this.esc(tm.runtime)} min</dd></dl>` : ''}
+                    <div style="margin-top:14px"><button class="vd-btn small" type="button" data-action="tmdb-refresh" data-path="${this.attr(item.path)}">${svg('refresh', 12)} Refresh metadata</button></div>
+                </section>
+            </div>
+        </div>`;
+    }
+
+    // ── Settings ─────────────────────────────────────────────────────────────
+
+    settingsHtml() {
+        const s = this.state;
+        const o = s.cfg?.options || {};
+        const tm = s.cfg?.tmdb || {};
+        const hw = s.status?.hw || {};
+        const cand = hw.candidates || {};
+        const enc = s.status?.encoder || hw.encoder;
+        const encLabel = enc === 'vaapi' ? 'VA-API' : enc === 'qsv' ? 'QuickSync' : 'Software (libx264)';
+        return `<div class="vd-settings" data-testid="vd-settings">
+            <div class="vd-settings-head"><h1>Settings</h1><p>Library, playback, metadata and the media engine.</p></div>
+
+            <section class="vd-panel"><h2>Library</h2>
+                ${(s.roots || []).map((r) => `<div class="vd-rootrow"><code>${this.esc(r)}</code>
+                    <button class="vd-btn small danger" type="button" data-action="remove-root" data-path="${this.attr(r)}">${svg('trash', 12)} Remove</button>
+                </div>`).join('') || '<p>No root folders yet.</p>'}
+                <div class="vd-actionsbar" style="border-top:0;margin-top:4px;padding-top:4px">
+                    <button class="vd-btn primary" type="button" data-action="add-folder">${svg('plus')} Add folder</button>
+                </div>
+            </section>
+
+            <section class="vd-panel"><h2>Playback</h2>
+                <div class="vd-fields">
+                    <div class="vd-field"><label>Transcode quality</label>
+                        <select class="vd-select" data-setting="quality" data-testid="vd-setting-quality">
+                            ${[['fast', 'Fast · 720p'], ['balanced', 'Balanced · 1080p'], ['high', 'High · source']]
+                                .map(([v, l]) => `<option value="${v}" ${o.quality === v ? 'selected' : ''}>${l}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="vd-field"><label>AAC bitrate</label>
+                        <select class="vd-select" data-setting="audio_bitrate">
+                            ${['96k', '128k', '160k', '192k', '256k'].map((b) => `<option value="${b}" ${o.audio_bitrate === b ? 'selected' : ''}>${b}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="vd-field"><label>Preferred audio language</label>
+                        <input class="vd-input" data-setting="preferred_audio_lang" value="${this.attr(o.preferred_audio_lang || '')}" placeholder="pol, eng…">
+                    </div>
+                    <div class="vd-field"><label>Playback</label>
+                        <label class="vd-check"><input type="checkbox" data-setting="auto_subtitles" ${o.auto_subtitles !== false ? 'checked' : ''}> Auto-load sibling subtitles</label>
+                        <label class="vd-check"><input type="checkbox" data-setting="autoplay_next" ${o.autoplay_next !== false ? 'checked' : ''}> Autoplay next episode</label>
+                        <label class="vd-check"><input type="checkbox" data-setting="hardware_decode" ${o.hardware_decode !== false ? 'checked' : ''}> Hardware decode when supported</label>
+                    </div>
+                </div>
+            </section>
+
+            <section class="vd-panel"><h2>Metadata (TMDB)</h2>
+                <div class="vd-fields">
+                    <div class="vd-field"><label>API key</label>
+                        <input class="vd-input" type="password" data-setting="tmdb_key" placeholder="${this.attr(tm.api_key_set ? `Saved (${tm.api_key_masked})` : 'Paste a TMDB v3 key')}" autocomplete="off">
+                    </div>
+                    <div class="vd-field"><label>Language</label>
+                        <input class="vd-input" data-setting="tmdb_language" value="${this.attr(tm.language || 'pl-PL')}" placeholder="pl-PL">
+                    </div>
+                    <div class="vd-field full"><label class="vd-check"><input type="checkbox" data-setting="tmdb_auto" ${tm.auto_fetch !== false ? 'checked' : ''}> Fetch metadata once per session</label></div>
+                </div>
+                <div class="vd-actionsbar">
+                    <button class="vd-btn" type="button" data-action="tmdb-test">${svg('check')} Test key</button>
+                    <button class="vd-btn primary" type="button" data-action="tmdb-refresh-all">${svg('refresh')} Fetch metadata now</button>
+                </div>
+            </section>
+
+            <section class="vd-panel"><h2>Media engine</h2>
+                <div class="vd-engine-grid">
+                    <div><b>${this.esc(encLabel)}</b><span>Encoder</span></div>
+                    <div><b>${this.esc(hw.device || '—')}</b><span>Render node</span></div>
+                    <div><b>${hw.decode?.vaapi ? 'VA-API' : hw.decode?.qsv ? 'QSV' : '—'}</b><span>HW decode</span></div>
+                    <div><b>${s.status?.active_transcodes?.active ?? 0} / ${s.status?.active_transcodes?.max ?? 2}</b><span>Active streams</span></div>
+                </div>
+                <p>${this.esc(hw.reason || (s.status?.ffmpeg ? 'Probe has not run yet.' : 'ffmpeg is not installed.'))}</p>
+                <table class="vd-table" data-testid="vd-engine-candidates">
+                    <thead><tr><th>Encoder</th><th>Status</th><th>Detail</th></tr></thead>
+                    <tbody>
+                        ${['qsv', 'vaapi', 'libx264'].map((name) => {
+                            const c = cand[name] || {};
+                            return `<tr><td>${this.esc(name === 'libx264' ? 'libx264 (software)' : name.toUpperCase())}</td>
+                                <td>${c.ok ? '<span class="vd-tag ok">Ready</span>' : '<span class="vd-tag bad">Unavailable</span>'}</td>
+                                <td class="vd-path">${this.esc((c.reason || '').slice(0, 180) || '—')}</td></tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+                <div class="vd-actionsbar">
+                    <button class="vd-btn" type="button" data-action="engine-test">${svg('engine')} Test hardware encode</button>
+                </div>
+            </section>
+
+            <div class="vd-actionsbar">
+                <button class="vd-btn primary" type="button" data-action="save-settings" data-testid="vd-save-settings">${svg('check')} Save settings</button>
+            </div>
+            <p style="text-align:center;font-size:10.5px;color:var(--vd-faint)">Video Station ${this.esc(this.ctx.pkg?.version || '')} · API stays in EthOS core</p>
+        </div>`;
+    }
+
+    async saveSettings() {
+        const s = this.state;
+        const get = (name) => this.view.querySelector(`[data-setting="${name}"]`);
+        const options = {
+            ...s.cfg.options,
+            quality: get('quality')?.value || 'balanced',
+            audio_bitrate: get('audio_bitrate')?.value || '192k',
+            preferred_audio_lang: get('preferred_audio_lang')?.value || '',
+            auto_subtitles: !!get('auto_subtitles')?.checked,
+            autoplay_next: !!get('autoplay_next')?.checked,
+            hardware_decode: !!get('hardware_decode')?.checked,
+            sort: s.sort,
+            view: s.layout,
+        };
+        const tmdb = {
+            auto_fetch: !!get('tmdb_auto')?.checked,
+            language: get('tmdb_language')?.value || 'pl-PL',
+        };
+        const key = get('tmdb_key')?.value?.trim();
+        if (key) tmdb.api_key = key;
+        try {
+            const data = await this.apiPost('/api/videos/config', { roots: s.roots, options, tmdb });
+            s.cfg = { ...s.cfg, ...data, options: { ...options, ...(data.options || {}) } };
+            this.ctx.notifications.toast('Settings saved', 'success');
+            this.renderView();
+        } catch (err) {
+            this.ctx.notifications.toast(`Could not save settings: ${err.message}`, 'error');
+        }
+    }
+
+    async removeRoot(path) {
+        const ok = await this.ctx.modal.confirm('Remove folder', `Stop showing videos from ${path}? The files stay untouched.`, {
+            danger: true, confirmLabel: 'Remove',
+        });
+        if (!ok) return;
+        this.state.roots = this.state.roots.filter((r) => r !== path);
+        try {
+            await this.apiPost('/api/videos/config', { roots: this.state.roots, options: this.state.cfg.options, tmdb: {} });
+            this.state.cfg.roots = this.state.roots;
+            this.state.library = null;
+            this.ctx.notifications.toast('Folder removed', 'success');
+            this.renderView();
+        } catch (err) {
+            this.ctx.notifications.toast(`Could not remove folder: ${err.message}`, 'error');
+        }
+    }
+
+    async addFolder() {
+        try {
+            const path = await this.ctx.pickFolder({
+                title: 'Add a video folder', roots: ['/home', '/mnt', '/media'], acceptLabel: 'Add folder',
+            });
+            if (!path) return;
+            if (!this.state.roots.includes(path)) this.state.roots.push(path);
+            await this.apiPost('/api/videos/config', { roots: this.state.roots, options: this.state.cfg.options, tmdb: {} });
+            this.state.cfg.roots = this.state.roots;
+            this.state.library = null;
+            this.ctx.notifications.toast('Folder added', 'success');
+            this.renderView();
+        } catch (err) {
+            this.ctx.notifications.toast(`Could not add folder: ${err.message}`, 'error');
+        }
+    }
+
+    async refreshLibrary() {
+        try {
+            await this.ensureLibrary(true);
+            await this.loadBootstrap();
+            this.ctx.notifications.toast('Library refreshed', 'success');
+            this.renderView();
+        } catch (err) {
+            this.ctx.notifications.toast(`Refresh failed: ${err.message}`, 'error');
+        }
+    }
+
+    async toggleList(path) {
+        const add = !this.state.list.has(path);
+        try {
+            const data = await this.apiPost('/api/videos/list', { path, add });
+            this.state.list = new Set(data.paths || []);
+            this.ctx.notifications.toast(add ? 'Added to My List' : 'Removed from My List', 'success');
+            this.renderView();
+        } catch (err) {
+            this.ctx.notifications.toast(`Could not update My List: ${err.message}`, 'error');
+        }
+    }
+
+    async removeContinue(path) {
+        try {
+            await this.ctx.apiFetch(`/api/videos/resume?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
+            delete this.state.resume[path];
+            this.renderView();
+        } catch (err) {
+            this.ctx.notifications.toast(`Could not remove: ${err.message}`, 'error');
+        }
+    }
+
+    async tmdbTest() {
+        try {
+            const data = await this.apiJson('/api/videos/tmdb/test');
+            this.ctx.notifications.toast(data.ok ? 'TMDB key works' : (data.detail || 'TMDB key rejected'), 'success');
+        } catch (err) {
+            this.ctx.notifications.toast(`TMDB test failed: ${err.message}`, 'error');
+        }
+    }
+
+    async tmdbRefreshAll() {
+        const task = this.ctx.progress.startTask({
+            appId: 'videos', title: 'Fetching TMDB metadata', detail: 'Walking the library…', testIdPrefix: 'vd-tmdb',
+        });
+        try {
+            const data = await this.apiPost('/api/videos/tmdb/refresh', {});
+            task.finish('done', { percent: 100, detail: `${data.matched ?? data.updated ?? 0} titles updated` });
+            this.ctx.notifications.emit({ kind: 'success', title: 'Video metadata updated', message: `${data.matched ?? data.updated ?? 0} titles refreshed.` });
+            this.state.library = null;
+            await this.loadBootstrap();
+            this.renderView();
+        } catch (err) {
+            task.finish('failed', { detail: err.message });
+            this.ctx.notifications.toast(`Metadata refresh failed: ${err.message}`, 'error');
+        }
+    }
+
+    async engineTest() {
+        try {
+            const data = await this.apiJson('/api/videos/status?refresh=1');
+            this.state.status = data;
+            this.updateChrome();
+            const enc = data.encoder === 'vaapi' ? 'VA-API' : data.encoder === 'qsv' ? 'QuickSync' : 'software libx264';
+            this.ctx.notifications.toast(`Hardware probe: ${enc}`, data.encoder ? 'success' : 'warning');
+            this.renderView();
+        } catch (err) {
+            this.ctx.notifications.toast(`Engine probe failed: ${err.message}`, 'error');
+        }
+    }
+
+    // ── Player ───────────────────────────────────────────────────────────────
+
+    async openPlayer(item, startOverride = null) {
+        this.stopPlayer({ quiet: true });
+        const state = this.state;
+        state.back = state.back || {
+            mode: state.mode === 'player' ? 'home' : state.mode,
+            path: state.path, show: state.show, detail: state.detail,
+        };
+        state.detail = item;
+        state.mode = 'player';
+        this.updateChrome();
+        this.view.innerHTML = '';
+        const layer = document.createElement('div');
+        layer.className = 'vd-player';
+        layer.setAttribute('data-testid', 'vd-player');
+        layer.innerHTML = `<video playsinline webkit-playsinline preload="metadata"></video>
+            <div class="vd-player-ui" data-role="ui">
+                <div class="vd-player-top">
+                    <button class="vd-player-btn" type="button" data-action="close-player" data-testid="vd-player-back">${svg('back', 20)}</button>
+                    <span class="vd-title">${this.esc(this.displayTitle(item))}</span>
+                    <span class="vd-tag" data-role="mode-tag">Preparing…</span>
+                    <span class="vd-tag gold" data-role="encoder-tag"></span>
+                    <button class="vd-player-btn" type="button" data-action="player-stats" title="Playback stats">${svg('stats', 18)}</button>
+                </div>
+                <div class="vd-player-center"><button type="button" data-action="player-toggle" data-role="big-play">${svg('play', 30)}</button></div>
+                <div class="vd-player-bottom">
+                    <div class="vd-seek-wrap">
+                        <div class="vd-seek-buffer"><i data-role="buffered" style="width:0%"></i></div>
+                        <input class="vd-seek" data-role="seek" type="range" min="0" max="100" step="0.1" value="0" data-testid="vd-player-seek">
+                    </div>
+                    <div class="vd-player-row">
+                        <button class="vd-player-btn primary" type="button" data-action="player-toggle" data-role="play-btn">${svg('play', 18)}</button>
+                        <button class="vd-player-btn" type="button" data-action="player-seek" data-delta="-10">-10</button>
+                        <button class="vd-player-btn" type="button" data-action="player-seek" data-delta="10">+10</button>
+                        <span class="vd-time" data-role="time">0:00 / --:--</span>
+                        <span class="vd-grow"></span>
+                        <select data-role="audio" data-action="player-audio" data-testid="vd-player-audio"></select>
+                        <select data-role="sub" data-action="player-sub" data-testid="vd-player-sub"></select>
+                        <select data-role="quality" data-action="player-quality" data-testid="vd-player-quality">
+                            <option value="fast">720p</option><option value="balanced">1080p</option><option value="high">Source</option>
+                        </select>
+                        <select data-role="speed" data-action="player-speed" data-testid="vd-player-speed">
+                            <option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option>
+                            <option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option>
+                        </select>
+                        <button class="vd-player-btn" type="button" data-action="player-pip" title="Picture in picture">${svg('pip', 18)}</button>
+                        <button class="vd-player-btn" type="button" data-action="player-fullscreen" title="Fullscreen">${svg('full', 18)}</button>
+                    </div>
+                </div>
+            </div>
+            <div class="vd-player-stats" data-role="stats"></div>
+            <div class="vd-next" data-role="next"></div>`;
+        this.main.appendChild(layer);
+        const video = layer.querySelector('video');
+        const player = {
+            item, layer, video, mode: 'direct', encoder: null, decode: 'sw', live: false,
+            base: 0, duration: 0, info: null, audioIdx: 0, audioTracks: [], subs: [], subIdx: -1,
+            quality: state.cfg?.options?.quality || 'balanced', hls: null, session: null,
+            playWhenReady: true, ended: false, lastSave: 0, wakeLock: null, stats: false,
+            opening: true, hideTimer: null, seekReloading: false,
+        };
+        this.player = player;
+        this.bindPlayer(player);
+        const start = startOverride != null ? Number(startOverride) : null;
+        await this.loadPlayerInfo(player, start);
+    }
+
+    async loadPlayerInfo(player, startOverride) {
+        const { item } = player;
+        try {
+            const [infoData, subsData, resumeData] = await Promise.all([
+                this.apiJson(`/api/videos/info?path=${encodeURIComponent(item.path)}`).catch(() => ({ info: {} })),
+                this.apiJson(`/api/videos/subtitles?path=${encodeURIComponent(item.path)}`).catch(() => ({ subtitles: [] })),
+                this.apiJson(`/api/videos/resume?path=${encodeURIComponent(item.path)}`).catch(() => ({ resume: null })),
+            ]);
+            if (this.player !== player) return;
+            const info = infoData.info || {};
+            player.info = info;
+            player.audioTracks = info.audio_tracks || [];
+            player.subs = subsData.subtitles || [];
+            player.audioIdx = this.defaultAudioIdx(player.audioTracks);
+            player.duration = Number(info.duration) || 0;
+            const resume = startOverride != null ? null : resumeData.resume;
+            const resumeTime = resume && resume.time > 5 && (!resume.duration || resume.time < resume.duration * 0.97)
+                ? Number(resume.time) : 0;
+            let start = startOverride != null ? Number(startOverride) : resumeTime;
+            if (player.duration && start >= player.duration - 1) start = 0;
+            player.base = Math.max(0, start || 0);
+
+            let mode = info.playback_mode || (info.needs_transcode ? 'transcode' : 'direct');
+            // Multiple audio tracks: browsers cannot switch tracks in direct mode.
+            if (mode === 'direct' && player.audioTracks.length > 1) mode = 'remux';
+            player.mode = mode;
+            player.encoder = info.engine?.encoder
+                || (mode === 'transcode' ? this.state.status?.encoder : null);
+            player.decode = info.engine?.hw_decode_capable ? 'hw' : 'sw';
+            player.live = mode !== 'direct';
+            this.renderPlayerMeta(player);
+
+            const autoSubs = this.state.cfg?.options?.auto_subtitles !== false;
+            const pref = player.subs.find((s) => s.preferred);
+            player.subIdx = autoSubs ? (pref ? player.subs.indexOf(pref) : (player.subs.length ? 0 : -1)) : -1;
+            this.renderPlayerSelects(player);
+            if (player.subIdx >= 0) this.loadSubtitle(player, player.subIdx).catch(() => {});
+
+            if (player.live) {
+                await this.startHls(player, player.base, player.audioIdx);
+            } else {
+                player.video.src = this.streamUrl(item.path);
+                player.opening = false;
+                if (player.base > 0) player.video.addEventListener('loadedmetadata', () => {
+                    try { player.video.currentTime = player.base; } catch { /* ignore */ }
+                }, { once: true });
+                player.video.play().catch(() => {});
+            }
+            if (resumeTime) this.toast(`Resumed at ${fmtTime(resumeTime)}`);
+            this.setupMediaSession(player);
+        } catch (err) {
+            this.ctx.logger.error('Player setup failed', String(err));
+            player.opening = false;
+            this.renderPlayerError(player, err.message || String(err));
+        }
+    }
+
+    streamUrl(path) {
+        return `/api/videos/stream?path=${encodeURIComponent(path)}&token=${encodeURIComponent(this.token)}`;
+    }
+
+    transcodeUrl(path, t = 0, a = 0, q = 'balanced') {
+        return `/api/videos/transcode?path=${encodeURIComponent(path)}${t > 0 ? `&t=${t.toFixed(3)}` : ''}`
+            + `&a=${a}&q=${encodeURIComponent(q)}&token=${encodeURIComponent(this.token)}`;
+    }
+
+    withToken(url) {
+        return `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(this.token)}`;
+    }
+
+    async startHls(player, start, audioIdx) {
+        player.seekReloading = true;
+        try {
+            const data = await this.apiPost('/api/videos/hls', {
+                path: player.item.path, t: Math.max(0, start || 0), a: audioIdx || 0, q: player.quality,
+            });
+            if (this.player !== player) return;
+            player.session = data.session;
+            player.mode = data.mode || player.mode;
+            player.encoder = data.encoder || player.encoder;
+            player.decode = data.decode || player.decode;
+            player.base = Math.max(0, Number(start) || 0);
+            player.live = true;
+            const url = this.withToken(data.playlist);
+            await this.attachPlaylist(player, url);
+            this.renderPlayerMeta(player);
+            player.video.play().catch(() => {});
+        } catch (err) {
+            if (this.player !== player) return;
+            this.ctx.logger.warn('HLS start failed, falling back to the legacy pipe', String(err));
+            player.live = true;
+            player.encoder = this.state.status?.encoder || null;
+            player.video.src = this.transcodeUrl(player.item.path, player.base, player.audioIdx, player.quality);
+            player.video.play().catch(() => {});
+            this.toast('HLS unavailable — using the legacy stream');
+        } finally {
+            player.seekReloading = false;
+            player.opening = false;
+        }
+    }
+
+    async attachPlaylist(player, url) {
+        const video = player.video;
+        const nativeHls = video.canPlayType('application/vnd.apple.mpegurl');
+        if (nativeHls) {
+            video.src = url;
+            return;
+        }
+        const Hls = await this.loadHls();
+        if (this.player !== player) return;
+        if (player.hls) {
+            player.hls.destroy();
+            player.hls = null;
+        }
+        const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+        player.hls = hls;
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+            if (!data?.fatal) return;
+            this.ctx.logger.error('HLS playback error', `${data.type}/${data.details}`);
+            player.hls?.destroy();
+            player.hls = null;
+            // Nie zostawiaj osieroconej sesji (blokuje kolejny start u tego użytkownika).
+            this.stopHlsSession(player);
+            if (player.video.src !== this.transcodeUrl(player.item.path, player.base, player.audioIdx, player.quality)) {
+                player.live = true;
+                player.video.src = this.transcodeUrl(player.item.path, player.base, player.audioIdx, player.quality);
+                player.video.play().catch(() => {});
+                this.toast('Stream error — switched to the legacy player');
+            }
+        });
+        hls.loadSource(url);
+        hls.attachMedia(video);
+    }
+
+    loadHls() {
+        if (window.Hls) return Promise.resolve(window.Hls);
+        if (this._hlsPromise) return this._hlsPromise;
+        this._hlsPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = '/api/packages/ethos-video/ui/frontend/hls.min.js';
+            script.onload = () => window.Hls ? resolve(window.Hls) : reject(new Error('hls.js did not load'));
+            script.onerror = () => reject(new Error('Could not load the HLS player'));
+            document.head.appendChild(script);
+        });
+        return this._hlsPromise;
+    }
+
+    stopPlayer({ quiet = false } = {}) {
+        const p = this.player;
+        if (!p) return;
+        this.player = null;
+        if (!quiet) this.saveResume(true, p);
+        try { p.video.pause(); } catch { /* ignore */ }
+        if (p.hls) { try { p.hls.destroy(); } catch { /* ignore */ } }
+        if (p.session) {
+            try {
+                fetch(`/api/videos/hls/${encodeURIComponent(p.session)}/stop`, {
+                    method: 'POST', keepalive: true,
+                    headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+                }).catch(() => {});
+            } catch { /* ignore */ }
+        }
+        if (p.wakeLock) { try { p.wakeLock.release(); } catch { /* ignore */ } }
+        if (p.subBlobUrl) { try { URL.revokeObjectURL(p.subBlobUrl); } catch { /* ignore */ } }
+        if (p.keyHandler) document.removeEventListener('keydown', p.keyHandler);
+        if (p.hideTimer) clearTimeout(p.hideTimer);
+        p.layer.remove();
+        if (!quiet) {
+            this.state.mode = 'detail';
+            this.state.detail = p.item;
+            this.updateChrome();
+            this.renderView();
+        }
+    }
+
+    bindPlayer(player) {
+        const video = player.video;
+        const layer = player.layer;
+        const ui = layer.querySelector('[data-role="ui"]');
+        const seek = layer.querySelector('[data-role="seek"]');
+        const time = layer.querySelector('[data-role="time"]');
+        const buffered = layer.querySelector('[data-role="buffered"]');
+        const playBtns = layer.querySelectorAll('[data-role="play-btn"], [data-role="big-play"]');
+        const showUi = () => {
+            ui.classList.remove('hidden');
+            if (player.hideTimer) clearTimeout(player.hideTimer);
+            if (!video.paused) {
+                player.hideTimer = setTimeout(() => ui.classList.add('hidden'), 3200);
+            }
+        };
+        layer.addEventListener('mousemove', showUi);
+        layer.addEventListener('touchstart', showUi, { passive: true });
+        layer.addEventListener('click', (e) => {
+            if (e.target.closest('button, select, input')) return;
+            showUi();
+        });
+        const updatePlayIcon = () => {
+            const icon = video.paused ? svg('play', 18) : svg('pause', 18);
+            const big = video.paused ? svg('play', 30) : svg('pause', 30);
+            playBtns.forEach((b) => { b.innerHTML = b.dataset.role === 'big-play' ? big : icon; });
+            layer.querySelector('[data-role="big-play"]').classList.toggle('show', video.paused);
+        };
+        video.addEventListener('play', updatePlayIcon);
+        video.addEventListener('pause', () => { updatePlayIcon(); showUi(); });
+        video.addEventListener('loadedmetadata', () => {
+            if (!player.live && Number.isFinite(video.duration)) player.duration = video.duration;
+            this.renderPlayerMeta(player);
+        });
+        video.addEventListener('timeupdate', () => {
+            const abs = this.absTime(player);
+            const duration = this.effectiveDuration(player);
+            const value = duration > 0 ? Math.min(duration, abs) : 0;
+            seek.max = String(Math.max(1, duration || 100));
+            seek.value = String(value);
+            seek.style.setProperty('--vd-fill', `${duration ? pct(value, duration) : 0}%`);
+            time.textContent = `${fmtTime(abs)} / ${duration ? fmtTime(duration) : '--:--'}`;
+            try {
+                const b = video.buffered;
+                if (b.length) {
+                    const end = b.end(b.length - 1) + (player.live ? player.base : 0);
+                    buffered.style.width = `${duration ? pct(end, duration) : 0}%`;
+                }
+            } catch { /* ignore */ }
+            this.saveResume(false, player);
+            if (duration && abs >= duration - 1.2 && !player.ended) this.finishPlayback(player);
+        });
+        video.addEventListener('ended', () => this.finishPlayback(player));
+        video.addEventListener('error', () => {
+            if (player.opening) return;
+            if (player.live && !player.seekReloading) {
+                this.renderPlayerError(player, 'The stream could not be played. Try a lower quality or the legacy player.');
+            }
+        });
+        seek.addEventListener('input', () => {
+            const duration = this.effectiveDuration(player);
+            time.textContent = `${fmtTime(seek.value)} / ${duration ? fmtTime(duration) : '--:--'}`;
+            seek.style.setProperty('--vd-fill', `${duration ? pct(Number(seek.value), duration) : 0}%`);
+        });
+        seek.addEventListener('change', () => this.seekTo(player, Number(seek.value)));
+        player.keyHandler = (e) => {
+            if (this.player !== player) return;
+            const tag = (e.target?.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+            if (e.key === ' ' || e.key.toLowerCase() === 'k') { e.preventDefault(); this.togglePlay(player); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); this.seekTo(player, this.absTime(player) - 10); }
+            else if (e.key === 'ArrowRight') { e.preventDefault(); this.seekTo(player, this.absTime(player) + 10); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); player.video.volume = Math.min(1, player.video.volume + 0.1); }
+            else if (e.key === 'ArrowDown') { e.preventDefault(); player.video.volume = Math.max(0, player.video.volume - 0.1); }
+            else if (e.key.toLowerCase() === 'm') { player.video.muted = !player.video.muted; }
+            else if (e.key.toLowerCase() === 'f') { this.toggleFullscreen(player); }
+            else if (e.key.toLowerCase() === 'p') { this.togglePip(player); }
+            else if (e.key.toLowerCase() === 's') { this.toggleStats(player); }
+            else if (e.key === 'Escape') { if (!document.fullscreenElement) this.stopPlayer(); }
+            showUi();
+        };
+        document.addEventListener('keydown', player.keyHandler);
+        updatePlayIcon();
+        showUi();
+    }
+
+    togglePlay(player) {
+        if (player.video.paused) player.video.play().catch(() => {});
+        else player.video.pause();
+    }
+
+    absTime(player) {
+        const t = Number(player.video.currentTime) || 0;
+        return player.live ? player.base + t : t;
+    }
+
+    effectiveDuration(player) {
+        if (player.live) return player.duration || Number(player.info?.duration) || 0;
+        return Number.isFinite(player.video.duration) ? player.video.duration : (player.duration || 0);
+    }
+
+    async seekTo(player, target) {
+        const t = Math.max(0, Number(target) || 0);
+        const duration = this.effectiveDuration(player);
+        const clamped = duration ? Math.min(t, Math.max(0, duration - 0.5)) : t;
+        if (!player.live) {
+            try { player.video.currentTime = clamped; } catch { /* ignore */ }
+            return;
+        }
+        const rel = clamped - player.base;
+        const seekable = this.isSeekable(player, rel);
+        if (seekable) {
+            try { player.video.currentTime = rel; } catch { /* ignore */ }
+            return;
+        }
+        const wasPlaying = !player.video.paused;
+        await this.stopHlsSession(player);
+        await this.startHls(player, clamped, player.audioIdx);
+        if (!wasPlaying) try { player.video.pause(); } catch { /* ignore */ }
+    }
+
+    isSeekable(player, rel) {
+        if (rel < 0) return false;
+        try {
+            const ranges = player.video.seekable;
+            for (let i = 0; i < ranges.length; i += 1) {
+                if (rel >= ranges.start(i) - 0.5 && rel <= ranges.end(i) + 0.5) return true;
+            }
+        } catch { /* ignore */ }
+        return false;
+    }
+
+    async stopHlsSession(player) {
+        if (player.hls) { try { player.hls.destroy(); } catch { /* ignore */ } player.hls = null; }
+        if (player.session) {
+            const sid = player.session;
+            player.session = null;
+            try {
+                await this.ctx.apiFetch(`/api/videos/hls/${encodeURIComponent(sid)}/stop`, { method: 'POST' });
+            } catch { /* TTL cleanup covers it */ }
+        }
+    }
+
+    saveResume(force, player = this.player) {
+        if (!player || !player.item) return;
+        const now = Date.now();
+        if (!force && now - player.lastSave < 5000) return;
+        player.lastSave = now;
+        const abs = this.absTime(player);
+        const duration = this.effectiveDuration(player) || player.duration || 0;
+        if (abs < 5) return;
+        const body = { path: player.item.path, time: abs, duration };
+        try {
+            this.ctx.apiFetch('/api/videos/resume', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+            }).catch(() => {});
+            if (duration && abs < duration * 0.97) this.state.resume[player.item.path] = { time: abs, duration, updated_at: now / 1000 };
+        } catch { /* ignore */ }
+    }
+
+    finishPlayback(player) {
+        if (player.ended) return;
+        player.ended = true;
+        const duration = this.effectiveDuration(player) || player.duration || 0;
+        if (duration) {
+            this.ctx.apiFetch('/api/videos/resume', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ path: player.item.path, time: duration, duration }),
+            }).catch(() => {});
+        }
+        delete this.state.resume[player.item.path];
+        const next = this.nextEpisode(player.item);
+        if (!next) {
+            this.showNext(player, null);
+            return;
+        }
+        const autoplay = this.state.cfg?.options?.autoplay_next !== false;
+        this.showNext(player, next, autoplay ? 8 : 0);
+    }
+
+    showNext(player, next, countdown = 0) {
+        const box = player.layer.querySelector('[data-role="next"]');
+        if (!box) return;
+        if (!next) {
+            box.innerHTML = '<p>Finished.</p><button class="vd-btn small" type="button" data-action="close-player">Back to library</button>';
+            box.classList.add('show');
+            return;
+        }
+        let remaining = countdown;
+        const render = () => {
+            box.innerHTML = `<p>Next up</p><strong>${this.esc(this.displayTitle(next))}</strong>
+                <div class="vd-tags"><span class="vd-tag">${this.esc(this.episodeLabel(next))}</span></div>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                    <button class="vd-btn small primary" type="button" data-action="play-next-now" data-path="${this.attr(next.path)}">Play now</button>
+                    <button class="vd-btn small" type="button" data-action="dismiss-next">Stay</button>
+                </div>
+                ${remaining ? `<p style="margin:10px 0 0">Starting in ${remaining}s…</p>` : ''}`;
+        };
+        render();
+        box.classList.add('show');
+        if (remaining > 0) {
+            const timer = setInterval(() => {
+                remaining -= 1;
+                if (this.player !== player) { clearInterval(timer); return; }
+                if (remaining <= 0) {
+                    clearInterval(timer);
+                    this.stopPlayer({ quiet: true });
+                    this.openPlayer(next);
+                } else render();
+            }, 1000);
+        }
+    }
+
+    nextEpisode(item) {
+        if (!item || item.kind !== 'episode') return null;
+        const show = item.show || '';
+        if (!show) return null;
+        const eps = (this.state.library?.videos || []).filter((v) => v.kind === 'episode' && (v.show || '') === show)
+            .sort((a, b) => (a.season ?? 0) - (b.season ?? 0) || (a.episode ?? 0) - (b.episode ?? 0));
+        const idx = eps.findIndex((v) => v.path === item.path);
+        return idx >= 0 ? (eps[idx + 1] || null) : null;
+    }
+
+    renderPlayerMeta(player) {
+        const mode = player.layer.querySelector('[data-role="mode-tag"]');
+        const enc = player.layer.querySelector('[data-role="encoder-tag"]');
+        if (mode) mode.textContent = player.live ? (player.mode === 'remux' ? 'Remux · video copy' : 'Transcoding') : 'Direct play';
+        if (enc) enc.textContent = player.mode === 'transcode' && player.encoder
+            ? `${player.encoder === 'vaapi' ? 'VA-API' : player.encoder === 'qsv' ? 'QuickSync' : 'libx264'}${player.decode === 'hw' ? ' + HW decode' : ''}`
+            : (player.mode === 'remux' ? 'No re-encode' : '');
+        const quality = player.layer.querySelector('[data-role="quality"]');
+        if (quality) quality.value = player.quality;
+    }
+
+    renderPlayerSelects(player) {
+        const audio = player.layer.querySelector('[data-role="audio"]');
+        if (audio) {
+            audio.innerHTML = player.audioTracks.length
+                ? player.audioTracks.map((t, i) => `<option value="${i}" ${i === player.audioIdx ? 'selected' : ''}>${this.esc(this.trackLabel(t))}</option>`).join('')
+                : '<option>Audio</option>';
+            audio.disabled = player.audioTracks.length < 2;
+        }
+        const sub = player.layer.querySelector('[data-role="sub"]');
+        if (sub) {
+            sub.innerHTML = `<option value="-1" ${player.subIdx < 0 ? 'selected' : ''}>Subtitles off</option>`
+                + player.subs.map((s, i) => `<option value="${i}" ${i === player.subIdx ? 'selected' : ''}>${this.esc(s.name)}</option>`).join('');
+        }
+    }
+
+    trackLabel(track) {
+        const lang = track.language ? `${track.language.toUpperCase()} · ` : '';
+        const channels = track.channels === 2 ? '2.0' : track.channels === 6 ? '5.1' : track.channels === 8 ? '7.1' : '';
+        return `${lang}${(track.codec || 'audio').toUpperCase()}${channels ? ` ${channels}` : ''}`;
+    }
+
+    defaultAudioIdx(tracks) {
+        const pref = (this.state.cfg?.options?.preferred_audio_lang || '').toLowerCase();
+        if (pref) {
+            const i = tracks.findIndex((t) => (t.language || '').toLowerCase().startsWith(pref));
+            if (i >= 0) return i;
+        }
+        const main = tracks.findIndex((t) => !t.role || t.role === 'main');
+        return main >= 0 ? main : 0;
+    }
+
+    async changeAudio(player, index) {
+        player.audioIdx = Math.max(0, Number(index) || 0);
+        const abs = this.absTime(player);
+        await this.stopHlsSession(player);
+        await this.startHls(player, abs, player.audioIdx);
+    }
+
+    async changeQuality(player, quality) {
+        player.quality = quality;
+        const abs = this.absTime(player);
+        await this.stopHlsSession(player);
+        await this.startHls(player, abs, player.audioIdx);
+        this.toast(`Quality: ${quality === 'fast' ? '720p' : quality === 'balanced' ? '1080p' : 'source'}`);
+    }
+
+    async loadSubtitle(player, index) {
+        player.subIdx = Number(index);
+        player.video.querySelectorAll('track').forEach((t) => t.remove());
+        if (player.subBlobUrl) { URL.revokeObjectURL(player.subBlobUrl); player.subBlobUrl = null; }
+        if (player.subIdx < 0 || !player.subs[player.subIdx]) return;
+        const sub = player.subs[player.subIdx];
+        const res = await this.ctx.apiFetch(`/api/files/raw?path=${encodeURIComponent(sub.path)}&token=${encodeURIComponent(this.token)}`);
+        if (!res.ok) throw new Error(`Subtitle HTTP ${res.status}`);
+        let text = await res.text();
+        if (!sub.name.toLowerCase().endsWith('.vtt')) text = this.srtToVtt(text);
+        player.subBlobUrl = URL.createObjectURL(new Blob([text], { type: 'text/vtt' }));
+        const track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.label = sub.name;
+        track.srclang = 'und';
+        track.src = player.subBlobUrl;
+        track.default = true;
+        player.video.appendChild(track);
+        requestAnimationFrame(() => {
+            try { track.track.mode = 'showing'; } catch { /* ignore */ }
+        });
+    }
+
+    srtToVtt(srt) {
+        const body = String(srt).replace(/\r/g, '').replace(/^\uFEFF/, '');
+        const blocks = body.split('\n\n');
+        const out = ['WEBVTT', ''];
+        for (const block of blocks) {
+            const lines = block.split('\n');
+            if (!lines.length) continue;
+            let i = 0;
+            if (/^\d+$/.test(lines[0].trim())) i = 1;
+            if (!lines[i] || !lines[i].includes('-->')) continue;
+            const timing = lines[i].replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+            out.push(timing, ...lines.slice(i + 1), '');
+        }
+        return out.join('\n');
+    }
+
+    toggleStats(player) {
+        player.stats = !player.stats;
+        const box = player.layer.querySelector('[data-role="stats"]');
+        if (!box) return;
+        if (!player.stats) { box.classList.remove('show'); return; }
+        const info = player.info || {};
+        const quality = player.video.getVideoPlaybackQuality?.();
+        box.innerHTML = `<b>${this.esc(this.displayTitle(player.item))}</b><br>
+            Mode: <b>${this.esc(player.mode)}</b><br>
+            Encoder: <b>${this.esc(player.encoder || '—')}</b> · decode: <b>${this.esc(player.decode)}</b><br>
+            Source: ${this.esc(`${info.width || '?'}×${info.height || '?'} · ${(info.video_codec || '?').toUpperCase()} / ${(info.audio_codec || '?').toUpperCase()}`)}<br>
+            Target: ${this.esc(this.state.cfg?.options?.quality || 'balanced')} · audio ${player.audioIdx + 1}/${Math.max(1, player.audioTracks.length)}<br>
+            Buffer: ${this.esc(fmtTime(this.bufferedAhead(player)))} · dropped: ${quality ? quality.droppedVideoFrames : '—'}<br>
+            ${player.hls ? `HLS level: ${player.hls.currentLevel} · bandwidth ${Math.round((player.hls.bandwidthEstimate || 0) / 1e6)} Mbps` : ''}`;
+        box.classList.add('show');
+    }
+
+    bufferedAhead(player) {
+        try {
+            const b = player.video.buffered;
+            return b.length ? b.end(b.length - 1) - player.video.currentTime : 0;
+        } catch { return 0; }
+    }
+
+    toggleFullscreen(player) {
+        const el = player.layer;
+        if (document.fullscreenElement) {
+            document.exitFullscreen?.().catch(() => {});
+            return;
+        }
+        if (el.requestFullscreen) {
+            el.requestFullscreen().then(() => {
+                if (screen.orientation?.lock) screen.orientation.lock('landscape').catch(() => {});
+            }).catch(() => {});
+        } else if (player.video.webkitEnterFullscreen) {
+            player.video.webkitEnterFullscreen();
+        }
+    }
+
+    togglePip(player) {
+        if (document.pictureInPictureElement) {
+            document.exitPictureInPicture?.().catch(() => {});
+        } else if (player.video.requestPictureInPicture) {
+            player.video.requestPictureInPicture().catch((err) => this.toast(`PiP unavailable: ${err.message}`, 'error'));
+        }
+    }
+
+    setupMediaSession(player) {
+        if (!('mediaSession' in navigator)) return;
+        try {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: this.displayTitle(player.item),
+                artist: player.item.show || 'Video Station',
+                artwork: [{ src: this.artUrl(player.item, 'poster'), sizes: '342x513', type: 'image/jpeg' }],
+            });
+            navigator.mediaSession.setActionHandler('play', () => player.video.play().catch(() => {}));
+            navigator.mediaSession.setActionHandler('pause', () => player.video.pause());
+            navigator.mediaSession.setActionHandler('seekbackward', () => this.seekTo(player, this.absTime(player) - 10));
+            navigator.mediaSession.setActionHandler('seekforward', () => this.seekTo(player, this.absTime(player) + 10));
+        } catch { /* unsupported */ }
+        if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').then((lock) => { player.wakeLock = lock; }).catch(() => {});
+        }
+    }
+
+    renderPlayerError(player, message) {
+        const ui = player.layer.querySelector('[data-role="ui"]');
+        if (!ui) return;
+        const box = document.createElement('div');
+        box.className = 'vd-error';
+        box.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;max-width:440px;background:rgba(20,10,10,.92)';
+        box.innerHTML = `${this.esc(message)}<div style="margin-top:10px"><button class="vd-btn small" type="button" data-action="close-player">Back</button></div>`;
+        player.layer.appendChild(box);
+    }
+
+    toast(message, kind = 'info') {
+        try { this.ctx.notifications.toast(message, kind); }
+        catch { this.ctx.logger.info(message); }
+    }
+
+    // ── Item helpers ─────────────────────────────────────────────────────────
+
+    artUrl(item, kind = 'poster') {
+        const tm = item.tmdb || {};
+        const file = kind === 'backdrop'
+            ? (tm.backdrop_file || tm.poster_file)
+            : (tm.poster_file || tm.backdrop_file);
+        if (file) return `/api/videos/tmdb/image?file=${encodeURIComponent(file)}&token=${encodeURIComponent(this.token)}`;
+        const width = kind === 'backdrop' ? 960 : 342;
+        return `/api/videos/thumbnail?path=${encodeURIComponent(item.path)}&w=${width}&token=${encodeURIComponent(this.token)}`;
+    }
+
+    displayTitle(item) {
+        const tm = item.tmdb || {};
+        if (item.kind === 'episode') {
+            const show = item.show || tm.title || basename(dirname(item.path)) || item.title || item.name || '';
+            const ep = this.episodeLabel(item);
+            return ep ? `${show} · ${ep}` : show;
+        }
+        return tm.title || item.title || item.name || basename(item.path);
+    }
+
+    episodeLabel(item) {
+        if (item.season == null && item.episode == null) return '';
+        return `S${pad2(item.season ?? 0)}E${pad2(item.episode ?? 0)}`;
+    }
+
+    itemYear(item) {
+        return (item.tmdb?.year || item.year || '').toString();
+    }
+
+    searchText(item) {
+        const tm = item.tmdb || {};
+        return [this.displayTitle(item), item.name, item.title, item.show, tm.title, (tm.genres || []).join(' ')]
+            .filter(Boolean).join(' ').toLowerCase();
+    }
+
+    groupShows(videos) {
+        const map = new Map();
+        for (const v of videos) {
+            if (v.kind !== 'episode') continue;
+            const show = v.show || v.folder || basename(dirname(v.path)) || 'Unknown series';
+            const key = show.toLowerCase();
+            let group = map.get(key);
+            if (!group) { group = { show, items: [], poster: v, latest: v }; map.set(key, group); }
+            group.items.push(v);
+            if (v.tmdb?.poster_file) group.poster = v;
+        }
+        for (const group of map.values()) {
+            group.items.sort((a, b) => (a.season ?? 0) - (b.season ?? 0) || (a.episode ?? 0) - (b.episode ?? 0));
+            group.latest = group.items[group.items.length - 1];
+        }
+        return [...map.values()].sort((a, b) => a.show.localeCompare(b.show));
+    }
+
+    genreShelves(videos) {
+        const map = new Map();
+        for (const v of videos) {
+            for (const g of (v.tmdb?.genres || []).slice(0, 3)) {
+                if (!map.has(g)) map.set(g, []);
+                map.get(g).push(v);
+            }
+        }
+        return [...map.entries()].filter(([, items]) => items.length >= 4).slice(0, 4);
+    }
+
+    libraryLoadingHtml(label) {
+        return `<div class="vd-page"><div class="vd-page-head"><div><h1>${this.esc(label)}</h1><p>Reading the library…</p></div></div>
+            <div class="vd-empty"><b>Loading…</b>Building the list from your root folders.</div></div>`;
+    }
+
+    // ── Events ───────────────────────────────────────────────────────────────
+
+    bind() {
+        this.root.addEventListener('click', (e) => this.onClick(e));
+        this.root.addEventListener('change', (e) => this.onChange(e));
+        this.root.addEventListener('input', (e) => this.onInput(e));
+        this.onScroll = () => {
+            const top = this.root?.querySelector('[data-testid="vd-top"]');
+            if (top) top.classList.toggle('is-solid', this.state.mode !== 'home' || (this.main?.scrollTop || 0) > 12);
+        };
+        this.pageHide = () => {
+            const sid = this.player?.session;
+            if (!sid) return;
+            try {
+                fetch(`/api/videos/hls/${encodeURIComponent(sid)}/stop`, {
+                    method: 'POST', keepalive: true,
+                    headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+                }).catch(() => {});
+            } catch { /* ignore */ }
+        };
+        window.addEventListener('pagehide', this.pageHide);
+        this.main.addEventListener('scroll', this.onScroll, { passive: true });
+        this.keyHandler = (e) => {
+            if (this.state.mode === 'player') return;
+            const tag = (e.target?.tagName || '').toLowerCase();
+            const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault(); this.navigate('search'); return;
+            }
+            if (!typing && e.key === '/') { e.preventDefault(); this.navigate('search'); }
+            if (e.key === 'Escape' && this.state.mode === 'search') { e.preventDefault(); this.goBack(); }
+        };
+        document.addEventListener('keydown', this.keyHandler);
+    }
+
+    onClick(e) {
+        const el = e.target.closest('[data-action]');
+        if (!el) return;
+        const action = el.dataset.action;
+        const path = el.dataset.path;
+        if (action === 'nav') {
+            this.navigate(el.dataset.mode || 'home');
+        } else if (action === 'details') {
+            const item = this.findItem(path);
+            if (!item) return;
+            this.state.back = { mode: this.state.mode, path: this.state.path, show: this.state.show, detail: this.state.detail };
+            this.navigate('detail', { detail: item, back: this.state.back });
+        } else if (action === 'show') {
+            this.navigate('series', { show: el.dataset.show });
+        } else if (action === 'play') {
+            const item = this.findItem(path);
+            if (item) this.openPlayer(item);
+        } else if (action === 'play-next') {
+            const group = this.groupShows(this.state.library?.videos || []).find((g) => g.show === el.dataset.show);
+            if (group) this.openPlayer(group.items[0]);
+        } else if (action === 'play-next-now') {
+            const item = this.findItem(path);
+            if (item && this.player) { this.stopPlayer({ quiet: true }); this.openPlayer(item); }
+        } else if (action === 'dismiss-next') {
+            this.player?.layer.querySelector('[data-role="next"]')?.classList.remove('show');
+        } else if (action === 'back') {
+            this.goBack();
+        } else if (action === 'search') {
+            this.state.back = { mode: this.state.mode, path: this.state.path, show: this.state.show, detail: this.state.detail };
+            this.navigate('search');
+        } else if (action === 'open-folder') {
+            this.state.path = path;
+            this.state.folder = null;
+            this.state.folderLoading = false;
+            this.state.mode = 'library';
+            this.main.scrollTop = 0;
+            this.updateChrome();
+            this.renderView();
+        } else if (action === 'add-folder') {
+            this.addFolder();
+        } else if (action === 'remove-root') {
+            this.removeRoot(path);
+        } else if (action === 'refresh') {
+            this.refreshLibrary();
+        } else if (action === 'save-settings') {
+            this.saveSettings();
+        } else if (action === 'toggle-list') {
+            this.toggleList(path);
+        } else if (action === 'tmdb-test') {
+            this.tmdbTest();
+        } else if (action === 'tmdb-refresh-all') {
+            this.tmdbRefreshAll();
+        } else if (action === 'tmdb-refresh') {
+            this.refreshOne(path);
+        } else if (action === 'engine-test') {
+            this.engineTest();
+        } else if (action === 'layout') {
+            this.state.layout = el.dataset.layout === 'list' ? 'list' : 'grid';
+            this.renderView();
+        } else if (action === 'more') {
+            this.state.visible += 300;
+            this.renderView();
+        } else if (action === 'recent-search') {
+            this.state.query = el.dataset.q || '';
+            this.renderView();
+        } else if (action === 'close-player') {
+            this.stopPlayer();
+        } else if (action === 'player-toggle') {
+            this.togglePlay(this.player);
+        } else if (action === 'player-seek') {
+            this.seekTo(this.player, this.absTime(this.player) + Number(el.dataset.delta || 0));
+        } else if (action === 'player-stats') {
+            this.toggleStats(this.player);
+        } else if (action === 'player-pip') {
+            this.togglePip(this.player);
+        } else if (action === 'player-fullscreen') {
+            this.toggleFullscreen(this.player);
+        }
+    }
+
+    onChange(e) {
+        const el = e.target.closest('[data-action], [data-setting]');
+        if (!el) return;
+        const action = el.dataset.action;
+        if (action === 'sort') { this.state.sort = el.value; this.renderView(); }
+        else if (action === 'quality') { this.state.quality = el.value; this.renderView(); }
+        else if (action === 'genre') { this.state.genre = el.value; this.renderView(); }
+        else if (action === 'player-audio') this.changeAudio(this.player, el.value);
+        else if (action === 'player-sub') this.loadSubtitle(this.player, el.value).catch((err) => this.toast(`Subtitle failed: ${err.message}`, 'error'));
+        else if (action === 'player-quality') this.changeQuality(this.player, el.value);
+        else if (action === 'player-speed') {
+            try { this.player.video.playbackRate = Number(el.value) || 1; } catch { /* ignore */ }
+        }
+    }
+
+    onInput(e) {
+        const el = e.target.closest('[data-action="search-input"]');
+        if (!el) return;
+        this.state.query = el.value;
+        clearTimeout(this.searchTimer);
+        this.searchTimer = setTimeout(() => {
+            if (this.state.query.trim()) this.rememberSearch(this.state.query.trim());
+            this.renderView();
+        }, 180);
+    }
+
+    async refreshOne(path) {
+        try {
+            await this.apiPost('/api/videos/tmdb/refresh', { path, force: true });
+            this.state.library = null;
+            await this.ensureLibrary(true);
+            this.renderView();
+            this.toast('Metadata refreshed', 'success');
+        } catch (err) {
+            this.toast(`Metadata refresh failed: ${err.message}`, 'error');
+        }
+    }
+
+    findItem(path) {
+        if (!path) return null;
+        const videos = this.state.library?.videos || [];
+        return videos.find((v) => v.path === path)
+            || (this.state.home.continue_watching || []).find((v) => v.path === path)
+            || (this.state.home.recently_added || []).find((v) => v.path === path)
+            || (this.state.folder?.videos || []).find((v) => v.path === path)
+            || null;
+    }
 }

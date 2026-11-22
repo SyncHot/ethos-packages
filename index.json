@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-22T07:23:04+00:00",
+  "generated_at": "2026-11-22T08:14:49+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -392,9 +392,9 @@
     },
     {
       "id": "ethos-video",
-      "name": "Videos",
-      "version": "1.0.2",
-      "description": "Browse and watch the videos on your NAS: live folder browsing, ffmpeg thumbnails, resume positions, subtitles and TMDB metadata. The video API stays in EthOS so the Android Video app keeps working; this package ships the desktop app. Needs ffmpeg on the NAS for thumbnails and transcoding.",
+      "name": "Video Station",
+      "version": "2.0.0",
+      "description": "Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for HEVC/AC3/MKV on desktop and phones; resume, subtitles, TMDB metadata and a media-engine panel (VA-API/QuickSync/software). The video API stays in EthOS so the Android Video app keeps working.",
       "icon": "🎬",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/icon.svg",
       "category": "media",
@@ -407,10 +407,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.2: renamed to Videos as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: light theme for the shell, rows and empty states (the hero and player stay cinematic), and adding a folder uses the EthOS folder picker. 1.0.0: first release. The Video Station desktop app moves out of the core install; the video library API, thumbnails and streaming stay in EthOS, shared with the Android app.",
+      "changelog": "2.0.0: new cinema UI (full-bleed top nav, backdrop hero, poster shelves, detail pages, bottom tab bar on phones), server-side HLS playback for HEVC/AC3/MKV with VA-API/QuickSync hardware decode and encode, a real media-engine panel with probe diagnostics, working quality/audio/subtitle pickers, server-side My List, responsive touch layout and lazy poster loading. Requires EthOS 2.12.0. 1.0.2: renamed to Videos as part of the EthOS 2.0 product naming (ids and APIs unchanged). 1.0.1: light theme for the shell, rows and empty states (the hero and player stay cinematic), and adding a folder uses the EthOS folder picker. 1.0.0: first release. The Video Station desktop app moves out of the core install; the video library API, thumbnails and streaming stay in EthOS, shared with the Android app.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-video/manifest.json",
-      "manifest_sha256": "b420912d72c04302fd739298b4074661c38025e30b8c7c4d28d159928f39f77b",
-      "size_bytes": 134987
+      "manifest_sha256": "cd348a3b1b5ee013c08a1be288c111ac06b6f32345636981f7119de9cf8d8a01",
+      "size_bytes": 752490
     },
     {
       "id": "ethos-welcome",
