@@ -130,6 +130,8 @@ class VideoStation {
             downloadTimer: null,
             downloadQuality: 'balanced',
             downloadQualities: [],
+            selectMode: false,
+            selected: new Set(),
             folder: null,
             roots: [],
             folders: [],
@@ -325,6 +327,15 @@ class VideoStation {
         .vd-card:hover .vd-card-play{opacity:1}
         .vd-card-badge{position:absolute;top:8px;left:8px;max-width:calc(100% - 16px);padding:3px 7px;border-radius:6px;background:rgba(8,9,12,.76);
             color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase}
+        /* multi-select */
+        .vd-root.is-selecting .vd-card-art::after{content:'';position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;
+            border:2px solid rgba(255,255,255,.85);background:rgba(8,9,12,.55);display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;z-index:3}
+        .vd-root.is-selecting .vd-card.is-selected .vd-card-art{outline:2px solid var(--vd-gold);outline-offset:2px}
+        .vd-root.is-selecting .vd-card.is-selected .vd-card-art::after{content:'✓';background:var(--vd-gold);border-color:var(--vd-gold);color:#17110a}
+        .vd-select-bar{position:absolute;left:clamp(18px,4vw,54px);right:clamp(18px,4vw,54px);bottom:18px;z-index:55;display:flex;align-items:center;
+            gap:8px;padding:10px 14px;border:1px solid var(--vd-border);border-radius:14px;background:var(--vd-solid);
+            box-shadow:0 14px 44px rgba(0,0,0,.4);font-size:12.5px}
+        .vd-select-bar>span{margin-right:auto;font-weight:700}
         .vd-progress{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.25)}
         .vd-progress i{display:block;height:100%;background:var(--vd-gold)}
 
@@ -666,6 +677,10 @@ class VideoStation {
 
     navigate(mode, extra = {}) {
         if (this.state.mode === 'player') this.stopPlayer();
+        // A view change always leaves multi-select (the bar belongs to a grid).
+        this.state.selectMode = false;
+        this.state.selected.clear();
+        this.root?.classList.remove('is-selecting');
         Object.assign(this.state, {
             mode,
             path: extra.path ?? null,
@@ -716,6 +731,7 @@ class VideoStation {
         }
         this.view.innerHTML = errors + html;
         this.updateChrome();
+        this.paintSelection();
         if (s.mode === 'search') {
             requestAnimationFrame(() => this.view.querySelector('[data-role="search-input"]')?.focus());
         }
@@ -899,6 +915,9 @@ class VideoStation {
                 ${genres.map((g) => `<option value="${this.attr(g)}" ${s.genre === g ? 'selected' : ''}>${this.esc(g)}</option>`).join('')}
             </select>
             <div class="vd-spacer"></div>
+            ${s.layout === 'grid' ? `<button class="vd-btn small ${s.selectMode ? 'primary' : ''}" type="button" data-action="select-mode" data-testid="vd-select-mode">
+                ${s.selectMode ? `${svg('check', 12)} Done` : `${svg('check', 12)} Select`}
+            </button>` : ''}
             <button class="vd-icon-btn" type="button" data-action="layout" data-layout="grid" title="Grid" data-testid="vd-layout-grid">${svg('grid')}</button>
             <button class="vd-icon-btn" type="button" data-action="layout" data-layout="list" title="List" data-testid="vd-layout-list">${svg('list')}</button>
         </div>`;
@@ -932,6 +951,7 @@ class VideoStation {
         const s = this.state;
         if (!items.length) return `<div class="vd-empty"><b>Nothing here yet</b>Try a different filter or add a folder.</div>`;
         const shown = items.slice(0, s.visible);
+        const bar = this.selectBarHtml();
         if (s.layout === 'list') {
             return `<table class="vd-table" data-testid="vd-list">
                 <thead><tr><th></th><th>Title</th><th class="vd-hide-mobile">Quality</th><th class="vd-hide-mobile">Added</th><th class="vd-num">Size</th><th></th></tr></thead>
@@ -944,10 +964,109 @@ class VideoStation {
                     <td class="vd-acts"><button class="vd-btn small primary" type="button" data-action="play" data-path="${this.attr(item.path)}">${svg('play', 12)} Play</button></td>
                 </tr>`).join('')}</tbody>
             </table>
-            ${items.length > shown.length ? `<div style="text-align:center;margin-top:18px"><button class="vd-btn" type="button" data-action="more">Show more (${items.length - shown.length})</button></div>` : ''}`;
+            ${items.length > shown.length ? `<div style="text-align:center;margin-top:18px"><button class="vd-btn" type="button" data-action="more">Show more (${items.length - shown.length})</button></div>` : ''}
+            ${bar}`;
         }
         return `<div class="vd-grid" data-testid="vd-grid">${shown.map((item) => this.cardHtml(item, kind)).join('')}</div>
-            ${items.length > shown.length ? `<div style="text-align:center;margin-top:22px"><button class="vd-btn" type="button" data-action="more">Show more (${items.length - shown.length})</button></div>` : ''}`;
+            ${items.length > shown.length ? `<div style="text-align:center;margin-top:22px"><button class="vd-btn" type="button" data-action="more">Show more (${items.length - shown.length})</button></div>` : ''}
+            ${bar}`;
+    }
+
+    // ── Multi-select: queue many films in the default version ───────────────
+
+    selectBarHtml() {
+        if (!this.state.selectMode) return '';
+        const quality = this.state.downloadQuality || 'balanced';
+        const label = (this.state.downloadQualities.find((q) => q.value === quality) || {}).label || quality;
+        const count = this.state.selected.size;
+        return `<div class="vd-select-bar" data-testid="vd-select-bar">
+            <span data-role="select-count">${count} selected</span>
+            <button class="vd-btn small" type="button" data-action="select-all">${this.allVisibleSelected() ? 'Clear all' : 'Select all'}</button>
+            <button class="vd-btn primary small" type="button" data-action="download-selected" ${count ? '' : 'disabled'} data-testid="vd-download-selected">
+                ${svg('download', 12)} Download · ${this.esc(label)}
+            </button>
+            <button class="vd-icon-btn" type="button" data-action="select-cancel" aria-label="Cancel selection">${svg('close', 14)}</button>
+        </div>`;
+    }
+
+    toggleSelectMode(on) {
+        this.state.selectMode = !!on;
+        if (!this.state.selectMode) this.state.selected.clear();
+        this.root.classList.toggle('is-selecting', this.state.selectMode);
+        this.renderView();
+    }
+
+    paintSelection() {
+        if (!this.root) return;
+        this.root.classList.toggle('is-selecting', this.state.selectMode);
+        this.root.querySelectorAll('.vd-card[data-path]').forEach((card) => {
+            card.classList.toggle('is-selected', this.state.selected.has(card.dataset.path));
+        });
+    }
+
+    toggleSelected(path, cardEl) {
+        if (this.state.selected.has(path)) this.state.selected.delete(path);
+        else this.state.selected.add(path);
+        if (cardEl) cardEl.classList.toggle('is-selected', this.state.selected.has(path));
+        const bar = this.view.querySelector('[data-testid="vd-select-bar"]');
+        if (bar) {
+            const count = bar.querySelector('[data-role="select-count"]');
+            if (count) count.textContent = `${this.state.selected.size} selected`;
+            const download = bar.querySelector('[data-action="download-selected"]');
+            if (download) download.disabled = this.state.selected.size === 0;
+            const all = bar.querySelector('[data-action="select-all"]');
+            if (all) all.textContent = this.allVisibleSelected() ? 'Clear all' : 'Select all';
+        }
+    }
+
+    visibleSelectable() {
+        const seen = new Set();
+        const out = [];
+        this.view.querySelectorAll('.vd-card[data-path]').forEach((card) => {
+            const path = card.dataset.path;
+            if (!path || seen.has(path)) return;
+            const item = this.findItem(path);
+            if (!item) return;
+            seen.add(path);
+            out.push(item);
+        });
+        return out;
+    }
+
+    allVisibleSelected() {
+        const items = this.visibleSelectable();
+        return items.length > 0 && items.every((item) => this.state.selected.has(item.path));
+    }
+
+    selectAllVisible() {
+        const items = this.visibleSelectable();
+        if (this.allVisibleSelected()) this.state.selected.clear();
+        else items.forEach((item) => this.state.selected.add(item.path));
+        this.paintSelection();
+        this.renderView();
+    }
+
+    async downloadSelected() {
+        const quality = this.state.downloadQuality || 'balanced';
+        const items = [...this.state.selected].map((path) => this.findItem(path)).filter(Boolean);
+        if (!items.length) return;
+        this.toggleSelectMode(false);
+        let queued = 0;
+        let failed = 0;
+        for (const item of items) {
+            try {
+                await this.apiPost('/api/videos/exports', { path: item.path, q: quality, a: 0 });
+                queued += 1;
+            } catch (err) {
+                failed += 1;
+                this.ctx.logger.warn('Batch download failed', `${item.path}: ${err.message}`);
+            }
+        }
+        await this.loadDownloads(true);
+        const label = (this.state.downloadQualities.find((q) => q.value === quality) || {}).label || quality;
+        this.ctx.notifications.toast(
+            failed ? `${queued} queued · ${failed} failed` : `${queued} queued · ${label}`,
+            failed ? 'warning' : 'success');
     }
 
     // ── Series ───────────────────────────────────────────────────────────────
@@ -1114,6 +1233,7 @@ class VideoStation {
             <div class="vd-page-head"><div><h1>My List</h1><p>${items.length} saved titles · synced with your account.</p></div></div>
             ${items.length ? `<div class="vd-grid">${items.map((item) => this.cardHtml(item, 'mylist')).join('')}</div>`
                 : `<div class="vd-empty"><b>Your list is empty</b>Open a title and choose “My List” to save it here.</div>`}
+            ${this.selectBarHtml()}
         </div>`;
     }
 
@@ -1133,6 +1253,7 @@ class VideoStation {
             ${!q && recent.length ? `<div class="vd-recent">${recent.map((r) => `<button type="button" data-action="recent-search" data-q="${this.attr(r)}">${this.esc(r)}</button>`).join('')}</div>` : ''}
             ${q ? (results.length ? `<div class="vd-grid">${results.map((item) => this.cardHtml(item)).join('')}</div>`
                 : `<div class="vd-empty"><b>No matches</b>Nothing in the library matches “${this.esc(q)}”.</div>`) : ''}
+            ${this.selectBarHtml()}
         </div>`;
     }
 
@@ -2488,10 +2609,22 @@ class VideoStation {
         if (action === 'nav') {
             this.navigate(el.dataset.mode || 'home');
         } else if (action === 'details') {
+            if (this.state.selectMode) {
+                this.toggleSelected(path, el.closest('.vd-card'));
+                return;
+            }
             const item = this.findItem(path);
             if (!item) return;
             this.state.back = { mode: this.state.mode, path: this.state.path, show: this.state.show, detail: this.state.detail };
             this.navigate('detail', { detail: item, back: this.state.back });
+        } else if (action === 'select-mode') {
+            this.toggleSelectMode(!this.state.selectMode);
+        } else if (action === 'select-all') {
+            this.selectAllVisible();
+        } else if (action === 'select-cancel') {
+            this.toggleSelectMode(false);
+        } else if (action === 'download-selected') {
+            this.downloadSelected();
         } else if (action === 'show') {
             this.navigate('series', { show: el.dataset.show });
         } else if (action === 'play') {
@@ -2559,6 +2692,7 @@ class VideoStation {
             this.engineTest();
         } else if (action === 'layout') {
             this.state.layout = el.dataset.layout === 'list' ? 'list' : 'grid';
+            if (this.state.layout !== 'grid') this.state.selectMode = false;
             this.renderView();
         } else if (action === 'more') {
             this.state.visible += 300;
