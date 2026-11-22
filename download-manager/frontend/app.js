@@ -193,7 +193,7 @@ const VIEWS = {
     overview: ['Overview', 'Live queue, speed and recent activity.'],
     downloads: ['Downloads', 'Order the queue, inspect progress and act on tasks.'],
     add: ['Add download', 'URL, magnet link or .torrent files.'],
-    settings: ['Settings', 'Destination, schedule, debrid, categories and RSS.'],
+    settings: ['Settings', 'Destination, schedule, providers, categories and RSS.'],
 };
 
 const STATUS = {
@@ -204,13 +204,11 @@ const STATUS = {
 };
 const ACTIVE = new Set(['waiting', 'downloading', 'debrid_downloading']);
 const ARCHIVE_NAME_RE = /\.(zip|rar|7z|tar|tgz|tbz|txz|gz|bz2|xz|zst|lz4)(\.html)?$/i;
-const DEBRID_FIELD = { realdebrid: 'realdebrid_api_token', alldebrid: 'alldebrid_api_key', torbox: 'torbox_api_key' };
 // Presets for the per-package bandwidth cap (bytes/s); 0 = follow the global limit.
 const PACKAGE_LIMITS = [
     [0, 'Limit: off'], [1048576, '1 MB/s'], [2097152, '2 MB/s'], [5242880, '5 MB/s'],
     [10485760, '10 MB/s'], [20971520, '20 MB/s'], [52428800, '50 MB/s'],
 ];
-const PROVIDER_LABEL = { realdebrid: 'Real-Debrid', alldebrid: 'AllDebrid', torbox: 'TorBox' };
 
 export async function render(container, ctx) {
     container.replaceChildren();
@@ -239,7 +237,7 @@ export async function render(container, ctx) {
     const $ = (selector) => root.querySelector(selector);
 
     const state = {
-        view: 'overview', tasks: [], config: null, filter: 'all', search: '',
+        view: 'overview', tasks: [], config: null, providers: null, filter: 'all', search: '',
         sort: 'newest', dragId: '', timer: null, fatal: '', busy: false, loaded: false,
         quickUrl: '', expanded: new Set(),
     };
@@ -405,9 +403,38 @@ export async function render(container, ctx) {
         return path;
     };
 
+    // ── Providers ──────────────────────────────────────────────────────────
+    // The backend owns the provider catalogue (capabilities, credential fields,
+    // hoster list); the package renders whatever /providers returns.
+    const providerList = () => state.providers?.providers || [];
+    const providerById = (id) => providerList().find((p) => p.id === id) || null;
+    const providerLabel = (id) => providerById(id)?.label || id || '—';
+    const providerFields = (id) => providerById(id)?.credentials || [];
+    const slotProviderIds = (slot) => state.providers?.slots?.[slot] || [];
+    const activeTorrentProvider = () => state.config?.debrid?.provider || '';
+    const activeLinkProvider = () => state.config?.debrid?.link_provider || '';
+    const accountLine = (provider) => {
+        const account = provider?.account || {};
+        const parts = [];
+        if (account.premium_until) parts.push(`Premium until ${account.premium_until}`);
+        if (Number(account.traffic_left_bytes) > 0) parts.push(`${fmtBytes(account.traffic_left_bytes)} left`);
+        return parts.join(' · ');
+    };
+    const providerHint = () => {
+        const torrent = providerById(activeTorrentProvider());
+        const link = providerById(activeLinkProvider());
+        const parts = [];
+        if (torrent) parts.push(`Torrents: ${torrent.label}`);
+        if (link) parts.push(`Hoster links: ${link.label}${link.hosters?.length ? ` (${link.hosters.length} hosters)` : ''}`);
+        return parts.join(' · ');
+    };
+
     // ── Data ───────────────────────────────────────────────────────────────
     async function loadConfig() {
         state.config = await api('/config');
+    }
+    async function loadProviders() {
+        state.providers = await api('/providers');
     }
     async function loadTasks() {
         const data = await api('/tasks');
@@ -617,7 +644,7 @@ export async function render(container, ctx) {
         const queued = queueOrder().length;
         const failures = state.tasks.filter((t) => t.status === 'error').length;
         const speed = state.tasks.reduce((sum, t) => sum + (ACTIVE.has(t.status) ? Number(t.speed || 0) : 0), 0);
-        const provider = state.config?.debrid?.provider || '';
+        const linkProvider = providerById(activeLinkProvider());
         const recent = buildGroups(state.tasks).sort((a, b) => b.newest - a.newest).slice(0, 5);
         const readyText = failures
             ? `${failures} download(s) stopped with an error — open Downloads to read the message and retry.`
@@ -628,8 +655,8 @@ export async function render(container, ctx) {
                 <span class="dm-check ${failures ? 'waiting' : ''}" aria-hidden="true">${failures ? '!' : '✓'}</span>
                 <div><h2>${failures ? 'Attention needed' : 'Ready to download'}</h2><p class="dm-muted">${escHtml(readyText)}</p></div>
             </section>
-            ${failures ? `<div class="dm-startup error">${failures} download(s) failed. Debrid keys, expired links and full disks are the usual causes.</div>` : ''}
-            ${provider ? '' : '<div class="dm-startup">No debrid provider configured — magnet links and .torrent files need one. Set it in <strong>Settings → Debrid</strong>.</div>'}
+            ${failures ? `<div class="dm-startup error">${failures} download(s) failed. Provider credentials, expired links and full disks are the usual causes.</div>` : ''}
+            ${activeTorrentProvider() ? '' : '<div class="dm-startup">No torrent provider configured — magnet links and .torrent files need one. Hoster links can still use a multihoster. Set both in <strong>Settings → Providers</strong>.</div>'}
             ${summary()}
             <section class="dm-panel">
                 <div class="dm-toolbar">
@@ -640,6 +667,7 @@ export async function render(container, ctx) {
                     <input class="dm-input" id="dm-quick-url" placeholder="https://… or magnet:?xt=urn:btih:…" aria-label="Download URL" value="${escAttr(state.quickUrl)}" data-testid="dm-quick-url">
                     <button class="dm-btn primary" type="button" data-action="quick-add" data-testid="dm-quick-add">⬇ Download</button>
                 </div>
+                <p class="dm-hint">${escHtml(providerHint() || 'No provider configured — http(s) links download directly.')}${linkProvider?.hosters?.length ? ` · ${escHtml(linkProvider.hosters.slice(0, 6).join(', '))}${linkProvider.hosters.length > 6 ? '…' : ''}` : ''}</p>
             </section>
             <section class="dm-panel">
                 <div class="dm-toolbar">
@@ -665,7 +693,8 @@ export async function render(container, ctx) {
                 <h2>1 · Source</h2>
                 <p class="dm-muted">A single URL: HTTP(S), a magnet link or a premium hoster link.</p>
                 <div class="dm-field full"><label for="dm-add-url">URL or magnet</label>
-                    <input class="dm-input" id="dm-add-url" name="url" placeholder="https://example.com/file.iso or magnet:?xt=urn:btih:…" required data-testid="dm-add-url"></div>
+                    <input class="dm-input" id="dm-add-url" name="url" placeholder="https://example.com/file.iso or magnet:?xt=urn:btih:…" required data-testid="dm-add-url">
+                    <p class="dm-hint">${escHtml(providerHint() || 'No provider configured — http(s) links download directly.')}</p></div>
                 <div class="dm-field full"><label for="dm-add-mirrors">Alternative URLs (optional)</label>
                     <textarea class="dm-input" id="dm-add-mirrors" name="mirrors" rows="2" placeholder="One mirror per line — tried in order when the first source fails" data-testid="dm-add-mirrors"></textarea>
                     <p class="dm-hint">Same file on another hoster (direct link or premium link). A mirror restarts the transfer from zero with its own retry budget.</p></div>
@@ -688,7 +717,7 @@ export async function render(container, ctx) {
             </section>
             <section class="dm-panel">
                 <h2>3 · Torrent files</h2>
-                <p class="dm-muted">Upload one or more .torrent files; they are queued through the debrid provider with the same destination rules.</p>
+                <p class="dm-muted">Upload one or more .torrent files; they are queued through the torrent provider with the same destination rules.</p>
                 <div class="dm-row" style="margin-top:12px">
                     <input type="file" id="dm-add-torrents" accept=".torrent" multiple aria-label="Torrent files" data-testid="dm-add-torrents">
                     <button class="dm-btn primary" type="button" data-action="upload-torrents" data-testid="dm-upload-torrents">Queue torrents</button>
@@ -731,14 +760,41 @@ export async function render(container, ctx) {
         </div></td>
     </tr>`).join('');
 
+    const providerSlotOptions = (slot, current) => ['<option value="">— None —</option>']
+        .concat(slotProviderIds(slot).map((id) => {
+            const provider = providerById(id);
+            const label = provider ? `${provider.label} (${provider.kind})` : id;
+            return `<option value="${escAttr(id)}"${current === id ? ' selected' : ''}>${escHtml(label)}</option>`;
+        })).join('');
+
+    const credentialBlock = (id) => {
+        const provider = providerById(id);
+        if (!provider) return '';
+        const fields = provider.credentials.map((field) => `<div class="dm-field">
+                <label for="dm-cred-${escAttr(id)}-${escAttr(field.name)}">${escHtml(field.label)}</label>
+                <input class="dm-input" id="dm-cred-${escAttr(id)}-${escAttr(field.name)}" data-provider="${escAttr(id)}" data-field="${escAttr(field.name)}" type="${field.secret ? 'password' : 'text'}" value="${escAttr(field.secret ? '' : (field.value || ''))}" autocomplete="off" placeholder="${escAttr(field.placeholder || (field.secret && field.set ? 'Saved — leave blank to keep it' : 'Paste the credential'))}">
+                ${field.secret && field.set ? '<p class="dm-hint">Saved — leave blank to keep it, or type a new value.</p>' : ''}
+            </div>`).join('');
+        const account = accountLine(provider);
+        const hosts = provider.hosters?.length
+            ? `<p class="dm-hint">${provider.hosters.length} supported hosters: ${escHtml(provider.hosters.slice(0, 12).join(', '))}${provider.hosters.length > 12 ? '…' : ''}</p>`
+            : '';
+        return `<div data-cred-block="${escAttr(id)}"${[activeTorrentProvider(), activeLinkProvider()].includes(id) ? '' : ' hidden'}>
+            <div class="dm-toolbar">
+                <div><h3>${escHtml(provider.label)}</h3><p class="dm-muted">${escHtml(provider.description || '')}</p></div>
+                <div class="dm-row"><button class="dm-btn" type="button" data-action="verify-debrid" data-provider="${escAttr(id)}" data-testid="dm-verify-${escAttr(id)}">Verify</button></div>
+            </div>
+            ${account ? `<p class="dm-hint">${escHtml(account)}</p>` : ''}
+            <div class="dm-fields">${fields}</div>
+            ${hosts}
+        </div>`;
+    };
+    // Render every provider block once; only the slots currently selected are visible.
     const settingsView = () => {
         const cfg = state.config || {};
         const sched = cfg.schedule || {};
         const limits = cfg.speed_limit || {};
-        const db = cfg.debrid || {};
-        const provider = db.provider || '';
-        const keyField = DEBRID_FIELD[provider] || '';
-        const apiKey = keyField ? (db[keyField] || '') : '';
+        const credentialBlocks = providerList().map((p) => credentialBlock(p.id)).join('');
         const canSeeKey = typeof cfg.qb_api_key === 'string' && cfg.qb_api_key.startsWith('ethos_');
         return `<section class="dm-panel">
             <div class="dm-toolbar">
@@ -773,21 +829,19 @@ export async function render(container, ctx) {
         </section>
         <section class="dm-panel">
             <div class="dm-toolbar">
-                <div><h2>Debrid</h2><p class="dm-muted">Magnets and .torrent files are resolved by the provider and pulled to the NAS.</p></div>
+                <div><h2>Providers</h2><p class="dm-muted">Torrents need a debrid service; premium file-hoster links can go through a multihoster. Both slots can be active at once.</p></div>
             </div>
             <form data-form="debrid">
                 <div class="dm-fields">
-                    <div class="dm-field"><label for="dm-set-provider">Provider</label>
-                        <select class="dm-input" id="dm-set-provider" data-testid="dm-set-provider">${[['', '— None —'], ['realdebrid', 'Real-Debrid'], ['alldebrid', 'AllDebrid'], ['torbox', 'TorBox']]
-                            .map(([v, l]) => `<option value="${v}"${provider === v ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
-                    <div class="dm-field"><label for="dm-set-key">API key</label>
-                        <input class="dm-input" id="dm-set-key" type="password" value="${escAttr(apiKey)}" placeholder="Paste the provider key" data-testid="dm-set-key">
-                        <p class="dm-hint">${apiKey.includes('****') ? 'A key is saved — leave the masked value to test it, or paste a new one.' : 'Paste the private API token from the provider dashboard.'}</p></div>
+                    <div class="dm-field"><label for="dm-set-provider">Torrent provider</label>
+                        <select class="dm-input" id="dm-set-provider" data-testid="dm-set-provider">${providerSlotOptions('torrent', activeTorrentProvider())}</select>
+                        <p class="dm-hint">Magnet links and .torrent uploads.</p></div>
+                    <div class="dm-field"><label for="dm-set-link-provider">Hoster link provider</label>
+                        <select class="dm-input" id="dm-set-link-provider" data-testid="dm-set-link-provider">${providerSlotOptions('link', activeLinkProvider())}</select>
+                        <p class="dm-hint">Premium file-hoster links are unlocked through this account.</p></div>
                 </div>
-                <div class="dm-form-actions">
-                    <button class="dm-btn" type="button" data-action="verify-debrid" data-testid="dm-verify-debrid">Verify key</button>
-                    <button class="dm-btn primary" type="submit" data-testid="dm-save-debrid">Save debrid</button>
-                </div>
+                ${credentialBlocks || '<p class="dm-hint">Choose a provider above to enter its credentials.</p>'}
+                <div class="dm-form-actions"><button class="dm-btn primary" type="submit" data-testid="dm-save-debrid">Save providers</button></div>
             </form>
         </section>
         <section class="dm-panel">
@@ -836,9 +890,9 @@ export async function render(container, ctx) {
             <h2>Package</h2>
             <div class="dm-def-grid">
                 <div><span>Package</span><strong>${escHtml(ctx.pkg?.name || 'EthOS Download Manager')}</strong></div>
-                <div><span>Version</span><strong>v${escHtml(ctx.pkg?.version || '1.0.1')}</strong></div>
+                <div><span>Version</span><strong>v${escHtml(ctx.pkg?.version || '1.1.0')}</strong></div>
                 <div><span>Engine</span><strong>Download Station API</strong></div>
-                <div><span>Config store</span><strong>v5 · json_store</strong></div>
+                <div><span>Config store</span><strong>v9 · json_store</strong></div>
             </div>
             <p class="dm-hint">The engine, queue and provider clients live in EthOS core. Removing the package hides this window; running downloads continue.</p>
         </section>`;
@@ -1017,31 +1071,47 @@ export async function render(container, ctx) {
     }
 
     async function saveDebrid() {
-        const provider = $('#dm-set-provider')?.value || '';
-        const key = $('#dm-set-key')?.value.trim() || '';
-        const body = { debrid: { provider } };
-        const field = DEBRID_FIELD[provider];
-        if (field && key && !key.includes('****')) body.debrid[field] = key;
+        const debrid = {
+            provider: $('#dm-set-provider')?.value || '',
+            link_provider: $('#dm-set-link-provider')?.value || '',
+        };
+        for (const providerId of new Set([debrid.provider, debrid.link_provider].filter(Boolean))) {
+            for (const field of providerFields(providerId)) {
+                const input = root.querySelector(`[data-provider="${providerId}"][data-field="${field.name}"]`);
+                const value = (input?.value || '').trim();
+                if (!value) continue;
+                if (field.secret && value.includes('****')) continue;
+                debrid[field.name] = value;
+            }
+        }
         try {
-            await postJson('/config', body);
-            notify('Debrid settings saved', 'success');
-            await loadConfig();
+            await postJson('/config', { debrid });
+            notify('Provider settings saved', 'success');
+            await Promise.all([loadConfig(), loadProviders()]);
             renderView();
-        } catch (error) { saveError(error, 'change debrid settings'); }
+        } catch (error) { saveError(error, 'change provider settings'); }
     }
 
-    async function verifyDebrid() {
-        const provider = $('#dm-set-provider')?.value || '';
-        const key = $('#dm-set-key')?.value.trim() || '';
-        if (!provider) return notify('Choose a provider first', 'error');
-        if (!key) return notify('Paste the API key first, then verify', 'error');
-        // A masked value is fine: the backend verifies the saved key with it.
-        const saved = key.includes('****');
+    async function verifyDebrid(provider) {
+        const info = providerById(provider);
+        if (!info) return notify('Choose a provider first', 'error');
+        const credentials = {};
+        for (const field of providerFields(provider)) {
+            const input = root.querySelector(`[data-provider="${provider}"][data-field="${field.name}"]`);
+            const value = (input?.value || '').trim();
+            // A masked/blank secret is verified against the stored value.
+            if (!value || (field.secret && value.includes('****'))) continue;
+            credentials[field.name] = value;
+        }
         try {
-            await postJson('/verify', { provider, key });
-            notify(`${PROVIDER_LABEL[provider] || provider} accepted the ${saved ? 'saved ' : ''}key`, 'success');
+            const result = await postJson('/verify', { provider, credentials });
+            const account = result?.account || {};
+            const extra = account.premium_until ? ` — premium until ${account.premium_until}` : '';
+            notify(`${info.label} accepted the credentials${extra}`, 'success');
+            await Promise.all([loadConfig(), loadProviders()]);
+            renderView();
         } catch (error) {
-            if (error.status === 403) notify('Only an admin can verify provider keys', 'error');
+            if (error.status === 403) notify('Only an admin can verify provider credentials', 'error');
             else notify(error.message || 'Verification failed', 'error');
         }
     }
@@ -1288,7 +1358,7 @@ export async function render(container, ctx) {
                 || name === 'skip' || name === 'unskip') { taskAction(name, id); return; }
             if (name === 'pick-folder') { pickFolder(target || id); return; }
             if (name === 'upload-torrents') { uploadTorrents(); return; }
-            if (name === 'verify-debrid') { verifyDebrid(); return; }
+            if (name === 'verify-debrid') { verifyDebrid(action.dataset.provider || ''); return; }
             if (name === 'save-cats') { saveCategories(); return; }
             if (name === 'add-cat') {
                 const list = $('#dm-cat-list');
@@ -1326,10 +1396,10 @@ export async function render(container, ctx) {
             void packageLimit(event.target.dataset.key, Number(event.target.value));
             return;
         }
-        // A masked key belongs to the previous provider; make the user paste the new one.
-        if (event.target.id === 'dm-set-provider') {
-            const keyInput = $('#dm-set-key');
-            if (keyInput && keyInput.value.includes('****')) keyInput.value = '';
+        // Show the credential block of every provider picked in either slot.
+        if (event.target.id === 'dm-set-provider' || event.target.id === 'dm-set-link-provider') {
+            const selected = new Set([$('#dm-set-provider')?.value, $('#dm-set-link-provider')?.value].filter(Boolean));
+            for (const block of root.querySelectorAll('[data-cred-block]')) block.hidden = !selected.has(block.dataset.credBlock);
         }
     }
 
@@ -1420,7 +1490,7 @@ export async function render(container, ctx) {
     }
 
     try {
-        await Promise.all([loadTasks(), loadConfig()]);
+        await Promise.all([loadTasks(), loadConfig(), loadProviders()]);
         state.loaded = true;
         setPill('ready', 'Ready');
     } catch (error) {
