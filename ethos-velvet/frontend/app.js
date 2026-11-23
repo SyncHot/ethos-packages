@@ -174,10 +174,12 @@ async function loadStill(img, kind, path, index) {
     const key = kind === 'frame' ? `f:${path}:${index}` : `t:${path}`;
     if (imageCache.has(key)) {
         img.src = imageCache.get(key);
+        img.classList.remove('is-loading');
         return;
     }
     if (img.dataset.waiting === '1') return;
     img.dataset.waiting = '1';
+    img.classList.add('is-loading');
     const url = kind === 'frame'
         ? `frame?path=${encodeURIComponent(path)}&i=${index}`
         : `thumb?path=${encodeURIComponent(path)}`;
@@ -187,10 +189,10 @@ async function loadStill(img, kind, path, index) {
             // 202 must be handled before `ok`: `ok` covers 200–299, and a pending
             // response carries JSON, not image bytes.
             if (response.status === 202) {
-                let wait = 3000;
+                let wait = 1200;
                 try {
                     const data = await response.json();
-                    wait = Math.max(600, Number(data.retry_ms || 3000));
+                    wait = Math.max(400, Number(data.retry_ms || 1200));
                 } catch { /* the body may be empty */ }
                 await sleep(wait);
                 continue;
@@ -201,6 +203,7 @@ async function loadStill(img, kind, path, index) {
                 cacheImage(key, objectUrl);
                 img.src = objectUrl;
                 img.dataset.waiting = '0';
+                img.classList.remove('is-loading');
                 return;
             }
             if (response.status >= 500) {
@@ -214,6 +217,7 @@ async function loadStill(img, kind, path, index) {
     }
     img.src = PLACEHOLDER;
     img.dataset.waiting = '0';
+    img.classList.remove('is-loading');
 }
 
 function bindThumbs(scope = _view) {
@@ -233,9 +237,33 @@ function bindThumbs(scope = _view) {
 
 function bindFrames() {
     if (!_detailEl) return;
+    // The poster is the same left-eye still the grid already loaded, so the
+    // detail opens with a real image instead of waiting for a fresh 960 px grab.
+    const poster = _detailEl.querySelector('[data-testid="velvet-poster"]');
+    if (poster && poster.dataset.thumb) loadStill(poster, 'thumb', poster.dataset.thumb, null);
     for (const img of _detailEl.querySelectorAll('img[data-frame]')) {
         loadStill(img, 'frame', img.dataset.frame, Number(img.dataset.index || 0));
     }
+}
+
+// Pre-generate the six preview frames while the pointer rests on a card, so the
+// detail view usually opens with the strip already cached.
+let _warmTimer = null;
+let _warmPath = null;
+
+function scheduleFrameWarm(path) {
+    if (!path || _warmPath === path) return;
+    _warmPath = path;
+    if (_warmTimer) clearTimeout(_warmTimer);
+    _warmTimer = setTimeout(() => {
+        _warmTimer = null;
+        if (state.detail || _player) return;  // the detail warms them itself
+        for (let i = 0; i < FRAMES; i += 1) {
+            proxyFetch(`frame?path=${encodeURIComponent(path)}&i=${i}`)
+                .then((response) => { response.body?.cancel().catch(() => {}); })
+                .catch(() => {});
+        }
+    }, 450);
 }
 
 // ── Boot ────────────────────────────────────────────────────────────────────
@@ -258,6 +286,10 @@ export async function render(container, ctx) {
     _root.addEventListener('click', onClick);
     _root.addEventListener('change', onChange);
     _root.addEventListener('input', onInput);
+    _root.addEventListener('pointerover', (event) => {
+        const card = event.target.closest?.('[data-testid="velvet-card"]');
+        if (card) scheduleFrameWarm(card.getAttribute('data-path'));
+    });
     _main.addEventListener('scroll', onScroll, { passive: true });
     _keyHandler = (event) => onKeydown(event);
     document.addEventListener('keydown', _keyHandler);
@@ -807,7 +839,7 @@ function renderDetail() {
     </div>
     <div class="vl-detail-grid">
       <div class="vl-detail-left">
-        <div class="vl-poster"><img data-frame="${attr(item.path)}" data-index="0" src="${PLACEHOLDER}" alt="" data-testid="velvet-poster"></div>
+        <div class="vl-poster"><img data-thumb="${attr(item.path)}" src="${PLACEHOLDER}" alt="" data-testid="velvet-poster"></div>
         <div class="vl-strip">${Array.from({ length: FRAMES }, (_, i) =>
             `<img data-frame="${attr(item.path)}" data-index="${i}" data-action="frame-pick" src="${PLACEHOLDER}" alt="" data-testid="velvet-frame-${i}">`).join('')}</div>
       </div>
@@ -2217,6 +2249,10 @@ const STYLES = `
 .vl-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
 .vl-strip img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; background: var(--vl-media-bg); cursor: pointer; border: 1px solid transparent; }
 .vl-strip img:hover { border-color: var(--pkg-accent-border); }
+.vl-thumb img.is-loading, .vl-strip img.is-loading, .vl-poster img.is-loading {
+  animation: vl-pulse 1.3s ease-in-out infinite;
+}
+@keyframes vl-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.9; } }
 .vl-detail-right { min-width: 0; display: flex; flex-direction: column; }
 .vl-player-overlay { background: var(--vl-player-bg); color: var(--vl-player-text); }
 .vl-player-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--vl-player-border); }

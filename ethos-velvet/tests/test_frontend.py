@@ -72,6 +72,17 @@ class VelvetFrontendTests(unittest.TestCase):
         self.assertIn("color-scheme: light", self.source)
         self.assertIn("color-scheme: dark", self.source)
 
+    def test_detail_poster_and_preview_strip_are_preloaded(self):
+        # The poster reuses the still the grid already cached — opening a detail
+        # must not wait for a fresh ffmpeg grab.
+        self.assertIn('data-thumb="${attr(item.path)}" src="${PLACEHOLDER}" alt="" '
+                      'data-testid="velvet-poster"', self.source)
+        self.assertIn("loadStill(poster, 'thumb', poster.dataset.thumb, null)", self.source)
+        # The six strip frames warm up while the pointer rests on a card.
+        self.assertIn("scheduleFrameWarm(card.getAttribute('data-path'))", self.source)
+        self.assertIn("addEventListener('pointerover'", self.source)
+        self.assertIn("is-loading", self.source)
+
     def test_vendored_hls_bundle(self):
         self.assertTrue(os.path.isfile(HLS))
         self.assertGreater(os.path.getsize(HLS), 100_000)

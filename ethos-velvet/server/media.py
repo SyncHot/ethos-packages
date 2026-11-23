@@ -136,7 +136,7 @@ def lookup(username: str, path: str, frame: int | None = None) -> tuple[str, str
         return ("pending", None, int(math.ceil(wait)))
 
     _enqueue(username, path, item, frame, cached, variant)
-    return ("pending", None, 3)
+    return ("pending", None, 1)
 
 
 def _enqueue(username: str, path: str, item: dict, frame: int | None,
