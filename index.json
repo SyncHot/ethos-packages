@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-23T11:05:22+00:00",
+  "generated_at": "2026-11-23T11:50:04+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -501,7 +501,7 @@
     {
       "id": "ethos-velvet",
       "name": "Velvet",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "description": "A private library for your personal 18+ video collection. Pick folders on the NAS and get single-eye thumbnails for VR/180° side-by-side files, a frame strip to see what a scene contains, freeform tags with ratings, duplicate detection for re-downloads, and playback with a Left/Right/SBS eye switch. Files are indexed in place — nothing is copied and no content leaves the device.",
       "icon": "🍑",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/icon.svg",
@@ -515,10 +515,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.0.3: opening Velvet now runs a quick incremental rescan by default — unchanged files skip ffprobe and per-row rewrites, so deletions or renames made while the window was closed are reflected immediately; restored files are un-marked without a probe, and Settings says “Quick rescan when Velvet opens”. 1.0.2: live File Manager sync — files deleted, trashed or renamed outside Velvet disappear from the library immediately through the core file-events WebSocket; their rows become Missing and cached stills are purged. Uploads and copies trigger a targeted rescan of the affected folder, a move one incremental scan. Velvet's own deletes are ignored by the bridge. 1.0.1: playback fixes — the player trusts the core's playback_mode, so multi-audio MP4s play directly instead of asking for an HLS session the core rejects; HLS sessions resume at the saved position with the correct absolute time; thumbnails retry while the service restarts and show a placeholder instead of a broken image. 1.0.0: first release — a private library for your own 18+ collection. Add folders with the EthOS picker, scan in place, and browse a thumbnail grid where VR side-by-side files show the left eye instead of a doubled frame. A detail view pairs six preview frames with ffprobe facts (per-eye dimensions, codec, bitrate, duration, size), freeform tags, a 1–5 rating and keep/reject marks. Duplicates are grouped by cleaned title and comparable runtime so re-downloads can be removed in bulk. Playback reuses the core Video Station pipeline (direct streaming or HLS for HEVC/MKV) with Left / Right / SBS eye switching, quality, audio tracks, speed and resume. Every account has its own index, tags and thumbnails; permanent deletion goes through the core file API behind a typed confirmation.",
+      "changelog": "1.0.4: deletes feel instant — the card disappears from the grid as soon as you confirm (it only comes back if the core reports a failure), the delete operation is checked after 150 ms instead of 700 ms, and the library is no longer reloaded after every delete; on a busy disk (thumbnail extraction, a running copy) a single-file delete could take several seconds before the grid updated. 1.0.3: opening Velvet now runs a quick incremental rescan by default — unchanged files skip ffprobe and per-row rewrites, so deletions or renames made while the window was closed are reflected immediately; restored files are un-marked without a probe, and Settings says “Quick rescan when Velvet opens”. 1.0.2: live File Manager sync — files deleted, trashed or renamed outside Velvet disappear from the library immediately through the core file-events WebSocket; their rows become Missing and cached stills are purged. Uploads and copies trigger a targeted rescan of the affected folder, a move one incremental scan. Velvet's own deletes are ignored by the bridge. 1.0.1: playback fixes — the player trusts the core's playback_mode, so multi-audio MP4s play directly instead of asking for an HLS session the core rejects; HLS sessions resume at the saved position with the correct absolute time; thumbnails retry while the service restarts and show a placeholder instead of a broken image. 1.0.0: first release — a private library for your own 18+ collection. Add folders with the EthOS picker, scan in place, and browse a thumbnail grid where VR side-by-side files show the left eye instead of a doubled frame. A detail view pairs six preview frames with ffprobe facts (per-eye dimensions, codec, bitrate, duration, size), freeform tags, a 1–5 rating and keep/reject marks. Duplicates are grouped by cleaned title and comparable runtime so re-downloads can be removed in bulk. Playback reuses the core Video Station pipeline (direct streaming or HLS for HEVC/MKV) with Left / Right / SBS eye switching, quality, audio tracks, speed and resume. Every account has its own index, tags and thumbnails; permanent deletion goes through the core file API behind a typed confirmation.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/manifest.json",
-      "manifest_sha256": "cc20f0d97a09fe249f17036dde0dba7ec874a2ef89955fba933cef81362dc79f",
-      "size_bytes": 799171
+      "manifest_sha256": "f2898fa266d6b81ff1d4ecc09dbff1b1ce850d7f5ba76790c4b21ebdb440ca32",
+      "size_bytes": 801391
     },
     {
       "id": "ethos-video",

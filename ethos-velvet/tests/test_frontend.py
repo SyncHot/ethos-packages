@@ -47,6 +47,19 @@ class VelvetFrontendTests(unittest.TestCase):
         self.assertIn("action === 'delete_soft'", self.source)
         self.assertIn("action === 'rename'", self.source)
 
+    def test_delete_is_optimistic_and_polls_fast(self):
+        # A busy volume can hold the unlink for seconds: the row must vanish as
+        # soon as the request is accepted, the rollback must be wired, and the
+        # first op poll must not sleep for most of a second.
+        self.assertIn("hidePendingDelete(unique)", self.source)
+        self.assertIn("restorePendingDelete(rollback)", self.source)
+        self.assertIn("let delay = 150", self.source)
+        self.assertNotIn("sleep(700)", self.source)
+        # Counts move locally and the grid is repainted instead of a full
+        # library reload after every delete.
+        self.assertIn("state.summary = {", self.source)
+        self.assertIn("updateChrome();\n            renderView();", self.source)
+
     def test_no_local_ui_systems(self):
         for forbidden in (
             "window.alert(", "window.confirm(", "window.prompt(", "alert(",

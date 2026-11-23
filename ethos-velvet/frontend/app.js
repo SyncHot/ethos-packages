@@ -1111,6 +1111,40 @@ function confirmDialog({ title, message, okText = 'OK' }) {
     });
 }
 
+// The core op is a plain unlink (milliseconds on an idle disk), but thumbnail
+// extraction or a copy job can keep the volume busy for seconds. Hide the rows
+// as soon as the request is accepted and put them back only when the op fails.
+function hidePendingDelete(paths) {
+    const drop = new Set(paths);
+    const snapshot = {
+        items: state.items,
+        total: state.total,
+        summary: state.summary ? { ...state.summary } : null,
+        byPath: new Map(state.byPath),
+        selected: new Set(state.selected),
+    };
+    const present = state.items.filter((item) => drop.has(item.path)).length;
+    state.items = state.items.filter((item) => !drop.has(item.path));
+    state.total = Math.max(0, state.total - present);
+    for (const path of paths) {
+        const card = _view?.querySelector(
+            `[data-testid="velvet-card"][data-path="${CSS.escape(path)}"]`);
+        if (card) card.remove();
+        state.selected.delete(path);
+    }
+    return snapshot;
+}
+
+function restorePendingDelete(snapshot) {
+    if (!snapshot) return;
+    state.items = snapshot.items;
+    state.total = snapshot.total;
+    state.summary = snapshot.summary;
+    state.byPath = snapshot.byPath;
+    state.selected = snapshot.selected;
+    renderView();
+}
+
 async function deletePaths(paths) {
     const unique = [...new Set(paths.filter(Boolean))];
     if (!unique.length) return;
@@ -1148,6 +1182,9 @@ async function deletePaths(paths) {
         title: `Deleting ${unique.length} file${unique.length === 1 ? '' : 's'}…`,
         total: unique.length,
     });
+    // Rows disappear immediately; the progress row keeps reporting until the
+    // core confirms the unlink (and rolls the rows back if it did not).
+    const rollback = hidePendingDelete(unique);
     try {
         const response = await _ctx.apiJsonFetch('/api/files/delete', {
             method: 'DELETE',
@@ -1157,15 +1194,23 @@ async function deletePaths(paths) {
         const opId = response?.op_id;
         if (opId) {
             let finished = false;
+            let delay = 150;  // first check fast: most deletes finish in ~ms
             for (let tick = 0; tick < 900; tick += 1) {
-                await sleep(700);
+                await sleep(delay);
+                delay = Math.min(1000, Math.round(delay * 1.6));
                 const snapshot = await _ctx.apiJsonFetch(`/api/files/ops/${encodeURIComponent(opId)}`);
                 task.update({
                     index: snapshot.index || 0,
-                    detail: snapshot.current || `${snapshot.succeeded || 0} deleted`,
+                    detail: snapshot.current
+                        ? `Removing ${snapshot.current}…`
+                        : `${snapshot.succeeded || 0} deleted`,
                 });
                 if (snapshot.status === 'done') {
-                    if (snapshot.failed) throw new Error(`${snapshot.failed} file(s) could not be deleted`);
+                    if (snapshot.failed) {
+                        const first = (snapshot.details || []).find((d) => d.status !== 'ok');
+                        throw new Error(first?.reason
+                            || `${snapshot.failed} file(s) could not be deleted`);
+                    }
                     finished = true;
                     break;
                 }
@@ -1187,18 +1232,28 @@ async function deletePaths(paths) {
         for (const [path, stamp] of _recentDeletes) {
             if (stamp < Date.now() - 60000) _recentDeletes.delete(path);
         }
-        state.items = state.items.filter((item) => !unique.includes(item.path));
-        state.total = Math.max(0, state.total - unique.length);
+        // Counts move locally: reloading the whole page after every delete was
+        // the slow part (and pointless — the rows are already gone).
+        if (state.summary) {
+            state.summary = {
+                ...state.summary,
+                files: Math.max(0, (state.summary.files || 0) - unique.length),
+                size: Math.max(0, (state.summary.size || 0) - totalSize),
+            };
+        }
         _ctx.notifications.toast(
             `Permanently deleted ${unique.length} file${unique.length === 1 ? '' : 's'}.`, 'success');
         if (cleanupWarning) {
             _ctx.notifications.toast(`Files deleted, but the index cleanup failed: ${cleanupWarning}`, 'warning');
         }
         try { await refreshState(); } catch { /* the next load will retry */ }
-        if (state.view === 'library') await loadLibrary({ reset: true });
-        else if (state.view === 'duplicates') await loadDuplicates();
+        if (state.view === 'library') {
+            updateChrome();
+            renderView();
+        } else if (state.view === 'duplicates') await loadDuplicates();
         else await loadTags();
     } catch (err) {
+        restorePendingDelete(rollback);
         task.finish('failed', { detail: err?.detail || err?.message || 'Delete failed' });
         _ctx.notifications.toast(err?.detail || err?.message || 'The delete failed.', 'error');
     }
