@@ -701,23 +701,24 @@ export async function render(container, ctx) {
                 <div class="dm-fields">
                     <div class="dm-field"><label for="dm-add-name">Display name (optional)</label>
                         <input class="dm-input" id="dm-add-name" name="name" maxlength="255"></div>
-                    <div class="dm-field"><label for="dm-add-category">Category</label>
-                        <select class="dm-input" id="dm-add-category" name="category" data-testid="dm-add-category"><option value="">— None —</option>
-                            ${categories.map((c) => `<option value="${escAttr(c.name)}">${escHtml(c.name)}${c.save_path ? ` — ${escHtml(c.save_path)}` : ''}</option>`).join('')}
-                        </select></div>
                 </div>
             </section>
             <section class="dm-panel">
                 <h2>2 · Destination</h2>
                 <p class="dm-muted">A category destination wins over the default folder; an explicit folder wins over both.</p>
+                <div class="dm-field full"><label for="dm-add-category">Category</label>
+                    <select class="dm-input" id="dm-add-category" name="category" data-testid="dm-add-category"><option value="">— None —</option>
+                        ${categories.map((c) => `<option value="${escAttr(c.name)}">${escHtml(c.name)}${c.save_path ? ` — ${escHtml(c.save_path)}` : ''}</option>`).join('')}
+                    </select>
+                    <p class="dm-hint">Applies to the URL above and to every .torrent uploaded below.</p></div>
                 <div class="dm-field full"><label for="dm-add-folder">Folder (optional)</label>
                     <div class="dm-row"><input class="dm-input" id="dm-add-folder" name="folder" placeholder="Leave blank for the default folder" data-testid="dm-add-folder">
                         <button type="button" class="dm-btn" data-action="pick-folder" data-target="dm-add-folder">Browse…</button></div>
-                    <p class="dm-hint">Current default: <code>${escHtml(state.config?.download_dir || '—')}</code></p></div>
+                    <p class="dm-hint">Current default: <code>${escHtml(state.config?.download_dir || '—')}</code>. An explicit folder wins over the category.</p></div>
             </section>
             <section class="dm-panel">
                 <h2>3 · Torrent files</h2>
-                <p class="dm-muted">Upload one or more .torrent files; they are queued through the torrent provider with the same destination rules.</p>
+                <p class="dm-muted">Upload one or more .torrent files; they are queued through the torrent provider into the category or folder selected in step 2.</p>
                 <div class="dm-row" style="margin-top:12px">
                     <input type="file" id="dm-add-torrents" accept=".torrent" multiple aria-label="Torrent files" data-testid="dm-add-torrents">
                     <button class="dm-btn primary" type="button" data-action="upload-torrents" data-testid="dm-upload-torrents">Queue torrents</button>
@@ -1017,14 +1018,20 @@ export async function render(container, ctx) {
         const files = Array.from(input?.files || []);
         if (!files.length) return notify('Choose at least one .torrent file', 'error');
         const folder = $('#dm-add-folder')?.value.trim() || '';
+        const category = $('#dm-add-category')?.value || '';
         const job = ctx.progress?.startTask
             ? ctx.progress.startTask({ title: files.length === 1 ? files[0].name : `${files.length} torrents`, total: files.length, detail: 'Uploading…' })
             : null;
         try {
             const formData = new FormData();
             for (const file of files) formData.append('files', file);
-            if (folder) formData.append('folder', folder);
-            const response = await ctx.apiFetch('/api/downloads/tasks/torrent', { method: 'POST', body: formData });
+            // folder/category are query parameters on the torrent endpoint; a
+            // multipart field would be ignored by FastAPI.
+            const query = new URLSearchParams();
+            if (folder) query.set('folder', folder);
+            if (category) query.set('category', category);
+            const suffix = query.toString() ? `?${query}` : '';
+            const response = await ctx.apiFetch(`/api/downloads/tasks/torrent${suffix}`, { method: 'POST', body: formData });
             const body = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(body?.detail || `HTTP ${response.status}`);
             const failed = Array.isArray(body.errors) ? body.errors.length : 0;
