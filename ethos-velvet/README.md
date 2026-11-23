@@ -32,6 +32,11 @@ collection, built for VR/180° side-by-side files.
 - **Permanent delete.** Multi-select, a typed `DELETE` confirmation and the
   core's background file-delete operation with shared progress. The package
   service never deletes files.
+- **Live File Manager sync.** The UI subscribes to `/ws/files/events`:
+  deletions, trashed files and renames made in File Manager disappear from the
+  library immediately (the row becomes **Missing**, cached stills are purged),
+  uploads/copies trigger a targeted rescan of that folder, and a move triggers
+  one incremental scan. Velvet's own deletes are ignored by the bridge.
 
 ## Per-account model
 
@@ -65,6 +70,7 @@ folder in Files can read the files. Velvet does not change the filesystem ACLs.
 | GET/PUT | `/resume` | playback position per file |
 | GET/PUT | `/settings` | quality, eye, grid size, auto-scan |
 | POST | `/forget` | drop rows + cached stills (never files) |
+| POST | `/events` | File Manager bridge: mark removed paths missing, rescan changed folders (`{removed, changed, full}`) |
 | GET | `/thumb?path=` | left-eye WebP still — `200`, `202` (`retry_ms`) or `404` |
 | GET | `/frame?path=&i=` | preview-strip frame (`0…5`) |
 
@@ -87,8 +93,11 @@ folder in Files can read the files. Velvet does not change the filesystem ACLs.
 - **No WebXR / mouse-look** in 1.0 — the eye switch is a flat crop.
 - **Received shares** are not indexed yet; folders are limited to the account's
   own home, `/mnt` and `/media`.
-- **Duplicates** rely on a cleaned title plus duration; files with different
-  titles will not be grouped.
+- **Duplicate detection** relies on a cleaned title plus duration; files with
+  different titles will not be grouped.
+- **External changes while Velvet is closed** are picked up by the next scan
+  (on open, automatically when the library is older than six hours, or with
+  Rescan). File Manager sync is live only while the Velvet window is open.
 
 ## Development
 

@@ -26,6 +26,10 @@ let _searchTimer = null;
 let _player = null;
 let _keyHandler = null;
 let _resizeHandler = null;
+let _filesWs = null;
+let _resyncTimer = null;
+const _pendingResync = { removed: new Set(), changed: new Set(), full: false };
+const _recentDeletes = new Map();
 
 const APP_ID = 'pkg-ethos-velvet';
 const FRAMES = 6;
@@ -257,6 +261,7 @@ export async function render(container, ctx) {
     _main.addEventListener('scroll', onScroll, { passive: true });
     _keyHandler = (event) => onKeydown(event);
     document.addEventListener('keydown', _keyHandler);
+    connectFileEvents();
 
     applyGridSize();
     try {
@@ -383,6 +388,136 @@ function maybeAutoScan() {
     if (!finished || Date.now() / 1000 - finished > 6 * 3600) {
         state.autoScanned = true;
         startScan();
+    }
+}
+
+// ── File Manager event bridge ───────────────────────────────────────────────
+
+function connectFileEvents() {
+    if (typeof _ctx.ws?.connect !== 'function') return;
+    try {
+        _filesWs = _ctx.ws.connect('/ws/files/events', onFileEvent, {
+            appId: APP_ID,
+            name: 'velvet-files',
+        });
+    } catch (err) {
+        _ctx.logger?.warn?.('Velvet: file events unavailable', err?.message || String(err));
+    }
+}
+
+function joinPath(parent, name) {
+    if (!parent || !name) return '';
+    return `${String(parent).replace(/\/+$/, '')}/${String(name).replace(/^\/+/, '')}`;
+}
+
+function inAnyFolder(path) {
+    const value = String(path || '');
+    return state.folders.some((folder) => {
+        const root = String(folder.path || '').replace(/\/+$/, '');
+        return Boolean(root) && (value === root || value.startsWith(root + '/'));
+    });
+}
+
+function onFileEvent(event) {
+    if (!_root || !document.body.contains(_root)) {
+        try { _filesWs?.close?.(); } catch { /* window is gone */ }
+        return;
+    }
+    const action = String(event?.action || '');
+    const parent = String(event?.path || '').replace(/\/+$/, '');
+    const items = Array.isArray(event?.items) ? event.items : [];
+    if (!action || !parent) return;
+
+    if (action === 'delete_soft' || action === 'delete_hard') {
+        let touched = false;
+        for (const item of items) {
+            if (action === 'delete_soft' && item?.status && item.status !== 'ok') continue;
+            const path = joinPath(parent, item?.name);
+            if (!path || !inAnyFolder(path)) continue;
+            if ((_recentDeletes.get(path) || 0) > Date.now() - 10000) continue;
+            _pendingResync.removed.add(path);
+            closeIfShowing(path);
+            touched = true;
+        }
+        if (touched) scheduleResync();
+        return;
+    }
+    if (action === 'rename') {
+        let touched = false;
+        for (const item of items) {
+            const oldPath = joinPath(parent, item?.old_name);
+            const newPath = joinPath(parent, item?.name);
+            if (oldPath && inAnyFolder(oldPath)) {
+                _pendingResync.removed.add(oldPath);
+                closeIfShowing(oldPath);
+            }
+            if ((newPath && inAnyFolder(newPath)) || inAnyFolder(parent)) {
+                _pendingResync.changed.add(parent);
+            }
+            touched = true;
+        }
+        if (touched) scheduleResync();
+        return;
+    }
+    if (action === 'move') {
+        // A move event names only the destination; the source may sit inside
+        // the library, so one incremental full scan is the only safe sync.
+        _pendingResync.full = true;
+        scheduleResync();
+        return;
+    }
+    if ((action === 'copy' || action === 'upload' || action === 'zip') && inAnyFolder(parent)) {
+        _pendingResync.changed.add(parent);
+        scheduleResync();
+    }
+}
+
+function closeIfShowing(path) {
+    const inside = (candidate) => candidate === path || candidate.startsWith(path + '/');
+    if (state.detail && inside(state.detail.path)) closeDetail();
+    if (_player && inside(_player.item.path)) closePlayer();
+}
+
+function scheduleResync() {
+    if (_resyncTimer) clearTimeout(_resyncTimer);
+    _resyncTimer = setTimeout(flushResync, 500);
+}
+
+async function flushResync() {
+    _resyncTimer = null;
+    const batch = {
+        removed: [..._pendingResync.removed],
+        changed: [..._pendingResync.changed],
+        full: _pendingResync.full,
+    };
+    _pendingResync.removed.clear();
+    _pendingResync.changed.clear();
+    _pendingResync.full = false;
+    if (!batch.removed.length && !batch.changed.length && !batch.full) return;
+    try {
+        const result = await proxyJson('events', { method: 'POST', body: batch });
+        if (result.removed) {
+            for (const path of batch.removed) {
+                state.byPath.delete(path);
+                state.selected.delete(path);
+            }
+            state.items = state.items.filter((item) =>
+                !batch.removed.some((path) => item.path === path || item.path.startsWith(path + '/')));
+            _ctx.notifications.toast(
+                `Velvet updated after ${result.removed} change${result.removed === 1 ? '' : 's'} in File Manager.`,
+                'info');
+            setStatus('Library updated from File Manager.');
+        }
+        if (result.scan) {
+            state.scan = { state: 'starting' };
+            updateChrome();
+            startScanPolling();
+        }
+        if (state.view === 'library') await loadLibrary({ reset: true });
+        else if (state.view === 'duplicates') await loadDuplicates();
+        else if (state.view === 'tags') await loadTags();
+    } catch (err) {
+        _ctx.logger?.warn?.('Velvet: file-event resync failed', err?.detail || err?.message || String(err));
     }
 }
 
@@ -1048,6 +1183,10 @@ async function deletePaths(paths) {
         for (const path of unique) {
             state.byPath.delete(path);
             state.selected.delete(path);
+            _recentDeletes.set(path, Date.now());
+        }
+        for (const [path, stamp] of _recentDeletes) {
+            if (stamp < Date.now() - 60000) _recentDeletes.delete(path);
         }
         state.items = state.items.filter((item) => !unique.includes(item.path));
         state.total = Math.max(0, state.total - unique.length);

@@ -30,6 +30,8 @@ Endpoints (all under /api/packages/ethos-velvet/proxy):
     GET    /settings               per-account preferences
     PUT    /settings               {settings:{...}}
     POST   /forget                 drop rows + cached stills (never files) {paths}
+    POST   /events                 File Manager bridge: mark removed paths missing,
+                                   rescan changed folders {removed, changed, full}
     GET    /thumb?path=            left-eye WebP still (200, 202 or 404)
     GET    /frame?path=&i=         preview strip frame (200, 202 or 404)
 """
@@ -324,6 +326,49 @@ class Handler(BaseHTTPRequestHandler):
                 media.purge(username, path)
             return 200, {"removed": removed}, "application/json", None
 
+        if route == "/events" and method == "POST":
+            body = self._body()
+            raw_removed = body.get("removed") or []
+            raw_changed = body.get("changed") or []
+            if not isinstance(raw_removed, list) or not isinstance(raw_changed, list):
+                raise ApiError(400, "removed and changed must be lists")
+
+            removed_paths: list[str] = []
+            for entry in raw_removed[:MAX_BATCH]:
+                try:
+                    real = paths.check_path(username, role, entry)
+                except (ValueError, PermissionError, FileNotFoundError):
+                    continue
+                if real not in removed_paths:
+                    removed_paths.append(real)
+            matched = store.mark_paths_missing(username, removed_paths)
+            for path in matched:
+                media.purge(username, path)
+
+            changed_dirs: list[str] = []
+            for entry in raw_changed[:MAX_BATCH]:
+                try:
+                    real = paths.check_path(username, role, entry)
+                except (ValueError, PermissionError, FileNotFoundError):
+                    continue
+                if os.path.isdir(real) and real not in changed_dirs:
+                    changed_dirs.append(real)
+
+            folders = [item["path"] for item in store.list_folders(username)]
+            roots = folders if bool(body.get("full")) else changed_dirs
+            roots = [root for root in roots
+                     if any(_inside(root, folder) for folder in folders)]
+            scan_started = False
+            if roots:
+                try:
+                    scanner.start_scan(username, role, roots)
+                    scan_started = True
+                except RuntimeError:
+                    # A scan is already running; its pass will pick these up.
+                    scan_started = False
+            return 200, {"removed": len(matched), "scan": scan_started}, \
+                "application/json", None
+
         if route == "/thumb" and method == "GET":
             return self._image(username, role, query, frame=False)
 
@@ -385,6 +430,12 @@ def _int(value, default: int) -> int:
         return int(value)
     except (TypeError, ValueError):
         return int(default)
+
+
+def _inside(path: str, root: str) -> bool:
+    path = path.rstrip(os.sep) or os.sep
+    root = root.rstrip(os.sep) or os.sep
+    return path == root or path.startswith(root + os.sep)
 
 
 def build_server(host: str = "127.0.0.1", port: int | None = None) -> VelvetServer:

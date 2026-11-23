@@ -275,6 +275,32 @@ def mark_missing(username: str, roots: list[str], seen: set[str]) -> int:
     return len(missing)
 
 
+def mark_paths_missing(username: str, paths_list: list[str]) -> list[str]:
+    """Mark exact paths (and their directory descendants) missing.
+
+    Used by the File Manager event bridge: a deleted or renamed file disappears
+    from the default library immediately, without waiting for a full rescan.
+    Returns every row that changed, so the caller can purge its cached stills.
+    """
+    matched: list[str] = []
+    with _connect(username) as conn:
+        for raw in paths_list[:MAX_PATHS_PER_CALL]:
+            path = str(raw or "").strip().rstrip("/") or "/"
+            if not path:
+                continue
+            escaped = path.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            rows = conn.execute(
+                "SELECT path FROM media WHERE path=? OR path LIKE ? ESCAPE '\\'",
+                (path, escaped + "/%"),
+            ).fetchall()
+            for row in rows:
+                if row["path"] not in matched:
+                    matched.append(row["path"])
+        if matched:
+            conn.executemany("UPDATE media SET missing=1 WHERE path=?", [(p,) for p in matched])
+    return matched
+
+
 def missing_count(username: str) -> int:
     with _connect(username) as conn:
         row = conn.execute("SELECT COUNT(*) FROM media WHERE missing=1").fetchone()

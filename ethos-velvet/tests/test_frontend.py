@@ -41,6 +41,12 @@ class VelvetFrontendTests(unittest.TestCase):
         self.assertIn("_ctx.notifications.toast", self.source)
         self.assertIn("_ctx.pickFolder", self.source)
 
+    def test_file_event_bridge(self):
+        self.assertIn("_ctx.ws.connect('/ws/files/events'", self.source)
+        self.assertIn("proxyJson('events'", self.source)
+        self.assertIn("action === 'delete_soft'", self.source)
+        self.assertIn("action === 'rename'", self.source)
+
     def test_no_local_ui_systems(self):
         for forbidden in (
             "window.alert(", "window.confirm(", "window.prompt(", "alert(",

@@ -147,6 +147,9 @@ class VelvetServiceTests(unittest.TestCase):
     def _scan(self, user="marcin", role="admin"):
         status, data = self._json("POST", "/scan", {}, user, role)
         self.assertEqual(status, 202, data)
+        self._wait_scan(user, role)
+
+    def _wait_scan(self, user="marcin", role="admin"):
         for _ in range(400):
             _code, current = self._json("GET", "/scan/status", user=user, role=role)
             state = current["scan"].get("state")
@@ -356,6 +359,43 @@ class VelvetServiceTests(unittest.TestCase):
                 return status, payload, headers
             time.sleep(0.05)
         self.fail("image did not become ready")
+
+    def test_file_event_bridge(self):
+        self._seed_library()
+        victim = self._library()["items"][0]
+        os.remove(victim["path"])
+
+        status, data = self._json("POST", "/events", {"removed": [victim["path"]]})
+        self.assertEqual(status, 200, data)
+        self.assertEqual(data["removed"], 1)
+        self.assertFalse(data["scan"])
+        self.assertEqual(self._library()["total"], 4)
+        self.assertEqual(self._library("&missing=1")["total"], 1)
+
+        # A new file plus a changed parent starts a targeted scan.
+        self._touch("StudioVR_New_Scene_8K_LR_180_1795014000.mp4")
+        status, data = self._json("POST", "/events", {"changed": [self.library]})
+        self.assertEqual(status, 200, data)
+        self.assertTrue(data["scan"])
+        self._wait_scan()
+        self.assertEqual(self._library()["total"], 5)
+
+        # Removing a directory marks its whole indexed subtree missing.
+        self._touch("nested.mp4", subdir="nested")
+        self._scan()
+        nested = os.path.join(self.library, "nested")
+        shutil.rmtree(nested)
+        status, data = self._json("POST", "/events", {"removed": [nested]})
+        self.assertEqual(status, 200, data)
+        self.assertEqual(data["removed"], 1)
+        self.assertEqual(self._library()["total"], 5)
+
+        # Another account cannot mark someone else's rows.
+        status, data = self._json("POST", "/events",
+                                  {"removed": ["/home/alice/secret.mp4"]},
+                                  user="bob", role="user")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["removed"], 0)
 
     def test_forget_and_missing(self):
         self._seed_library()

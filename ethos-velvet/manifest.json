@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-velvet",
   "name": "Velvet",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A private library for your personal 18+ video collection. Pick folders on the NAS and get single-eye thumbnails for VR/180° side-by-side files, a frame strip to see what a scene contains, freeform tags with ratings, duplicate detection for re-downloads, and playback with a Left/Right/SBS eye switch. Files are indexed in place — nothing is copied and no content leaves the device.",
   "icon": "🍑",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/icon.svg",
@@ -24,12 +24,12 @@
     "port": 8100,
     "path": "/health"
   },
-  "changelog": "1.0.1: playback fixes — the player trusts the core's playback_mode, so multi-audio MP4s play directly instead of asking for an HLS session the core rejects; HLS sessions resume at the saved position with the correct absolute time; thumbnails retry while the service restarts and show a placeholder instead of a broken image. 1.0.0: first release — a private library for your own 18+ collection. Add folders with the EthOS picker, scan in place, and browse a thumbnail grid where VR side-by-side files show the left eye instead of a doubled frame. A detail view pairs six preview frames with ffprobe facts (per-eye dimensions, codec, bitrate, duration, size), freeform tags, a 1–5 rating and keep/reject marks. Duplicates are grouped by cleaned title and comparable runtime so re-downloads can be removed in bulk. Playback reuses the core Video Station pipeline (direct streaming or HLS for HEVC/MKV) with Left / Right / SBS eye switching, quality, audio tracks, speed and resume. Every account has its own index, tags and thumbnails; permanent deletion goes through the core file API behind a typed confirmation.",
+  "changelog": "1.0.2: live File Manager sync — files deleted, trashed or renamed outside Velvet disappear from the library immediately through the core file-events WebSocket; their rows become Missing and cached stills are purged. Uploads and copies trigger a targeted rescan of the affected folder, a move one incremental scan. Velvet's own deletes are ignored by the bridge. 1.0.1: playback fixes — the player trusts the core's playback_mode, so multi-audio MP4s play directly instead of asking for an HLS session the core rejects; HLS sessions resume at the saved position with the correct absolute time; thumbnails retry while the service restarts and show a placeholder instead of a broken image. 1.0.0: first release — a private library for your own 18+ collection. Add folders with the EthOS picker, scan in place, and browse a thumbnail grid where VR side-by-side files show the left eye instead of a doubled frame. A detail view pairs six preview frames with ffprobe facts (per-eye dimensions, codec, bitrate, duration, size), freeform tags, a 1–5 rating and keep/reject marks. Duplicates are grouped by cleaned title and comparable runtime so re-downloads can be removed in bulk. Playback reuses the core Video Station pipeline (direct streaming or HLS for HEVC/MKV) with Left / Right / SBS eye switching, quality, audio tracks, speed and resume. Every account has its own index, tags and thumbnails; permanent deletion goes through the core file API behind a typed confirmation.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/server/main.py",
-      "sha256": "a6293442aec08bfa43e765e1540e169cebc88e2646bb045675da3d5365f9a3c5",
+      "sha256": "eac0f67970b2efeffa35d65896460271224890e17e3d01c6c68f523f611ab388",
       "path": "server/main.py",
       "mode": 420
     },
@@ -41,7 +41,7 @@
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/server/store.py",
-      "sha256": "3abf48517d7ffca6de535e3c8507e380916a532b6811368f2f909bda8540c3f5",
+      "sha256": "4abf7aed2fe2bcd7eecefb58e33e84e07e8d01c828fcd6c46df6d185d9bc10ad",
       "path": "server/store.py",
       "mode": 420
     },
@@ -59,7 +59,7 @@
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/frontend/app.js",
-      "sha256": "301274de6c757a2fff814bba1028b26fd1e5b1e01d2f1e307d333ab7a1a3bc96",
+      "sha256": "b4420027237796ff970b05055720d0ddfb031bb1ffdbf2ef62832db309def3d9",
       "path": "frontend/app.js",
       "mode": 420
     },
