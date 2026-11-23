@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-23T12:18:13+00:00",
+  "generated_at": "2026-11-23T21:26:55+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -107,7 +107,7 @@
     {
       "id": "ethos-books",
       "name": "Books",
-      "version": "1.2.1",
+      "version": "1.3.0",
       "description": "Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied and your permissions still apply; covers and your place in every title are kept per account.",
       "icon": "📚",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/icon.svg",
@@ -121,10 +121,10 @@
       "capabilities": [],
       "system_requires": [],
       "screenshots": [],
-      "changelog": "1.2.1: shorter release notes in Package Center (no behaviour change). 1.2.0: audiobook tracks carry their duration and embedded cover art, reading positions from several devices merge by newest write, and the library answers ETag/304. 1.1.0: shared folders and individual titles from other accounts — a “Shared with me” section in Folders & Scan and the library, read-only scanning and playback, and a Share button on your own scan folders (requires EthOS 2.13.3). 1.0.0: first release — a library for EPUB, PDF and audiobooks with per-account progress. Add one or more folders, scan them through the EthOS file API (no copying, no extra share access), and read in a paginated or scrolled reader with light, sepia and dark themes. Audiobooks play from .m4b files or folders of .mp3/.flac tracks with resume, speed, skip and a sleep timer. Covers, titles, authors and series are extracted in the browser; the package service stores metadata only.",
+      "changelog": "1.3.0: download titles to your device — books from the card menu, reader bar or audiobooks table, and single audiobook tracks with a ⤓ button in the player; bytes stream through /api/files/download, so nothing is copied on the NAS. 1.2.1: shorter release notes in Package Center (no behaviour change). 1.2.0: audiobook tracks carry their duration and embedded cover art, reading positions from several devices merge by newest write, and the library answers ETag/304. 1.1.0: shared folders and individual titles from other accounts — a “Shared with me” section in Folders & Scan and the library, read-only scanning and playback, and a Share button on your own scan folders (requires EthOS 2.13.3). 1.0.0: first release — a library for EPUB, PDF and audiobooks with per-account progress. Add one or more folders, scan them through the EthOS file API (no copying, no extra share access), and read in a paginated or scrolled reader with light, sepia and dark themes. Audiobooks play from .m4b files or folders of .mp3/.flac tracks with resume, speed, skip and a sleep timer. Covers, titles, authors and series are extracted in the browser; the package service stores metadata only.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/manifest.json",
-      "manifest_sha256": "96412abb6adbd0fcc08ba37b3f19b61b00679fc5fa92d2e1b7053d6c40a2f2d0",
-      "size_bytes": 1918664
+      "manifest_sha256": "869f911dbc0e664f8862e9b17d379003c859771640586358c3852ec8bc88b55f",
+      "size_bytes": 1923801
     },
     {
       "id": "ethos-cleaner",

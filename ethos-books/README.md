@@ -20,6 +20,8 @@ The service never opens a book. It stores metadata, covers and reading positions
   `path_scope` stays the only filesystem gate.
 - Bytes are streamed from `GET /api/files/raw` (`Range`-capable), so EPUB/PDF/audio are never
   copied into the package directory.
+- Whole titles (or single audiobook tracks) can be saved to the device through
+  `GET /api/files/download` (see Downloads below).
 - EPUB metadata (title, author, series, language, cover) is parsed in the browser with the vendored
   JSZip; the cover is downscaled to a 420 px WebP and posted to the service.
 - Audiobooks gain a **duration** per track (read from `<audio>` metadata, new/changed files only)
@@ -30,6 +32,21 @@ The service never opens a book. It stores metadata, covers and reading positions
   desktop window stays the only place that scans folders.
 
 `DELETE /books/{id}` removes a title from the library only; the file on the NAS is untouched.
+
+## Downloads
+
+Every title can be saved to the device that runs the window. The UI builds a
+`/api/files/download?path=…&token=…` link (the core answers with
+`Content-Disposition: attachment`) and clicks a hidden anchor, so the browser streams the bytes
+straight to disk: nothing is copied onto the NAS and a 1 GB audiobook is never buffered in page
+memory.
+
+- the card menu (`⤓ Download` / `⤓ Download tracks`), the reader/player bar and the audiobooks table
+  save the whole title;
+- a folder audiobook becomes one file per track — the browser may ask to allow multiple downloads,
+  and the player has a `⤓` button on every track;
+- titles shared with you download read-only, because `/api/files/download` uses `sanitize_read` just
+  like streaming.
 
 ## API (through the authenticated proxy)
 

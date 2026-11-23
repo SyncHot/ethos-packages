@@ -163,6 +163,60 @@ async function json(path, { method = 'GET', body } = {}) {
     return _ctx.proxy(path, opts);
 }
 
+// ── Downloads ───────────────────────────────────────────────────────────────
+
+// Downloads go through the core file API (`/api/files/download`) with the
+// caller's own token, so `path_scope` decides what can be saved exactly as it
+// does for reading. A hidden anchor keeps the browser in charge: the response
+// streams straight to disk, so a 1 GB audiobook is never buffered in page
+// memory. Folder audiobooks are several files — browsers may ask to allow
+// multiple downloads.
+const DOWNLOAD_GAP_MS = 700;
+
+function downloadUrl(path) {
+    const token = localStorage.getItem('token') || '';
+    return `/api/files/download?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`;
+}
+
+function bookPaths(book) {
+    const tracks = Array.isArray(book.tracks) ? book.tracks : [];
+    return (tracks.length ? tracks.map((track) => track.path) : [book.path]).filter(Boolean);
+}
+
+function saveToDevice(path) {
+    const anchor = document.createElement('a');
+    anchor.href = downloadUrl(path);
+    anchor.download = baseName(path);
+    anchor.rel = 'noopener';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    setTimeout(() => { anchor.remove(); }, 2000);
+}
+
+function downloadLabel(book) {
+    return book.kind === 'audiobook' && (book.tracks || []).length > 1 ? 'All tracks' : 'Download';
+}
+
+async function downloadBook(book, paths = null) {
+    const list = (paths && paths.length ? paths : bookPaths(book)).filter(Boolean);
+    if (!list.length) {
+        setStatus('There is no file to download for this title.', 'warn');
+        return;
+    }
+    const label = book.title || baseName(book.path);
+    for (let i = 0; i < list.length; i += 1) {
+        saveToDevice(list[i]);
+        if (i < list.length - 1) await new Promise((resolve) => setTimeout(resolve, DOWNLOAD_GAP_MS));
+    }
+    const message = list.length > 1
+        ? `Downloading ${list.length} files of ${label} — allow multiple downloads if the browser asks.`
+        : `Downloading ${baseName(list[0])}…`;
+    log.info('download started', `${list.length} file(s) · ${label}`);
+    setStatus(message);
+    _ctx.notifications.toast(message, 'info');
+}
+
 // ── Formatting helpers ──────────────────────────────────────────────────────
 
 function fmtBytes(value) {
@@ -519,14 +573,27 @@ function injectStyles(container) {
 .bk-player-meta p { margin: 4px 0 0; font-size: 12px; color: var(--pkg-muted); }
 .bk-tracks { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 26px 16px; }
 .bk-track {
-    display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 9px;
-    border: 0; border-radius: 8px; background: transparent; color: var(--pkg-text);
-    font: 500 11.5px/1.3 ui-sans-serif, system-ui, sans-serif; text-align: left; cursor: pointer;
+    display: flex; align-items: center; gap: 2px; width: 100%;
+    border-radius: 8px; color: var(--pkg-text);
 }
 .bk-track:hover { background: var(--pkg-hover); }
 .bk-track.is-active { background: var(--pkg-accent-soft); color: var(--pkg-accent); }
+.bk-track-main {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+    padding: 8px 9px; border: 0; border-radius: 8px; background: transparent;
+    color: inherit; font: 500 11.5px/1.3 ui-sans-serif, system-ui, sans-serif;
+    text-align: left; cursor: pointer;
+}
+.bk-track-main:focus-visible { outline: 2px solid var(--pkg-accent); outline-offset: -2px; }
+.bk-track .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bk-track .num { font-family: ui-monospace, monospace; font-size: 10px; color: var(--pkg-muted); min-width: 20px; }
 .bk-track .dur { margin-left: auto; font-family: ui-monospace, monospace; font-size: 10px; color: var(--pkg-muted); }
+.bk-track-dl {
+    flex: none; border: 0; background: transparent; color: var(--pkg-muted);
+    cursor: pointer; padding: 6px 8px; border-radius: 7px; font-size: 12px; line-height: 1;
+}
+.bk-track-dl:hover { background: var(--pkg-hover); color: var(--pkg-text); }
+.bk-track-dl:focus-visible { outline: 2px solid var(--pkg-accent); outline-offset: 1px; }
 .bk-player-bar {
     display: flex; align-items: center; gap: 10px; padding: 10px 18px 14px;
     border-top: 1px solid var(--pkg-border); background: var(--pkg-side-bg); flex-wrap: wrap;
@@ -735,7 +802,7 @@ function renderAudiobooksView(host) {
   <td>${(book.tracks || []).length || 1}</td>
   <td class="num">${escHtml(fmtBytes(book.size))}</td>
   <td class="num">${percent ? `${percent}%` : '—'}</td>
-  <td class="actions"><button class="bk-btn small primary" type="button" data-open="${escAttr(book.id)}" data-testid="books-play">${percent ? 'Resume' : 'Play'}</button></td>
+  <td class="actions"><button class="bk-btn small primary" type="button" data-open="${escAttr(book.id)}" data-testid="books-play">${percent ? 'Resume' : 'Play'}</button> <button class="bk-btn small" type="button" data-download="${escAttr(book.id)}" data-testid="books-download" title="Download to your device" aria-label="Download ${escAttr(book.title || baseName(book.path))}">⤓</button></td>
 </tr>`;
     }).join('')}</tbody>
   </table>
@@ -1558,7 +1625,7 @@ function openReaderShell(book, extraActions = '') {
   <div class="bk-reader-bar">
     <button class="bk-btn small" type="button" data-reader-close data-testid="books-reader-back">← Library</button>
     <strong data-testid="books-reader-title">${escHtml(book.title || baseName(book.path))}</strong>
-    <div class="bk-row">${extraActions}<button class="bk-btn small" type="button" data-reader-close data-testid="books-reader-close">Close</button></div>
+    <div class="bk-row">${extraActions}<button class="bk-btn small" type="button" data-reader-download data-testid="books-reader-download" title="Download to your device">⤓ ${escHtml(downloadLabel(book))}</button><button class="bk-btn small" type="button" data-reader-close data-testid="books-reader-close">Close</button></div>
   </div>
   <div class="bk-reader-body" data-reader-body></div>
   <div class="bk-reader-foot" data-reader-foot></div>`;
@@ -1566,6 +1633,9 @@ function openReaderShell(book, extraActions = '') {
     overlay.tabIndex = -1;
     overlay.querySelectorAll('[data-reader-close]').forEach((btn) => {
         btn.addEventListener('click', closeReader);
+    });
+    overlay.querySelectorAll('[data-reader-download]').forEach((btn) => {
+        btn.addEventListener('click', () => downloadBook(book));
     });
     overlay.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') closeReader();
@@ -1817,10 +1887,13 @@ async function openPlayer(book) {
     </div>
   </div>
   <div class="bk-tracks" data-testid="books-tracks">${tracks.map((track, i) => `
-    <button class="bk-track${i === index ? ' is-active' : ''}" type="button" data-track="${i}" data-testid="books-track">
-      <span class="num">${i + 1}</span><span>${escHtml(track.title || baseName(track.path))}</span>
-      <span class="dur">${escHtml(fmtBytes(track.size))}</span>
-    </button>`).join('')}</div>
+    <div class="bk-track${i === index ? ' is-active' : ''}">
+      <button class="bk-track-main" type="button" data-track="${i}" data-testid="books-track">
+        <span class="num">${i + 1}</span><span class="name">${escHtml(track.title || baseName(track.path))}</span>
+        <span class="dur">${escHtml(fmtBytes(track.size))}</span>
+      </button>
+      <button class="bk-track-dl" type="button" data-track-download="${i}" data-testid="books-track-download" title="Download this track" aria-label="Download ${escAttr(track.title || baseName(track.path))}">⤓</button>
+    </div>`).join('')}</div>
 </div>`;
     const foot = overlay.querySelector('[data-reader-foot]');
     foot.innerHTML = `
@@ -1921,6 +1994,12 @@ async function openPlayer(book) {
         }
     });
     body.addEventListener('click', (event) => {
+        const download = event.target.closest('[data-track-download]');
+        if (download) {
+            const track = tracks[Number(download.dataset.trackDownload)];
+            if (track) downloadBook(book, [track.path]);
+            return;
+        }
         const row = event.target.closest('[data-track]');
         if (!row) return;
         load(Number(row.dataset.track));
@@ -1971,6 +2050,11 @@ function findBook(id) {
     return (_state.library.books || []).find((book) => book.id === id) || null;
 }
 
+function findVisibleBook(path) {
+    return [...(_state.library.shared_books || []), ...(_state.sharedFiles || [])]
+        .find((book) => book.path === path) || null;
+}
+
 function closeMenus() {
     document.querySelectorAll('.bk-menu').forEach((menu) => menu.remove());
 }
@@ -1984,6 +2068,7 @@ function toggleMenu(book, anchor) {
     menu.dataset.testid = 'books-menu-panel';
     menu.innerHTML = `
   <button type="button" data-act="open" data-testid="books-act-open">${book.kind === 'audiobook' ? 'Play' : 'Read'}</button>
+  <button type="button" data-act="download" data-testid="books-act-download">⤓ ${book.kind === 'audiobook' ? 'Download tracks' : 'Download'}</button>
   <button type="button" data-act="details" data-testid="books-act-details">Edit details</button>
   <button type="button" data-act="reset" data-testid="books-act-reset">Reset progress</button>
   <button type="button" class="danger" data-act="remove" data-testid="books-act-remove">Remove from library</button>`;
@@ -1993,6 +2078,7 @@ function toggleMenu(book, anchor) {
         const action = btn.dataset.act;
         closeMenus();
         if (action === 'open') return openBook(book);
+        if (action === 'download') return downloadBook(book);
         if (action === 'details') return editDetails(book);
         if (action === 'reset') return resetProgress(book);
         if (action === 'remove') return removeBook(book);
@@ -2109,6 +2195,18 @@ function attachEvents(container) {
         if (menuBtn) {
             const book = findBook(menuBtn.dataset.menu);
             if (book) toggleMenu(book, menuBtn);
+            return;
+        }
+        const downloadBtn = event.target.closest('[data-download]');
+        if (downloadBtn) {
+            const book = findBook(downloadBtn.dataset.download);
+            if (book) downloadBook(book);
+            return;
+        }
+        const downloadShared = event.target.closest('[data-download-shared]');
+        if (downloadShared) {
+            const book = findVisibleBook(downloadShared.dataset.downloadShared);
+            if (book) downloadBook(book);
             return;
         }
         if (!event.target.closest('.bk-menu')) closeMenus();
@@ -2279,6 +2377,7 @@ function sharedCardMarkup(book) {
   </button>
   <div class="bk-card-title">${escHtml(label)}</div>
   <div class="bk-card-sub">${owner ? `Shared by ${escHtml(owner)}` : 'Shared with you'}</div>
+  <button class="bk-btn small" type="button" data-download-shared="${escAttr(book.path)}" data-testid="books-download-shared" title="Download to your device">⤓ Download</button>
 </article>`;
 }
 
