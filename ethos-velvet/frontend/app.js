@@ -1188,14 +1188,18 @@ async function openPlayer(item, options = {}) {
 
     try {
         const info = await _ctx.apiJsonFetch(`/api/videos/info?path=${encodeURIComponent(item.path)}`);
-        _player.duration = Number(info?.info?.duration || _player.duration || 0);
-        _player.audioTracks = info?.info?.audio_tracks || [];
+        // `/api/videos/info` nests the facts under `info` (playback_mode,
+        // audio_tracks, duration); tolerate older cores that answered flat.
+        const details = info?.info || info || {};
+        _player.duration = Number(details.duration || info?.duration || _player.duration || 0);
+        _player.audioTracks = details.audio_tracks || info?.audio_tracks || [];
         _player.info = info;
         renderAudioOptions();
         const resume = options.t != null ? Number(options.t)
             : await resumeFor(item.path);
         _player.resume = resume || 0;
-        if (info.playback_mode === 'direct' && _player.audioTracks.length <= 1) {
+        const playbackMode = details.playback_mode || info?.playback_mode || '';
+        if (playbackMode === 'direct') {
             await startDirect();
         } else {
             await startHls(_player.resume);
@@ -1233,6 +1237,7 @@ async function startDirect() {
     _player.mode = 'direct';
     _player.offset = 0;
     _player.refs.quality.disabled = true;
+    if (_player.refs.audio) _player.refs.audio.hidden = true;
     video.src = withToken(`/api/videos/stream?path=${encodeURIComponent(_player.item.path)}`);
     video.addEventListener('loadedmetadata', () => {
         if (!_player) return;

@@ -28,7 +28,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `ethos-sticky-notes` 🗒️ | 2.0.0 | native | Per-account notes and checklist tasks: search, pin, archive, due dates, reminders with browser push, and a collapsible right-edge desktop ribbon. |
 | `ethos-surveillance` 📹 | 2.0.1 | native | Surveillance Station for EthOS: live HLS wall, continuous or scheduled recording with retention, timeline playback and MP4 export, masked motion zone… |
 | `ethos-sync` 🔁 | 1.0.2 | window 8384 | Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the midd… |
-| `ethos-velvet` 🍑 | 1.0.0 | native | A private library for your personal 18+ video collection. Pick folders on the NAS and get single-eye thumbnails for VR/180° side-by-side files, a fra… |
+| `ethos-velvet` 🍑 | 1.0.1 | native | A private library for your personal 18+ video collection. Pick folders on the NAS and get single-eye thumbnails for VR/180° side-by-side files, a fra… |
 | `ethos-video` 🎬 | 2.3.1 | native | Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for… |
 | `ethos-welcome` 🌅 | 1.0.4 | window 8090 | A tiny static welcome page for your NAS, served by nginx on port 8090. |
 | `tic-tac-toe` ❌ | 2.1.1 | native | A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port. |
