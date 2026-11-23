@@ -372,6 +372,16 @@ class VelvetServiceTests(unittest.TestCase):
         self.assertEqual(self._library()["total"], 4)
         self.assertEqual(self._library("&missing=1")["total"], 1)
 
+        # A file that still exists but was marked missing (a stale event) is
+        # restored by the next scan without a new probe.
+        survivor = self._library()["items"][0]
+        status, data = self._json("POST", "/events", {"removed": [survivor["path"]]})
+        self.assertEqual(status, 200, data)
+        self.assertEqual(data["removed"], 1)
+        self.assertEqual(self._library()["total"], 3)
+        self._scan()
+        self.assertEqual(self._library()["total"], 4)
+
         # A new file plus a changed parent starts a targeted scan.
         self._touch("StudioVR_New_Scene_8K_LR_180_1795014000.mp4")
         status, data = self._json("POST", "/events", {"changed": [self.library]})

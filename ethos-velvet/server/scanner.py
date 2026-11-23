@@ -167,31 +167,33 @@ def _run(username: str, role: str, roots: list[str] | None) -> None:
             if cached and int(cached["size"]) == size and abs(float(cached["mtime"]) - mtime) < 0.001:
                 metadata_fresh = float(cached.get("probed_at") or 0) > 0
             if metadata_fresh:
-                row = store.get_media(username, path) or {}
                 meta = {
-                    "duration": float(row.get("duration") or 0),
-                    "width": int(row.get("width") or 0),
-                    "height": int(row.get("height") or 0),
-                    "bitrate": int(row.get("bitrate") or 0),
-                    "vcodec": row.get("vcodec") or "",
-                    "acodec": row.get("acodec") or "",
-                    "audio_tracks": int(row.get("audio_tracks") or 0),
+                    "duration": float(cached.get("duration") or 0),
+                    "width": int(cached.get("width") or 0),
+                    "height": int(cached.get("height") or 0),
+                    "bitrate": int(cached.get("bitrate") or 0),
+                    "vcodec": cached.get("vcodec") or "",
+                    "acodec": cached.get("acodec") or "",
+                    "audio_tracks": int(cached.get("audio_tracks") or 0),
                 }
                 return entry, meta, True, True
             return entry, meta, False, False
 
-        # Phase 1: reuse unchanged metadata without touching ffprobe.
+        # Phase 1: reuse unchanged metadata without touching ffprobe or writing
+        # every row again. Only restored rows need their missing flag cleared.
         pending: list[tuple[str, str, int, float]] = []
+        restored: list[str] = []
         for entry in files:
             entry, meta, fresh, _ = prepare(entry)
             path, name, size, mtime = entry
             if fresh:
                 skipped += 1
-                _upsert(username, path, name, size, mtime, meta,
-                        float(existing[path].get("probed_at") or time.time()))
+                restored.append(path)
                 seen.add(path)
             else:
                 pending.append(entry)
+        if restored:
+            store.mark_present(username, restored)
 
         _update(username, scanned=len(seen), skipped=skipped, probed=probed, failed=failed)
 

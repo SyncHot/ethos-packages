@@ -384,11 +384,10 @@ function setView(view) {
 function maybeAutoScan() {
     if (state.autoScanned || !state.settings.auto_scan || !state.folders.length) return;
     if (state.scan.state === 'scanning' || state.scan.state === 'starting') return;
-    const finished = Number(state.scan.finished_at || 0);
-    if (!finished || Date.now() / 1000 - finished > 6 * 3600) {
-        state.autoScanned = true;
-        startScan();
-    }
+    // A quick incremental pass on every open reconciles changes made while the
+    // window was closed (unchanged files skip ffprobe and DB writes).
+    state.autoScanned = true;
+    startScan();
 }
 
 // ── File Manager event bridge ───────────────────────────────────────────────
@@ -997,7 +996,7 @@ function settingsHtml() {
         ${select('grid', 'Grid size', [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']])}
         <label class="vl-field"><span>On open</span>
           <span class="vl-check-line"><input type="checkbox" data-role="setting" data-key="auto_scan"
-            ${state.settings.auto_scan ? 'checked' : ''} data-testid="velvet-setting-auto-scan"> Rescan when the library is older than 6 hours</span>
+            ${state.settings.auto_scan ? 'checked' : ''} data-testid="velvet-setting-auto-scan"> Quick rescan when Velvet opens (picks up File Manager changes)</span>
         </label>
       </div>
     </section>

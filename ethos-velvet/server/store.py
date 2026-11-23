@@ -154,15 +154,41 @@ def replace_folders(username: str, folder_paths: list[str]) -> list[dict]:
 def existing_index(username: str) -> dict[str, dict]:
     """path → the fields the scanner uses to skip unchanged files."""
     with _connect(username) as conn:
-        rows = conn.execute("SELECT path, size, mtime, probed_at FROM media").fetchall()
+        rows = conn.execute(
+            "SELECT path, size, mtime, probed_at, duration, width, height, bitrate, "
+            "vcodec, acodec, audio_tracks FROM media"
+        ).fetchall()
     return {
         row["path"]: {
             "size": int(row["size"]),
             "mtime": float(row["mtime"]),
             "probed_at": float(row["probed_at"]),
+            "duration": float(row["duration"]),
+            "width": int(row["width"]),
+            "height": int(row["height"]),
+            "bitrate": int(row["bitrate"]),
+            "vcodec": row["vcodec"] or "",
+            "acodec": row["acodec"] or "",
+            "audio_tracks": int(row["audio_tracks"]),
         }
         for row in rows
     }
+
+
+def mark_present(username: str, paths_list: list[str]) -> int:
+    """Clear the missing flag for files that reappeared unchanged."""
+    cleaned = [str(p) for p in paths_list if p]
+    changed = 0
+    with _connect(username) as conn:
+        for start in range(0, len(cleaned), 500):
+            chunk = cleaned[start:start + 500]
+            marks = ", ".join("?" for _ in chunk)
+            cursor = conn.execute(
+                f"UPDATE media SET missing=0 WHERE missing=1 AND path IN ({marks})",
+                chunk,
+            )
+            changed += int(cursor.rowcount or 0)
+    return changed
 
 
 def upsert_media(username: str, item: dict) -> None:

@@ -95,9 +95,10 @@ folder in Files can read the files. Velvet does not change the filesystem ACLs.
   own home, `/mnt` and `/media`.
 - **Duplicate detection** relies on a cleaned title plus duration; files with
   different titles will not be grouped.
-- **External changes while Velvet is closed** are picked up by the next scan
-  (on open, automatically when the library is older than six hours, or with
-  Rescan). File Manager sync is live only while the Velvet window is open.
+- **External changes while Velvet is closed** are reconciled by the quick
+  incremental scan on open (default) or by Rescan; turn the open scan off in
+  Settings if you prefer manual control. The live File Manager sync only runs
+  while the Velvet window is open.
 
 ## Development
 
