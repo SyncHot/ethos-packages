@@ -9,7 +9,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 |---|---|---|---|
 | `backup-manager` 🔄 | 1.0.3 | native | Versioned backups for folders and Docker Compose projects. Dated hardlink snapshots, GFS retention, quick/deep verify, a restore wizard and optional… |
 | `domains` 🌐 | 1.2.2 | native | Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another… |
-| `download-manager` ⬇️ | 1.1.1 | native | HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window. |
+| `download-manager` ⬇️ | 1.1.2 | native | HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window. |
 | `ethos-antivirus` 🛡️ | 2.1.6 | native | ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only… |
 | `ethos-books` 📚 | 1.2.1 | native | Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied… |
 | `ethos-cleaner` 🧹 | 2.0.0 | native | Find what is eating your disk — folder sizes, biggest files, junk cleanup, EthOS caches and Docker leftovers — with recoverable deletes. |
@@ -28,6 +28,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `ethos-sticky-notes` 🗒️ | 2.0.0 | native | Per-account notes and checklist tasks: search, pin, archive, due dates, reminders with browser push, and a collapsible right-edge desktop ribbon. |
 | `ethos-surveillance` 📹 | 2.0.1 | native | Surveillance Station for EthOS: live HLS wall, continuous or scheduled recording with retention, timeline playback and MP4 export, masked motion zone… |
 | `ethos-sync` 🔁 | 1.0.2 | window 8384 | Keep folders in sync between this NAS, laptops, phones and other servers. Syncthing transfers directly between devices — no cloud account in the midd… |
+| `ethos-velvet` 🍑 | 1.0.0 | native | A private library for your personal 18+ video collection. Pick folders on the NAS and get single-eye thumbnails for VR/180° side-by-side files, a fra… |
 | `ethos-video` 🎬 | 2.3.1 | native | Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for… |
 | `ethos-welcome` 🌅 | 1.0.4 | window 8090 | A tiny static welcome page for your NAS, served by nginx on port 8090. |
 | `tic-tac-toe` ❌ | 2.1.1 | native | A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port. |

@@ -1,0 +1,92 @@
+{
+  "schema": 2,
+  "id": "ethos-velvet",
+  "name": "Velvet",
+  "version": "1.0.0",
+  "description": "A private library for your personal 18+ video collection. Pick folders on the NAS and get single-eye thumbnails for VR/180° side-by-side files, a frame strip to see what a scene contains, freeform tags with ratings, duplicate detection for re-downloads, and playback with a Left/Right/SBS eye switch. Files are indexed in place — nothing is copied and no content leaves the device.",
+  "icon": "🍑",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/icon.svg",
+  "category": "media",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "min_ethos_version": "2.13.3",
+  "runtime": "venv",
+  "user_access": true,
+  "ui": {
+    "mode": "native",
+    "entry": "frontend/app.js",
+    "port": 8100
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 8100,
+    "path": "/health"
+  },
+  "changelog": "1.0.0: first release — a private library for your own 18+ collection. Add folders with the EthOS picker, scan in place, and browse a thumbnail grid where VR side-by-side files show the left eye instead of a doubled frame. A detail view pairs six preview frames with ffprobe facts (per-eye dimensions, codec, bitrate, duration, size), freeform tags, a 1–5 rating and keep/reject marks. Duplicates are grouped by cleaned title and comparable runtime so re-downloads can be removed in bulk. Playback reuses the core Video Station pipeline (direct streaming or HLS for HEVC/MKV) with Left / Right / SBS eye switching, quality, audio tracks, speed and resume. Every account has its own index, tags and thumbnails; permanent deletion goes through the core file API behind a typed confirmation.",
+  "compose": null,
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/server/main.py",
+      "sha256": "a6293442aec08bfa43e765e1540e169cebc88e2646bb045675da3d5365f9a3c5",
+      "path": "server/main.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/server/paths.py",
+      "sha256": "9726225cd96eaaf608db51c066603abb9f3f03bff900feddb23aff7606fd71d9",
+      "path": "server/paths.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/server/store.py",
+      "sha256": "3abf48517d7ffca6de535e3c8507e380916a532b6811368f2f909bda8540c3f5",
+      "path": "server/store.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/server/scanner.py",
+      "sha256": "148f5e64bc5011af8c2fb3e9ae3d5a83dfb1b1ff543c9cd1f72be2be006ac439",
+      "path": "server/scanner.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/server/media.py",
+      "sha256": "a9d8a53751167ae2c0fb421505f1e7290184a4f3c744778be8c78465f7ee6c71",
+      "path": "server/media.py",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/frontend/app.js",
+      "sha256": "83f4aacadb4483f3db89aaeb7a0793b775aee2be698e472a1b101023ded7f905",
+      "path": "frontend/app.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/frontend/hls.min.js",
+      "sha256": "cfc70cc9e9fc63d071919e087670abc760c8fd1bc889b88588026e4d22193bbe",
+      "path": "frontend/hls.min.js",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/frontend/hls.LICENSE.txt",
+      "sha256": "ca8773cf798c7ed997d4dd7c8e23c348699f8d5b7462636694cc14de6cda12db",
+      "path": "frontend/hls.LICENSE.txt",
+      "mode": 420
+    },
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-velvet/icon.svg",
+      "sha256": "85021ae9cf710f1a207f5a134f006facdd2f74637e5bd9db8064bab1ab1e4b7b",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ],
+  "python": {
+    "entry": "server/main.py",
+    "port": 8100,
+    "requirements": [],
+    "requires_python": "3.14",
+    "wheels": []
+  }
+}
