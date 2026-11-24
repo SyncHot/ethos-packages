@@ -31,6 +31,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `ethos-velvet` 🍑 | 1.0.5 | native | A private library for your personal 18+ video collection. Pick folders on the NAS and get single-eye thumbnails for VR/180° side-by-side files, a fra… |
 | `ethos-video` 🎬 | 2.3.1 | native | Browse and watch the videos on your NAS: a cinema library with poster shelves, Continue Watching, Movies/Series, search and My List; HLS playback for… |
 | `ethos-welcome` 🌅 | 1.0.4 | window 8090 | A tiny static welcome page for your NAS, served by nginx on port 8090. |
+| `grafana` 📈 | 1.0.0 | window 3010 | Dashboards for the metrics that already live on the NAS: point Grafana at InfluxDB (or Prometheus, SQL and other sources) and build graphs, alerts an… |
 | `influxdb` 📊 | 1.0.1 | window 8086 | Store metrics, sensor readings and events from your NAS, Home Assistant and other devices in a time-series database that lives on the NAS. InfluxDB 2… |
 | `tic-tac-toe` ❌ | 2.1.1 | native | A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port. |
 | `vmm` 🖥️ | 1.2.2 | native | Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO or boot a ready-made system image such as the… |

@@ -1,0 +1,44 @@
+{
+  "schema": 2,
+  "id": "grafana",
+  "name": "Grafana",
+  "version": "1.0.0",
+  "description": "Dashboards for the metrics that already live on the NAS: point Grafana at InfluxDB (or Prometheus, SQL and other sources) and build graphs, alerts and shared views in the browser. The first visit uses the built-in admin account, which you change immediately; dashboards, users and data sources live in a package volume that survives updates. The web UI opens in its own EthOS window on port 3010 and is reachable on the LAN.",
+  "icon": "📈",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/grafana/icon.svg",
+  "category": "monitoring",
+  "author": "SyncHot",
+  "homepage": "https://grafana.com/oss/grafana/",
+  "license": "AGPL-3.0",
+  "channel": "stable",
+  "min_ethos_version": "2.27.0",
+  "ui": {
+    "mode": "window",
+    "scheme": "http",
+    "port": 3010,
+    "path": "/",
+    "expose": "lan",
+    "auth": "package"
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 3010,
+    "path": "/api/health"
+  },
+  "system_requires": [
+    "docker"
+  ],
+  "changelog": "1.0.0: first release — Grafana OSS 13.3.1 pinned, dashboards and users in a volume that survives updates, web UI on port 3010 (own login; change admin/admin on first visit), resource caps and rotated logs.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/grafana/docker-compose.yml",
+    "sha256": "529b60b836c392c4349f3a340b532725f13ac84c0208ce77567848685c9e99d5"
+  },
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/grafana/icon.svg",
+      "sha256": "2620fe388939dbc53fad81048d92c56cd28ad8bef24122103a98c26197a71add",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ]
+}

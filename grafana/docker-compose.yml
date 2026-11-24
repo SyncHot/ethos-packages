@@ -1,0 +1,47 @@
+services:
+  grafana:
+    # Pinned on purpose: the signed compose file must describe exactly what runs.
+    image: grafana/grafana:13.3.1
+    container_name: ethos-grafana
+    environment:
+      # Grafana keeps its own login. The first visit signs in with admin/admin
+      # and must change it; no credentials live in the public signed package.
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_ALLOW_ORG_CREATE: "false"
+      # No outbound usage reports or update checks from a self-hosted NAS.
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      # EthOS embeds the UI in a window; Grafana refuses framing by default.
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "3010:3000"  # Web UI (own login)
+    # Lets Grafana reach the InfluxDB package on this NAS without hardcoding its
+    # address: http://host.docker.internal:8086.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # SQLite database, dashboards, users, data sources and plugins survive
+      # updates.
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+    # Grafana needs ~200 MB idle and documents 512 MB as its minimum; 768 MB
+    # leaves room for dashboards and plugins without letting it starve the NAS.
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  grafana-data: {}
