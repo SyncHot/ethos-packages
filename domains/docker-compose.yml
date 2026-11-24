@@ -31,6 +31,16 @@ services:
       # host.docker.internal:9000 (the EthOS API/UI).
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    # Caddy is tiny (about 60 MB idle); cap it so a runaway route or a
+    # connection burst cannot starve the NAS.
+    mem_limit: 256m
+    cpus: 1.0
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       # Caddy's admin API is the only endpoint that must stay alive for the UI
       # to reload routes; busybox wget ships with the alpine image.
@@ -66,6 +76,15 @@ services:
     depends_on:
       - proxy
     restart: unless-stopped
+    # The control plane only renders config and reloads Caddy over its API.
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8093/api/health', timeout=3)"]
       interval: 30s

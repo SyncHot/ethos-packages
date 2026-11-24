@@ -14,6 +14,19 @@ The two containers share four volumes: `caddy-data` (certificates, ACME account)
 `caddy-config`, `caddy-generated` (the rendered config) and `caddy-logs`.
 Routes and settings live in `domains-data` as one JSON document.
 
+## Resource guard
+
+Docker caps both containers so a bad route, a connection flood or a stuck reload cannot take the
+NAS down:
+
+| Container | Memory | CPU | PIDs |
+|---|---|---|---|
+| `ethos-domains-proxy` | 256 MB | 1.0 | 256 |
+| `ethos-domains` | 128 MB | 0.5 | 128 |
+
+Container logs use `json-file` with `max-size: 10m` and `max-file: 3` (30 MB per container).
+Measured idle use is about 60 MB for Caddy and 5 MB for the control plane.
+
 ## Independent of EthOS
 
 Both containers use `restart: unless-stopped`, and EthOS never talks to them

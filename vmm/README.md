@@ -13,6 +13,14 @@ KVM virtual machines with qcow2 disks on your shares, a browser console and auto
 
 State (disk metadata, autostart flags) lives in the `vmm-data` volume; disks live on the NAS shares.
 
+## Resource guard
+
+The container is capped at **3 CPU cores** and **512 processes**, with `json-file` logs rotated at
+10 MB × 3. There is deliberately **no memory limit**: QEMU allocates guest RAM inside this
+container, so a hard cap would make VMs fail to start. Keep the sum of VM memory below the NAS's
+free RAM (the VM form shows the host total); the CPU and PID caps still stop a runaway guest from
+monopolising the host.
+
 ## Development
 
 `frontend/app.js` exports `render(container, ctx)`; the server is stdlib Python. Bump `version`,

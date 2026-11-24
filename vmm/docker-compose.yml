@@ -35,6 +35,16 @@ services:
       - /media:/vmhost/media
     stop_grace_period: 60s
     restart: unless-stopped
+    # Guest RAM is allocated by QEMU inside this container, so a mem_limit would
+    # kill VMs; keep the sum of VM memory within the NAS's free RAM instead. CPU
+    # and process caps still stop a runaway guest from monopolising the host.
+    cpus: 3.0
+    pids_limit: 512
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8095/api/health', timeout=3)"]
       interval: 30s
