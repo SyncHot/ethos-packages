@@ -9,7 +9,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 |---|---|---|---|
 | `backup-manager` 🔄 | 1.0.3 | native | Versioned backups for folders and Docker Compose projects. Dated hardlink snapshots, GFS retention, quick/deep verify, a restore wizard and optional… |
 | `domains` 🌐 | 1.2.3 | native | Reverse proxy with free, automatically renewed HTTPS certificates. Point your own domains at this NAS and forward them to any host and port - another… |
-| `download-manager` ⬇️ | 1.1.3 | native | HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window. |
+| `download-manager` ⬇️ | 1.1.4 | native | HTTP, magnet and debrid downloads with a priority queue, categories, a daily schedule, bandwidth limits and RSS rules — in a native EthOS window. |
 | `ethos-antivirus` 🛡️ | 2.1.6 | native | ClamAV antivirus with a native EthOS window: full, custom and scheduled scans, quarantine copies, scan logs and configurable scan options. Read-only… |
 | `ethos-books` 📚 | 1.5.0 | native | Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied… |
 | `ethos-cleaner` 🧹 | 2.0.0 | native | Find what is eating your disk — folder sizes, biggest files, junk cleanup, EthOS caches and Docker leftovers — with recoverable deletes. |

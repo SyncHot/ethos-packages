@@ -150,6 +150,9 @@ const STYLE = `
 .dm-bar > i { display: block; height: 100%; border-radius: 999px; background: var(--dm-accent); transition: width 0.3s ease; }
 .dm-bar.is-done > i { background: var(--dm-green); }
 .dm-bar.is-error > i { background: var(--dm-red); }
+.dm-bar.is-extracting > i { width: 100% !important; background: repeating-linear-gradient(90deg, var(--dm-accent) 0 12px, var(--dm-accent-soft) 12px 24px); background-size: 24px 100%; animation: dm-extract-sweep 0.8s linear infinite; }
+@keyframes dm-extract-sweep { to { background-position: 24px 0; } }
+@media (prefers-reduced-motion: reduce) { .dm-bar.is-extracting > i { animation: none; } }
 .dm-meta { margin-top: 4px; color: var(--dm-muted); font-size: 10px; }
 .dm-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--dm-tag-border); background: var(--dm-tag-bg); color: var(--dm-tag-text); font: 10px ui-monospace, monospace; white-space: nowrap; }
 .dm-tag.is-ok { border-color: var(--dm-green-border); background: var(--dm-green-soft); color: var(--dm-green); }
@@ -498,10 +501,12 @@ export async function render(container, ctx) {
         const canSkip = task.status !== 'completed' && task.status !== 'skipped';
         const canUnskip = task.status === 'skipped';
         const canExtract = task.status === 'completed' && ARCHIVE_NAME_RE.test(String(task.name || ''));
-        const extractInfo = task.extract_state === 'running'
-            ? ' · <span class="dm-danger">extracting…</span>'
-            : task.extract_state === 'done' ? ' · extracted'
+        const extracting = task.extract_state === 'running';
+        const extractInfo = task.extract_state === 'done' ? ' · extracted'
             : task.extract_state === 'error' ? ` · <span class="dm-danger">extract failed: ${escHtml(task.extract_error || '')}</span>` : '';
+        const barClass = extracting ? 'is-extracting'
+            : task.status === 'completed' ? 'is-done'
+            : task.status === 'error' ? 'is-error' : '';
         const retryAt = Number(task.retry_at || 0);
         const retryMax = Number(state.config?.retry_max ?? 3);
         const retrying = task.status === 'waiting' && retryAt > Date.now() / 1000;
@@ -511,6 +516,9 @@ export async function render(container, ctx) {
         const mirrorCount = Number(task.mirror_count || 1);
         const mirrorInfo = mirrorCount > 1
             ? ` · <span${Number(task.mirror_index || 0) > 0 ? ' class="dm-danger"' : ''}>mirror ${Number(task.mirror_index || 0) + 1}/${mirrorCount}</span>` : '';
+        const meta = extracting
+            ? `Extracting… · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)}`
+            : `${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${retryInfo}${mirrorInfo}${extractInfo}${task.error ? ` · <span class="dm-danger">${escHtml(task.error)}</span>` : ''}`;
         const actions = compact ? '' : `<td class="actions"><div class="dm-row end">
                 ${canPause ? `<button class="dm-btn small" type="button" data-action="pause" data-id="${escAttr(task.id)}" data-testid="dm-pause-${escAttr(task.id)}">Pause</button>` : ''}
                 ${canResume ? `<button class="dm-btn small" type="button" data-action="resume" data-id="${escAttr(task.id)}" data-testid="dm-resume-${escAttr(task.id)}">Resume</button>` : ''}
@@ -530,9 +538,10 @@ export async function render(container, ctx) {
                     <span class="dm-tag ${tone}">${escHtml(label)}</span>
                     ${waiting && task.queue_position ? `<span class="dm-tag is-info">#${task.queue_position}</span>` : ''}
                     ${task.category ? `<span class="dm-tag">${escHtml(task.category)}</span>` : ''}
+                    ${extracting ? '<span class="dm-tag is-info">Extracting…</span>' : ''}
                 </div>
-                <div class="dm-bar ${task.status === 'completed' ? 'is-done' : task.status === 'error' ? 'is-error' : ''}"><i style="width:${percent}%"></i></div>
-                <div class="dm-meta">${percent}% · ${fmtBytes(task.downloaded)} / ${fmtBytes(task.size)} · ${fmtSpeed(task.speed)} · ETA ${eta}${retryInfo}${mirrorInfo}${extractInfo}${task.error ? ` · <span class="dm-danger">${escHtml(task.error)}</span>` : ''}</div>
+                <div class="dm-bar ${barClass}" role="progressbar" aria-busy="${extracting ? 'true' : 'false'}"><i style="width:${percent}%"></i></div>
+                <div class="dm-meta">${meta}</div>
             </td>
             <td class="path" title="${escAttr(task.path || '')}">${escHtml(task.path || '—')}</td>
             <td class="num">${fmtTime(task.created_at)}</td>
@@ -558,8 +567,15 @@ export async function render(container, ctx) {
         const retrying = group.tasks.filter((t) => t.status === 'waiting'
             && Number(t.retry_at || 0) > Date.now() / 1000).length;
         const extractState = group.tasks.map((t) => t.extract_state).find(Boolean) || '';
+        const extracting = extractState === 'running';
+        const barClass = extracting ? 'is-extracting'
+            : group.status === 'completed' ? 'is-done'
+            : group.status === 'error' ? 'is-error' : '';
+        const meta = extracting
+            ? `Extracting… · ${group.done}/${parts} done · ${fmtBytes(group.downloaded)} / ${fmtBytes(group.size)}`
+            : `${group.done}/${parts} done · ${percent}% · ${fmtBytes(group.downloaded)} / ${fmtBytes(group.size)} · ${fmtSpeed(group.speed)}${retrying ? ` · ${retrying} retrying` : ''}${firstError ? ` · <span class="dm-danger">${escHtml(firstError)}</span>` : ''}`;
         const canExtract = group.tasks.length > 1 && group.tasks.every((t) => t.status === 'completed')
-            && extractState !== 'running'
+            && !extracting
             && group.tasks.some((t) => ARCHIVE_NAME_RE.test(String(t.name || '')));
         const canResume = group.tasks.some((t) => t.status === 'paused' || t.status === 'error');
         const canPause = group.tasks.some((t) => ACTIVE.has(t.status));
@@ -585,12 +601,12 @@ export async function render(container, ctx) {
                     <span class="dm-tag is-info">${parts} parts</span>
                     ${group.failed ? `<span class="dm-tag is-bad">${group.failed} failed</span>` : ''}
                     ${group.skipped ? `<span class="dm-tag is-warn">${group.skipped} skipped</span>` : ''}
-                    ${extractState === 'running' ? '<span class="dm-tag is-info">Extracting…</span>' : ''}
+                    ${extracting ? '<span class="dm-tag is-info">Extracting…</span>' : ''}
                     ${extractState === 'done' ? '<span class="dm-tag is-ok">Extracted</span>' : ''}
                     ${extractState === 'error' ? '<span class="dm-tag is-bad">Extract failed</span>' : ''}
                 </div>
-                <div class="dm-bar ${group.status === 'completed' ? 'is-done' : group.status === 'error' ? 'is-error' : ''}"><i style="width:${percent}%"></i></div>
-                <div class="dm-meta">${group.done}/${parts} done · ${percent}% · ${fmtBytes(group.downloaded)} / ${fmtBytes(group.size)} · ${fmtSpeed(group.speed)}${retrying ? ` · ${retrying} retrying` : ''}${firstError ? ` · <span class="dm-danger">${escHtml(firstError)}</span>` : ''}</div>
+                <div class="dm-bar ${barClass}" role="progressbar" aria-busy="${extracting ? 'true' : 'false'}"><i style="width:${percent}%"></i></div>
+                <div class="dm-meta">${meta}</div>
             </td>
             <td class="path" title="${escAttr(taskFolder(group.tasks[0]))}">${escHtml(taskFolder(group.tasks[0]))}</td>
             <td class="num">${fmtTime(group.newest)}</td>
