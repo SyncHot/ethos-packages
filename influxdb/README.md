@@ -47,6 +47,21 @@ InfluxDB 2.x client.
 Everything is managed in the UI: buckets and retention under **Data → Buckets**, Flux queries under
 **Data Explorer**, downsampling or alerting under **Tasks**, and charts under **Dashboards**.
 
+## Resource guard
+
+The container is deliberately capped so a bad query or a large import cannot take the NAS down:
+
+| Limit | Value |
+|---|---|
+| Memory | 2 GB (`mem_limit`) |
+| CPU | 1.5 cores (`cpus`) |
+| Processes | 256 (`pids_limit`) |
+| Container logs | 10 MB × 3 files (`json-file`, 30 MB max) |
+
+A home telemetry workload fits comfortably. If you keep years of high-cardinality data, raise the
+memory limit in the package's `docker-compose.yml`; the caps protect the host and are not an
+InfluxDB setting.
+
 ## Backups
 
 `influx backup` walks the data directory; run it inside the container and copy the archive out:

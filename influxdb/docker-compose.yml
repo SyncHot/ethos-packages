@@ -14,6 +14,19 @@ services:
       # Generated server config and the influx CLI config.
       - influxdb-config:/etc/influxdb2
     restart: unless-stopped
+    # Keep a runaway database from starving the NAS: a home telemetry workload
+    # fits in 2 GB / 1.5 CPUs, and the container is OOM-killed in its own
+    # cgroup instead of the host running out of memory.
+    mem_limit: 2g
+    cpus: 1.5
+    pids_limit: 256
+    logging:
+      # Small rotated logs (30 MB total) so a noisy container cannot fill the
+      # root filesystem.
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       # The image ships curl; /health needs no token by default and answers
       # 200 only while the server accepts writes and queries.
