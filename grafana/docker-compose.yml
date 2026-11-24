@@ -28,7 +28,10 @@ services:
       # The SQLite database, dashboards, users, data sources and plugins live in
       # the folder chosen at install time (Installed → Settings to change it).
       # EthOS defaults it to packages/data/grafana on the NAS.
-      - "${ETHOS_PACKAGE_DATA_DIR}:/var/lib/grafana"
+      # The `:-./data` fallback matters when the file is rendered *without* EthOS
+      # (a manual `docker compose down/up` in this folder): an empty variable
+      # would otherwise abort with "empty section between colons".
+      - "${ETHOS_PACKAGE_DATA_DIR:-./data}:/var/lib/grafana"
     restart: unless-stopped
     # Grafana needs ~200 MB idle and documents 512 MB as its minimum; 768 MB
     # leaves room for dashboards and plugins without letting it starve the NAS.
