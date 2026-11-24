@@ -28,6 +28,10 @@ The service never opens a book. It stores metadata, covers and reading positions
   and the **embedded cover** is extracted from ID3 APIC (MP3) or the MP4 `covr` atom (M4B/M4A) by
   fetching just the first/last 512 KB of the file — never the whole audiobook. The original
   JPEG/PNG is stored as-is.
+- Titles without embedded art fall back to **folder artwork**: the scan looks for `cover.*`,
+  `folder.*`, `front.*`, `frontcover.*`, `poster.*`, `smallcover.*`, `okladka.*` or a sibling image
+  named after the book file/folder (JPG/PNG/WebP, ≤ 500 KB). Embedded EPUB/audio art still wins,
+  and for a PDF the folder image replaces the rendered first page.
 - The phone client lives in the core at `/books` (`docs/books-pwa.md` in the EthOS NAS repo); the
   desktop window stays the only place that scans folders.
 

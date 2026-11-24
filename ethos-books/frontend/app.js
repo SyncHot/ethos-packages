@@ -16,6 +16,11 @@ let _uiBase = '';
 const AUDIO_EXTS = new Set(['m4b', 'm4a', 'mp3', 'flac', 'ogg', 'opus']);
 const BOOK_EXTS = new Set(['epub', 'pdf']);
 const ALL_EXTS = [...BOOK_EXTS, ...AUDIO_EXTS];
+// Folder artwork: a normal book layout keeps `cover.jpg` next to the file, so
+// those files are collected while walking but never treated as titles.
+const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp']);
+const FOLDER_COVER_STEMS = ['cover', 'folder', 'front', 'frontcover', 'poster', 'smallcover', 'okladka'];
+const MAX_COVER_BYTES = 500 * 1024;
 const SKIP_DIRS = new Set(['@eaDir', '#recycle', '.@__thumb', 'lost+found', '.Trash-1000',
     '$RECYCLE.BIN', 'System Volume Information', 'node_modules', '__pycache__']);
 const MAX_DEPTH = 8;
@@ -983,6 +988,7 @@ async function scanOne(root, task, shared = false) {
     const settings = _state.library.settings || {};
     const exts = new Set((settings.extensions || ALL_EXTS).map((ext) => String(ext).toLowerCase()));
     const found = [];
+    const dirImages = new Map();
     const queue = [{ path: root, depth: 0 }];
     let nodes = 0;
     let dirs = 0;
@@ -1010,6 +1016,15 @@ async function scanOne(root, task, shared = false) {
                 continue;
             }
             const ext = extOf(name);
+            if (IMAGE_EXTS.has(ext)) {
+                const size = Number(entry.size) || 0;
+                if (size > 0 && size <= MAX_COVER_BYTES) {
+                    let images = dirImages.get(current.path);
+                    if (!images) { images = []; dirImages.set(current.path, images); }
+                    images.push({ path: entry.path, name, size, ext });
+                }
+                continue;
+            }
             if (!exts.has(ext)) continue;
             found.push({
                 path: entry.path, name, ext,
@@ -1032,6 +1047,8 @@ async function scanOne(root, task, shared = false) {
                 size: file.size,
                 modified: file.modified,
                 title: fileTitle(file.name),
+                _coverDir: file.dir,
+                _coverStem: stemOf(file.name),
             };
             if (file.ext === 'epub' && file.size <= MAX_META_BYTES) {
                 task.update({ detail: `Reading ${file.name}` });
@@ -1053,6 +1070,7 @@ async function scanOne(root, task, shared = false) {
             entries.push({
                 path: file.path, format: 'm4b', size: file.size, modified: file.modified,
                 title: fileTitle(file.name), author: dirAuthor(file.dir, root),
+                _coverDir: file.dir, _coverStem: stemOf(file.name),
                 tracks: [{ path: file.path, title: fileTitle(file.name), size: file.size, modified: file.modified }],
             });
         } else {
@@ -1071,6 +1089,8 @@ async function scanOne(root, task, shared = false) {
             modified: Math.max(...items.map((item) => item.modified)),
             title: baseName(dir),
             author: dirAuthor(dir, root),
+            _coverDir: dir,
+            _coverStem: baseName(dir),
             tracks: items.map((item) => ({
                 path: item.path,
                 title: fileTitle(item.name),
@@ -1129,6 +1149,34 @@ async function scanOne(root, task, shared = false) {
         }
     }
 
+    // Folder artwork: `cover.jpg`, `folder.jpg`, `okladka.*` or a sibling
+    // `<book name>.jpg` next to the file/folder. Embedded artwork wins. Generic
+    // names are only used when the folder holds a single title — otherwise one
+    // `cover.jpg` would end up on every book in a flat directory.
+    if (!shared) {
+        const perDir = new Map();
+        for (const entry of entries) {
+            if (!entry._coverDir) continue;
+            perDir.set(entry._coverDir, (perDir.get(entry._coverDir) || 0) + 1);
+        }
+        const missing = entries.filter((entry) => !entry._cover && entry._coverDir);
+        if (missing.length) {
+            task.update({ detail: `Folder covers · ${root}` });
+            await mapLimit(missing, 4, async (entry) => {
+                if (_state.scanCancel || entry._cover) return;
+                const allowGeneric = (perDir.get(entry._coverDir) || 0) <= 1;
+                const image = pickFolderCover(dirImages.get(entry._coverDir), entry._coverStem, allowGeneric);
+                if (!image) return;
+                try {
+                    const cover = await readFolderCover(image);
+                    if (cover) entry._cover = cover;
+                } catch (err) {
+                    log.debug('folder cover failed', `${image.path}: ${String(err?.message || err)}`);
+                }
+            });
+        }
+    }
+
     const sourceBooks = shared ? (_state.library.shared_books || []) : (_state.library.books || []);
     const known = sourceBooks.filter((book) => under(book.path, root)).map((book) => book.path);
     const seen = new Set(entries.map((entry) => entry.path));
@@ -1142,7 +1190,7 @@ async function scanOne(root, task, shared = false) {
     for (let index = 0; index < entries.length || index === 0; index += SCAN_BATCH) {
         if (_state.scanCancel) throw new Error('cancelled');
         const batch = entries.slice(index, index + SCAN_BATCH).map((entry) => {
-            const { _cover, ...rest } = entry;
+            const { _cover, _coverDir, _coverStem, ...rest } = entry;
             return rest;
         });
         const last = index + SCAN_BATCH >= entries.length;
@@ -1182,7 +1230,7 @@ async function scanOne(root, task, shared = false) {
     // PDFs have no embedded cover: render page one with the vendored pdf.js.
     const haveCover = new Set((_state.library.books || []).filter((book) => book.cover).map((book) => book.path));
     const pdfs = shared ? [] : entries.filter((entry) => entry.format === 'pdf' && idByPath.has(entry.path)
-        && !haveCover.has(entry.path)).slice(0, 80);
+        && !haveCover.has(entry.path) && !entry._cover).slice(0, 80);
     if (pdfs.length) {
         await loadVendors();
         for (const entry of pdfs) {
@@ -1254,6 +1302,32 @@ function base64FromBytes(bytes) {
         binary += String.fromCharCode(...bytes.subarray(offset, offset + chunk));
     }
     return btoa(binary);
+}
+
+function stemOf(name) {
+    return String(name || '').replace(/\.[^.]+$/, '');
+}
+
+/** A file/folder name stem first; generic names only for a single-title folder. */
+function pickFolderCover(images, stem, allowGeneric) {
+    if (!images?.length) return null;
+    const wanted = [];
+    if (stem) wanted.push(String(stem).toLowerCase());
+    if (allowGeneric) wanted.push(...FOLDER_COVER_STEMS);
+    for (const name of wanted) {
+        const hit = images.find((image) => stemOf(image.name).toLowerCase() === name);
+        if (hit) return hit;
+    }
+    return null;
+}
+
+async function readFolderCover(image) {
+    const res = await _ctx.apiFetch(rawUrl(image.path));
+    if (!res.ok) return null;
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    if (!bytes.length || bytes.length > MAX_COVER_BYTES) return null;
+    const format = image.ext === 'jpeg' ? 'jpg' : image.ext;
+    return { data: base64FromBytes(bytes), format };
 }
 
 /** ID3v2 APIC (MP3) → {data, format}. */
