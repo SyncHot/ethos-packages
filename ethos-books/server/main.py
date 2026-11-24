@@ -51,7 +51,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import providers  # noqa: E402
 from naming import fold, looks_like_release, parse_name  # noqa: E402
 
-TOOL_VERSION = "2.0.1"
+TOOL_VERSION = "2.0.2"
 PORT = int(os.environ.get("ETHOS_PACKAGE_PORT", "8089"))
 STATE_DIR = os.environ.get("ETHOS_PACKAGE_DATA_DIR") or os.getcwd()
 COVER_DIR = os.path.join(STATE_DIR, "covers")
@@ -1020,8 +1020,12 @@ def _store_cover(book_id: str, candidate: dict):
     return fmt
 
 
-def _apply_enrichment(book: dict, candidate: dict) -> list:
-    """Fill empty or auto-derived fields; fields the user owns never change."""
+def _apply_enrichment(book: dict, candidate: dict, force: bool = False) -> list:
+    """Fill empty or auto-derived fields; fields the user owns never change.
+
+    ``force`` is used when the user picks a candidate by hand: the title and
+    author are then applied even when the stored record already looks complete.
+    """
     manual = set(book.get("fields_manual") or [])
     changed = []
 
@@ -1035,18 +1039,24 @@ def _apply_enrichment(book: dict, candidate: dict) -> list:
 
     title = _text(candidate.get("title"), 300)
     current_title = str(book.get("title") or "")
+    auto_title = (not current_title or _looks_auto_title(book)
+                  or looks_like_release(current_title)
+                  or re.search(r"\b(?:czyta|lektor)\b", current_title, re.I))
+    # A near-miss edition ("Basia. Wielka księga pytań" for "Basia Wielka
+    # ksiega") must not rename an established title on a refresh; only a
+    # different spelling of the same title is corrected. A hand-picked
+    # candidate is always applied.
+    same_spelling = _fold(title) == _fold(current_title)
     if (title and "title" not in manual and title != current_title
-            and (not current_title or _looks_auto_title(book)
-                 or _similarity(title, current_title) >= 0.72)):
+            and (force or auto_title or same_spelling)):
         book["title"] = title
         changed.append("title")
 
     author = _text(candidate.get("author"), 200)
     current_author = str(book.get("author") or "")
     if author and "author" not in manual and _fold(author) != _fold(current_author):
-        if (not current_author or looks_like_release(current_author)
-                or _fold(current_author) in _fold(author)
-                or providers.author_match(current_author, author) >= 0.6):
+        match = providers.author_match(current_author, author)
+        if force or not current_author or looks_like_release(current_author) or match < 0.84:
             book["author"] = author
             changed.append("author")
 
@@ -1174,7 +1184,7 @@ def apply_candidate(user: str, book_id: str, payload: dict) -> dict:
         book = _user_library(store, user)["books"].get(book_id)
         if not book:
             raise ApiError("book not found", 404)
-        changed = _apply_enrichment(book, candidate)
+        changed = _apply_enrichment(book, candidate, force=True)
         book["source"] = source
         book["source_id"] = source_id
         book["source_url"] = _text(candidate.get("source_url"), 512)
