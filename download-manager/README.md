@@ -4,6 +4,7 @@ Native Package Center window for the EthOS Download Station engine.
 
 - Live queue with drag-and-drop ordering, pause/resume/reset/delete and details.
 - Add downloads from an HTTP(S) URL, a magnet link or uploaded `.torrent` files.
+- Archives (`.zip`, `.tar.*`, `.rar`, `.7z`, …) unpack themselves into a folder next to the download and the source volumes are removed after a successful extraction — both switches are on by default and can be turned off in Settings.
 - Categories with their own destination, daily start window, global/per-task speed limits.
 - Debrid provider setup (AllDebrid / Real-Debrid / TorBox) with key verification.
 - Two independent provider slots — a torrent debrid **and** a hoster-link multihoster (AllDebrid / tb7.pl) can be active together.
