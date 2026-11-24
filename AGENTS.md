@@ -106,7 +106,7 @@ reachable by the browser and EthOS cannot authenticate it. Say so in the manifes
   official package. Known in-use ports: antivirus `8092`, domains `80/443/8093`, vmm `8095` +
   `18190-18194` (console `8094` is a container-only mapping, Docker picks the host port), welcome
   `8090`, kanban `8098`, sticky notes `8099`, books `8089`, monitor `3091`, rss `8085`, sync
-  `8384/22000/21027`, git `3005/2222`.
+  `8384/22000/21027`, git `3005/2222`, influxdb `8086`.
 - **Stay off the ports dev servers expect.** A package UI on `3000`, `3001`, `3008`, `8080`, `8081`
   or `9000` collides with whatever the operator already runs (compose projects, framework dev
   servers, other NAS apps). EthOS remaps a busy **compose** host port since 2.28.5, but the manifest,

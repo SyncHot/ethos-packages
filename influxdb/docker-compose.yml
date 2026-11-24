@@ -1,0 +1,28 @@
+services:
+  influxdb:
+    # Pinned on purpose: the signed compose file must describe exactly what runs.
+    image: influxdb:2.10.1
+    container_name: ethos-influxdb
+    environment:
+      # A self-hosted NAS does not send usage telemetry to InfluxData.
+      INFLUXD_REPORTING_DISABLED: "true"
+    ports:
+      - "8086:8086"  # Web UI + API (own login, created on the first visit)
+    volumes:
+      # Buckets, users, tokens, tasks and dashboards survive updates.
+      - influxdb-data:/var/lib/influxdb2
+      # Generated server config and the influx CLI config.
+      - influxdb-config:/etc/influxdb2
+    restart: unless-stopped
+    healthcheck:
+      # The image ships curl; /health needs no token by default and answers
+      # 200 only while the server accepts writes and queries.
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8086/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+volumes:
+  influxdb-data: {}
+  influxdb-config: {}

@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-23T21:26:55+00:00",
+  "generated_at": "2026-11-24T14:59:59+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -567,6 +567,32 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-welcome/manifest.json",
       "manifest_sha256": "7a217d08300b78432a190bad3386c0eb070638842ff630dba78c92894eba6f49",
       "size_bytes": 5754
+    },
+    {
+      "id": "influxdb",
+      "name": "InfluxDB",
+      "version": "1.0.0",
+      "description": "Store metrics, sensor readings and events from your NAS, Home Assistant and other devices in a time-series database that lives on the NAS. InfluxDB 2.10 keeps buckets, dashboards, tasks and alerts, and answers Flux and InfluxQL queries; the web UI opens in its own EthOS window on port 8086, where the first visit creates the administrator, organisation, bucket and API token. Data lives in a package volume that survives updates.",
+      "icon": "📊",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/influxdb/icon.svg",
+      "category": "monitoring",
+      "author": "SyncHot",
+      "homepage": "https://www.influxdata.com/products/influxdb/",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [
+        "compose"
+      ],
+      "system_requires": [
+        "docker"
+      ],
+      "screenshots": [],
+      "changelog": "1.0.0: first release — InfluxDB OSS 2.10.1 pinned, data and config in volumes that survive updates, the web UI and API on port 8086 (own login on the first visit) and a container healthcheck.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/influxdb/manifest.json",
+      "manifest_sha256": "02ea83b365246921eec32ef61e34f1a0be8bd58ffdd63170f72d7fe277c3d7e0",
+      "size_bytes": 1633
     },
     {
       "id": "tic-tac-toe",
