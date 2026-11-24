@@ -28,6 +28,7 @@ const MAX_NODES = 20000;
 const MAX_META_BYTES = 150 * 1024 * 1024;
 const MAX_AUDIO_META = 400;      // metadata reads per scan (new files only)
 const SCAN_BATCH = 100;
+const ENRICH_BATCH = 80;         // outbound lookups per run (Open Library)
 
 const READ_THEMES = {
     light: { bg: '#ffffff', text: '#1f2430', muted: '#5b6472', link: '#2563eb' },
@@ -47,6 +48,7 @@ const _state = {
     coverLoading: new Set(),
     reading: null,
     scanCancel: false,
+    enriching: false,
     progressTimer: null,
     pendingProgress: null,
 };
@@ -749,6 +751,7 @@ ${summaryMarkup()}
         <option value="size"${_state.sort === 'size' ? ' selected' : ''}>Largest first</option>
       </select>
       <button class="bk-btn" type="button" id="bk-rescan" data-testid="books-rescan"${hasFolders ? '' : ' disabled'}>Rescan all</button>
+      <button class="bk-btn" type="button" id="bk-enrich" data-testid="books-enrich"${hasFolders ? '' : ' disabled'}>Fetch metadata</button>
     </div>
   </div>
 </section>
@@ -972,6 +975,11 @@ async function scanRoots(roots, { shared = false } = {}) {
         if (added || removed) {
             _ctx.notifications.toast(`Library updated — ${summary}`, 'success');
         }
+        if (!shared && (_state.library.settings || {}).enrich_after_scan !== false) {
+            // Fire and forget: the scan task is done, metadata gets its own
+            // progress row and the user can keep browsing meanwhile.
+            runEnrichment({ auto: true });
+        }
     } catch (err) {
         const message = String(err?.detail || err?.message || err);
         task.finish(message === 'cancelled' ? 'cancelled' : 'failed', { detail: message });
@@ -981,6 +989,71 @@ async function scanRoots(roots, { shared = false } = {}) {
     } finally {
         _state.scanCancel = false;
         renderView();
+    }
+}
+
+function needsEnrichment(book) {
+    if (!book) return false;
+    if (!book.cover) return true;
+    return !book.author;
+}
+
+/**
+ * Fill missing covers/authors from Open Library, one title at a time. The
+ * package service does the outbound call (the browser cannot read Open Library
+ * responses), rate-limited and with a fixed host allowlist; titles already
+ * tried are skipped server-side unless `force` is sent.
+ */
+async function runEnrichment({ auto = false } = {}) {
+    if (_state.enriching) return;
+    const books = (_state.library.books || []).filter(needsEnrichment);
+    if (!books.length) {
+        if (!auto) setStatus('Every title already has metadata and a cover.');
+        return;
+    }
+    _state.enriching = true;
+    const batch = books.slice(0, ENRICH_BATCH);
+    const task = _ctx.progress.startTask({
+        appId: `pkg-${_ctx.pkg.id}`,
+        title: 'Fetching metadata',
+        detail: `0 of ${batch.length} · Open Library`,
+        testIdPrefix: 'books-enrich',
+        total: batch.length,
+    });
+    let updated = 0;
+    let covers = 0;
+    let errors = 0;
+    setPill('Metadata…', 'starting');
+    try {
+        for (let index = 0; index < batch.length; index += 1) {
+            const book = batch[index];
+            try {
+                const result = await json(`books/${book.id}/enrich`, { method: 'POST', body: {} });
+                if (result?.status === 'updated') {
+                    updated += 1;
+                    if ((result.changed || []).includes('cover')) covers += 1;
+                } else if (result?.status === 'error') {
+                    errors += 1;
+                }
+            } catch (err) {
+                errors += 1;
+                log.debug('metadata lookup failed', `${book.id}: ${String(err?.detail || err?.message || err)}`);
+            }
+            task.update({
+                percent: Math.round(((index + 1) / batch.length) * 100),
+                detail: `${index + 1} of ${batch.length} · ${updated} updated`,
+            });
+        }
+    } finally {
+        _state.enriching = false;
+        await reloadLibrary().catch(() => {});
+        renderView();
+        const summary = `${updated} updated · ${covers} cover${covers === 1 ? '' : 's'}`
+            + `${errors ? ` · ${errors} error${errors === 1 ? '' : 's'}` : ''}`;
+        task.finish('done', { detail: summary });
+        setPill('Ready', 'ready');
+        setStatus(`Metadata: ${summary}.`);
+        if (updated) _ctx.notifications.toast(`Metadata updated — ${summary}.`, 'success');
     }
 }
 
@@ -1621,6 +1694,15 @@ function renderSettingsView(host) {
     ${ALL_EXTS.map((ext) => `<label class="bk-tag" style="cursor:pointer">
       <input type="checkbox" data-ext="${ext}"${(settings.extensions || ALL_EXTS).includes(ext) ? ' checked' : ''}> .${ext}
     </label>`).join('')}
+  </div>
+</section>
+<section class="bk-panel">
+  <div class="bk-toolbar"><div><h2>Metadata &amp; covers</h2><p class="bk-hint">Missing covers or authors are looked up on Open Library (the scanned title and author are sent to openlibrary.org). Manual edits are never overwritten.</p></div></div>
+  <div class="bk-row" style="margin-top:12px;flex-wrap:wrap">
+    <label class="bk-tag" style="cursor:pointer">
+      <input type="checkbox" id="bk-set-enrich" data-testid="books-set-enrich"${settings.enrich_after_scan !== false ? ' checked' : ''}> Fetch missing metadata after a scan
+    </label>
+    <button class="bk-btn" type="button" id="bk-enrich" data-testid="books-enrich">Fetch metadata now</button>
   </div>
 </section>
 <section class="bk-panel">
@@ -2286,6 +2368,7 @@ function attachEvents(container) {
         if (!event.target.closest('.bk-menu')) closeMenus();
 
         if (event.target.closest('#bk-rescan')) { scanRoots([]); return; }
+        if (event.target.closest('#bk-enrich')) { runEnrichment(); return; }
         if (event.target.closest('#bk-add-folder')) { addFolder(); return; }
         const scanBtn = event.target.closest('[data-scan-root]');
         if (scanBtn) { scanRoots([scanBtn.dataset.scanRoot]); return; }
@@ -2332,6 +2415,7 @@ function attachEvents(container) {
         const target = event.target;
         if (target.id === 'bk-filter') { _state.format = target.value; renderView(); return; }
         if (target.id === 'bk-sort') { _state.sort = target.value; renderView(); return; }
+        if (target.id === 'bk-set-enrich') { saveSettings({ enrich_after_scan: !!target.checked }); return; }
         const map = {
             'bk-set-theme': 'theme', 'bk-set-font': 'font_family', 'bk-set-flow': 'flow',
         };

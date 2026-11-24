@@ -20,6 +20,7 @@ Endpoints (all under /api/books)
     GET    /covers/<id>             cover bytes (image/webp)
     PUT    /books/<id>/progress     save reading/playback position
     PUT    /books/<id>/meta         manual title/author/series override
+    POST   /books/<id>/enrich       fill missing metadata/cover from Open Library
     DELETE /books/<id>              forget one title (never deletes the file)
     GET    /settings                reader/player preferences
     PUT    /settings                update preferences
@@ -28,6 +29,7 @@ Endpoints (all under /api/books)
 
 import base64
 import binascii
+import difflib
 import hashlib
 import json
 import os
@@ -36,10 +38,14 @@ import shutil
 import sys
 import threading
 import time
+import unicodedata
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-TOOL_VERSION = "1.2.0"
+TOOL_VERSION = "1.5.0"
 PORT = int(os.environ.get("ETHOS_PACKAGE_PORT", "8089"))
 STATE_DIR = os.environ.get("ETHOS_PACKAGE_DATA_DIR") or os.getcwd()
 COVER_DIR = os.path.join(STATE_DIR, "covers")
@@ -55,6 +61,27 @@ MAX_FOLDERS = 64
 MAX_SCAN_ENTRIES = 500
 MAX_TRACKS = 500
 MAX_SETTINGS_EXTENSIONS = 12
+
+# Online enrichment (Open Library, no API key). The service is the only place
+# allowed to make the outbound call: the browser cannot read Open Library
+# responses (no CORS), and a fixed host allowlist keeps this free of SSRF.
+ENRICH_SEARCH = "https://openlibrary.org/search.json"
+ENRICH_COVER = "https://covers.openlibrary.org/b/id/{cover}-L.jpg"
+ENRICH_TIMEOUT = 8
+ENRICH_MAX_RESPONSE = 2 * 1024 * 1024
+ENRICH_MIN_SCORE = 0.72
+ENRICH_COVER_SCORE = 0.82
+ENRICH_GAP = 0.25
+ENRICH_RETRY_DAYS = 30
+ENRICH_ALLOWED_HOSTS = ("openlibrary.org", "archive.org")
+ENRICH_LANGUAGES = {
+    "pol": "pl", "eng": "en", "ger": "de", "deu": "de", "fre": "fr", "fra": "fr",
+    "spa": "es", "ita": "it", "rus": "ru", "ukr": "uk", "cze": "cs", "ces": "cs",
+    "swe": "sv", "nor": "no", "dut": "nl", "nld": "nl", "por": "pt", "jpn": "ja",
+    "chi": "zh", "zho": "zh",
+}
+_ENRICH_LAST = 0.0
+_ENRICH_LOCK = threading.Lock()
 
 AUDIO_EXTS = ("m4b", "m4a", "mp3", "flac", "ogg", "opus")
 BOOK_EXTS = ("epub", "pdf")
@@ -79,6 +106,7 @@ DEFAULT_SETTINGS = {
     "skip_seconds": 30,
     "speed": 1.0,
     "extensions": list(FORMATS),
+    "enrich_after_scan": True,
 }
 
 _LOCK = threading.RLock()
@@ -280,6 +308,8 @@ def _clean_settings(raw) -> dict:
     base["line_height"] = round(_clean_float(raw.get("line_height") or base["line_height"], 1.2, 2.4), 2)
     base["skip_seconds"] = _clean_int(raw.get("skip_seconds") or base["skip_seconds"], 5, 300)
     base["speed"] = round(_clean_float(raw.get("speed") or base["speed"], 0.5, 3.0), 2)
+    if isinstance(raw.get("enrich_after_scan"), bool):
+        base["enrich_after_scan"] = raw["enrich_after_scan"]
     extensions = raw.get("extensions")
     if isinstance(extensions, list):
         cleaned = [e for e in (str(x).strip().lower().lstrip(".") for x in extensions) if e in FORMATS]
@@ -621,6 +651,321 @@ def save_meta(user: str, book_id: str, payload: dict) -> dict:
         return {"book": book}
 
 
+# ── Online metadata (Open Library) ──────────────────────────────────────────
+
+
+def _fold(value) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = re.sub(r"[^a-z0-9]+", " ", text.lower())
+    return " ".join(text.split())
+
+
+def _similarity(left, right) -> float:
+    a, b = _fold(left), _fold(right)
+    if not a or not b:
+        return 0.0
+    if a == b:
+        return 1.0
+    if a in b or b in a:
+        short, long_ = (len(a), len(b)) if len(a) <= len(b) else (len(b), len(a))
+        return 0.72 + 0.24 * (short / max(1, long_))
+    return difflib.SequenceMatcher(None, a, b).ratio()
+
+
+NOISE = re.compile(
+    r"\[[^\]]*\]|\([^)]*\)|\b(audiobook|ebook|e-book|epub|pdf|mp3|m4a|m4b|flac|ogg|opus|"
+    r"unabridged|retail|proper|webrip)\b",
+    re.I,
+)
+
+
+def _clean_query(value) -> str:
+    text = NOISE.sub(" ", str(value or ""))
+    text = re.sub(r"[_.]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip(" -–—")
+    return text[:120]
+
+
+def _stem(book) -> str:
+    path = str(book.get("path") or "").rstrip("/")
+    base = os.path.basename(path)
+    fmt = str(book.get("format") or "").lower()
+    if fmt and base.lower().endswith("." + fmt):
+        base = base[: -(len(fmt) + 1)]
+    return base
+
+
+def _title_candidates(book) -> list:
+    stem = _stem(book)
+    author = _fold(book.get("author") or "")
+    parts = [part for part in (_clean_query(piece) for piece in re.split(r"\s+[-–—]\s+", stem)) if part]
+    parts = [part for part in parts if not re.fullmatch(r"\d{1,4}", _fold(part))]
+    primary = ""
+    if parts:
+        primary = parts[-1]
+        if author and author in _fold(primary) and len(parts) > 1:
+            primary = parts[0]
+    ordered = []
+    if primary:
+        ordered.append(primary)
+    title = _clean_query(book.get("title") or "")
+    if title and _fold(title) != _fold(stem):
+        ordered.append(title)
+    if len(parts) > 1:
+        ordered.append(" ".join(parts))
+    elif stem:
+        ordered.append(_clean_query(stem))
+    seen, out = set(), []
+    for value in ordered:
+        key = _fold(value)
+        if len(key) < 2 or key in seen:
+            continue
+        seen.add(key)
+        out.append(value)
+    return out[:2]
+
+
+def _looks_auto_title(book) -> bool:
+    return _fold(book.get("title")) in ("", _fold(_stem(book)))
+
+
+def _looks_auto_author(book) -> bool:
+    author = _fold(book.get("author") or "")
+    if not author:
+        return True
+    parent = os.path.dirname(str(book.get("path") or "").rstrip("/"))
+    return author == _fold(os.path.basename(parent))
+
+
+def _author_match(book_author, doc_authors) -> float:
+    wanted = _fold(book_author)
+    if not wanted or not isinstance(doc_authors, list):
+        return 0.0
+    best = 0.0
+    wanted_tokens = set(wanted.split())
+    for name in doc_authors[:4]:
+        candidate = _fold(name)
+        if not candidate:
+            continue
+        if candidate == wanted:
+            return 1.0
+        if wanted in candidate or candidate in wanted:
+            best = max(best, 0.85)
+        elif wanted_tokens & set(candidate.split()):
+            best = max(best, 0.6)
+    return best
+
+
+def _author_hint(book) -> str:
+    """The stored author, or an 'Author - Title' prefix inferred from the name."""
+    stored = _fold(book.get("author") or "")
+    if stored:
+        return str(book.get("author") or "")
+    parts = [part.strip() for part in re.split(r"\s+[-–—]\s+", _stem(book)) if part.strip()]
+    if len(parts) >= 2:
+        first = _clean_query(parts[0])
+        tokens = first.split()
+        if 1 < len(tokens) <= 4 and not re.search(r"\d", first):
+            return first
+    return ""
+
+
+def _doc_score(book, doc, candidates=None) -> float:
+    titles = candidates or _title_candidates(book)
+    title = max((_similarity(candidate, doc.get("title")) for candidate in titles), default=0.0)
+    hint = _author_hint(book)
+    if not hint:
+        return title
+    return 0.7 * title + 0.3 * _author_match(hint, doc.get("author_name"))
+
+
+class _EnrichRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        host = (urllib.parse.urlparse(newurl).hostname or "").lower()
+        if not any(host == allowed or host.endswith("." + allowed)
+                   for allowed in ENRICH_ALLOWED_HOSTS):
+            raise urllib.error.HTTPError(newurl, code, "redirect outside the allowlist", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_ENRICH_OPENER = urllib.request.build_opener(_EnrichRedirect())
+
+
+def _enrich_request(url: str):
+    return urllib.request.Request(url, headers={
+        "User-Agent": f"EthOS-Books/{TOOL_VERSION} (+https://github.com/SyncHot/ethos-packages)",
+        "Accept": "application/json,image/*;q=0.8",
+    })
+
+
+def _enrich_throttle() -> None:
+    global _ENRICH_LAST
+    with _ENRICH_LOCK:
+        wait = ENRICH_GAP - (time.time() - _ENRICH_LAST)
+        if wait > 0:
+            time.sleep(wait)
+        _ENRICH_LAST = time.time()
+
+
+def _enrich_search(title: str, author: str) -> list:
+    params = {
+        "title": title,
+        "limit": "5",
+        "fields": "key,title,author_name,first_publish_year,cover_i,language,series",
+    }
+    if author:
+        params["author"] = author
+    _enrich_throttle()
+    try:
+        with _ENRICH_OPENER.open(
+                _enrich_request(ENRICH_SEARCH + "?" + urllib.parse.urlencode(params)),
+                timeout=ENRICH_TIMEOUT) as response:
+            if response.status != 200:
+                raise ApiError(f"Open Library answered {response.status}", 502)
+            raw = response.read(ENRICH_MAX_RESPONSE + 1)
+    except ApiError:
+        raise
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise ApiError(f"Open Library unreachable: {exc}", 502) from None
+    if len(raw) > ENRICH_MAX_RESPONSE:
+        raise ApiError("Open Library response is too large", 502)
+    try:
+        data = json.loads(raw.decode("utf-8", "replace"))
+    except ValueError:
+        raise ApiError("Open Library returned invalid JSON", 502) from None
+    docs = data.get("docs") if isinstance(data, dict) else None
+    return docs[:8] if isinstance(docs, list) else []
+
+
+def _image_format(blob: bytes) -> str:
+    if blob[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    if blob[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if blob[:4] == b"RIFF" and blob[8:12] == b"WEBP":
+        return "webp"
+    return ""
+
+
+def _enrich_cover(doc):
+    cover_id = doc.get("cover_i")
+    if not isinstance(cover_id, int) or cover_id <= 0:
+        return None
+    url = ENRICH_COVER.format(cover=cover_id)
+    try:
+        with _ENRICH_OPENER.open(_enrich_request(url), timeout=ENRICH_TIMEOUT) as response:
+            if response.status != 200:
+                return None
+            blob = response.read(MAX_COVER_BYTES + 1)
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return None
+    fmt = _image_format(blob) if 0 < len(blob) <= MAX_COVER_BYTES else ""
+    return (blob, fmt) if fmt else None
+
+
+def _apply_enrichment(book: dict, doc: dict) -> list:
+    changed = []
+    if not book.get("manual"):
+        title = _text(doc.get("title"), 300)
+        if title and _looks_auto_title(book) and _similarity(title, book.get("title")) >= 0.55:
+            if _fold(title) != _fold(book.get("title")):
+                book["title"] = title
+                changed.append("title")
+        authors = [_text(name, 120) for name in (doc.get("author_name") or [])
+                   if isinstance(name, str) and _text(name, 120)]
+        author = ", ".join(authors[:3])[:200]
+        if author and _looks_auto_author(book) and _fold(author) != _fold(book.get("author")):
+            book["author"] = author
+            changed.append("author")
+        series = doc.get("series")
+        if isinstance(series, list):
+            series = series[0] if series else ""
+        series = _text(series, 200)
+        if series and not book.get("series"):
+            book["series"] = series
+            changed.append("series")
+        languages = [str(code).lower() for code in (doc.get("language") or [])
+                     if isinstance(code, str)]
+        if languages and not book.get("language") and len(set(languages)) == 1:
+            code = languages[0]
+            book["language"] = ENRICH_LANGUAGES.get(code, code)[:16]
+            changed.append("language")
+    return changed
+
+
+def enrich_book(user: str, book_id: str, payload: dict) -> dict:
+    """Fill missing metadata and artwork from Open Library for one title.
+
+    The browser cannot call Open Library (no CORS), so the package service does
+    it with a fixed host allowlist, a timeout and a small rate-limit gap. User
+    corrections (`manual`) are never overwritten.
+    """
+    force = bool(payload.get("force"))
+    with _LOCK:
+        book = _user_library(_load(LIBRARY_FILE), user)["books"].get(book_id)
+        if not book:
+            raise ApiError("book not found", 404)
+        snapshot = dict(book)
+        if snapshot.get("enriched_at") and not force:
+            age = time.time() - _ts(snapshot.get("enriched_at"))
+            if age < ENRICH_RETRY_DAYS * 86400:
+                return {"ok": True, "skipped": True, "status": "skipped", "book": snapshot}
+
+    best, best_score, query, tried, error = None, 0.0, "", [], ""
+    attempts = failures = 0
+    candidates = _title_candidates(snapshot)
+    for candidate in candidates:
+        tried.append(candidate)
+        attempts += 1
+        try:
+            docs = _enrich_search(candidate, snapshot.get("author") or _author_hint(snapshot))
+        except ApiError as exc:
+            failures += 1
+            error = exc.detail
+            continue
+        for doc in docs:
+            if not isinstance(doc, dict):
+                continue
+            score = _doc_score(snapshot, doc, candidates)
+            if score > best_score:
+                best, best_score, query = doc, score, candidate
+        if best_score >= ENRICH_MIN_SCORE + 0.1:
+            break
+
+    cover = None
+    if best and best_score >= ENRICH_COVER_SCORE and not snapshot.get("cover"):
+        cover = _enrich_cover(best)
+
+    status = "error" if attempts and failures == attempts else "no-match"
+    changed = []
+    with _LOCK:
+        store = _load(LIBRARY_FILE)
+        book = _user_library(store, user)["books"].get(book_id)
+        if not book:
+            raise ApiError("book not found", 404)
+        if best and best_score >= ENRICH_MIN_SCORE:
+            changed = _apply_enrichment(book, best)
+            if cover and not book.get("cover"):
+                blob, fmt = cover
+                os.makedirs(COVER_DIR, exist_ok=True)
+                _remove_cover(book_id)
+                with open(os.path.join(COVER_DIR, f"{book_id}.{fmt}"), "wb") as handle:
+                    handle.write(blob)
+                book["cover"] = True
+                book["cover_ext"] = fmt
+                changed.append("cover")
+            status = "updated" if changed else "unchanged"
+        book["enriched_at"] = _now()
+        book["enrich_status"] = status
+        book["enrich_query"] = query
+        if changed:
+            book["updated_at"] = _now()
+        _save(LIBRARY_FILE, store)
+        return {"ok": True, "status": status, "changed": changed, "query": query,
+                "tried": tried, "error": error, "book": book}
+
+
 def forget_book(user: str, book_id: str) -> dict:
     """Remove one title from the library. The file on the NAS is untouched."""
     with _LOCK:
@@ -683,6 +1028,8 @@ def _dispatch(method: str, route: str, user: str, payload: dict):
             return 200, save_progress(user, book_id, payload)
         if action == "meta" and method == "PUT":
             return 200, save_meta(user, book_id, payload)
+        if action == "enrich" and method == "POST":
+            return 200, enrich_book(user, book_id, payload)
     elif len(rest) == 2 and rest[0] == "books" and method == "DELETE":
         book_id = rest[1]
         if not re.fullmatch(r"bk_[0-9a-f]{12}", book_id):

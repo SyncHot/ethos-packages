@@ -32,6 +32,13 @@ The service never opens a book. It stores metadata, covers and reading positions
   `folder.*`, `front.*`, `frontcover.*`, `poster.*`, `smallcover.*`, `okladka.*` or a sibling image
   named after the book file/folder (JPG/PNG/WebP, ≤ 500 KB). Embedded EPUB/audio art still wins,
   and for a PDF the folder image replaces the rendered first page.
+- Missing metadata and covers can be filled from **Open Library**: the library has a **Fetch
+  metadata** button and Settings can run it automatically after a scan. The package service does the
+  lookup (the browser cannot read Open Library responses — no CORS), sequential with a 250 ms gap,
+  a 8 s timeout and a fixed host allowlist (`openlibrary.org`, `archive.org`). Matching prefers the
+  correct title (including `Author - Title` file names), never overwrites manual edits, only sets
+  empty fields, retries unmatched titles after 30 days and downloads the cover as JPG/PNG/WebP
+  (≤ 512 KB). Titles and authors are sent to openlibrary.org; disable it in Settings if unwanted.
 - The phone client lives in the core at `/books` (`docs/books-pwa.md` in the EthOS NAS repo); the
   desktop window stays the only place that scans folders.
 
@@ -66,6 +73,7 @@ The UI calls `ctx.proxy(...)`, so every path below is
 | GET | `covers/{id}` | — | `image/webp` |
 | PUT | `books/{id}/progress` | `{percent, locator, position_s, finished, updated_at?}` | `{progress}` (newest write wins) |
 | PUT | `books/{id}/meta` | `{title, author, series, series_index}` | book |
+| POST | `books/{id}/enrich` | `{force?}` — fill empty fields/cover from Open Library | book |
 | DELETE | `books/{id}` | — | `{ok, removed}` |
 | GET/PUT | `settings` | reader/player preferences | `{settings}` |
 | GET | `health` | — | `{ok, version}` |

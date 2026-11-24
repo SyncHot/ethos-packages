@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "ethos-books",
   "name": "Books",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Read EPUB and PDF books and listen to audiobooks that already live on your NAS. Folders are browsed through the EthOS file API, so nothing is copied and your permissions still apply; covers and your place in every title are kept per account.",
   "icon": "📚",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/icon.svg",
@@ -24,18 +24,18 @@
     "port": 8089,
     "path": "/health"
   },
-  "changelog": "1.4.0: covers are picked up from the folder during a scan — cover.jpg, folder.jpg, front.jpg, okladka.* or an image named after the book file or folder; embedded EPUB/audio art still wins, and a PDF folder cover replaces the rendered first page. 1.3.0: download titles to your device — books from the card menu, reader bar or audiobooks table, and single audiobook tracks with a ⤓ button in the player; bytes stream through /api/files/download, so nothing is copied on the NAS. 1.2.1: shorter release notes in Package Center (no behaviour change). 1.2.0: audiobook tracks carry their duration and embedded cover art, reading positions from several devices merge by newest write, and the library answers ETag/304. 1.1.0: shared folders and individual titles from other accounts — a “Shared with me” section in Folders & Scan and the library, read-only scanning and playback, and a Share button on your own scan folders (requires EthOS 2.13.3). 1.0.0: first release — a library for EPUB, PDF and audiobooks with per-account progress. Add one or more folders, scan them through the EthOS file API (no copying, no extra share access), and read in a paginated or scrolled reader with light, sepia and dark themes. Audiobooks play from .m4b files or folders of .mp3/.flac tracks with resume, speed, skip and a sleep timer. Covers, titles, authors and series are extracted in the browser; the package service stores metadata only.",
+  "changelog": "1.5.0: missing metadata and covers can now be filled from Open Library — a Fetch metadata button in the library, plus an option to do it automatically after a scan; matching prefers the correct title (Author - Title names), never overwrites manual edits, retries unmatched titles after 30 days, and downloads covers through the package service (no browser CORS limits). 1.4.0: covers are picked up from the folder during a scan — cover.jpg, folder.jpg, front.jpg, okladka.* or an image named after the book file or folder; embedded EPUB/audio art still wins, and a PDF folder cover replaces the rendered first page. 1.3.0: download titles to your device — books from the card menu, reader bar or audiobooks table, and single audiobook tracks with a ⤓ button in the player; bytes stream through /api/files/download, so nothing is copied on the NAS. 1.2.1: shorter release notes in Package Center (no behaviour change). 1.2.0: audiobook tracks carry their duration and embedded cover art, reading positions from several devices merge by newest write, and the library answers ETag/304. 1.1.0: shared folders and individual titles from other accounts — a “Shared with me” section in Folders & Scan and the library, read-only scanning and playback, and a Share button on your own scan folders (requires EthOS 2.13.3). 1.0.0: first release — a library for EPUB, PDF and audiobooks with per-account progress. Add one or more folders, scan them through the EthOS file API (no copying, no extra share access), and read in a paginated or scrolled reader with light, sepia and dark themes. Audiobooks play from .m4b files or folders of .mp3/.flac tracks with resume, speed, skip and a sleep timer. Covers, titles, authors and series are extracted in the browser; the package service stores metadata only.",
   "compose": null,
   "files": [
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/server/main.py",
-      "sha256": "8ba502062f7a8ac8274d277b5562a3b901ce8d65ea0d3d708b96b9db7a0eb3a2",
+      "sha256": "d3003bfcc241dfd879b70623a6aff1d901ba322ecc23047166ad99e46fa92701",
       "path": "server/main.py",
       "mode": 420
     },
     {
       "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/ethos-books/frontend/app.js",
-      "sha256": "9b4c345ea4a127ff514a82d79f859d3164c2785a3e843cb7813a6cb14ad2bea9",
+      "sha256": "2f0c2fa91001394278389e02bc5cd0734867990ab710b11027a07abb0b791dae",
       "path": "frontend/app.js",
       "mode": 420
     },
