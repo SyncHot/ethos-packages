@@ -71,6 +71,12 @@ repo.pub            publisher public key (private key never committed)
   `:stable`, `:edge`, any tag without a version number, an untagged image, or a compose service
   without a `restart:` policy. Add a `healthcheck:` whenever the image makes one possible — it is a
   warning today and the EthOS package-health monitor reports unhealthy containers from it.
+- **Every container is minimized and capped.** A compose service must declare the smallest
+  `mem_limit` that still works, a `cpus` cap, a `pids_limit`, and `json-file` log rotation
+  (`max-size: 10m`, `max-file: 3`). A package must never be able to OOM the NAS or fill the root
+  disk. Document any exception that genuinely needs more (ClamAV signature memory, VM guest RAM)
+  and bound it as tightly as the workload allows. `ethos-pack lint` warns when memory or log limits
+  are missing.
 - **Never hand-edit the README catalog table.** It lives between `<!-- catalog:start -->` and
   `<!-- catalog:end -->` and is generated from `index.json` by `ethos-pack readme`; lint fails on a
   missing row or an older version.
