@@ -30,14 +30,14 @@ mariusz marta mateusz michal mikolaj milena monika natalia pawel piotr rafal
 remigiusz
 robert roman ryszard sebastian stanislaw sylwia szymon tadeusz tomasz urszula
 waldemar wieslaw witold wladyslaw wojciech zbigniew zofia zuzanna
-aaron alan albert andrew arthur austin benjamin billy bobby bradley brandon
-brian bruce bryan carl charles christian christopher daniel david dennis douglas
-dylan edward eric ethan eugene frank gabriel gary gerald gregory harold harry
-henry hiroko ivan jack james jason jeff jeremy jerry jesse jo joe john johnny
-jordan jose joseph juan justin keith kevin kyle larry lawrence logan louis mark
-matthew michael nathan noah patrick paul peter philip ralph randy raymond
-richard robert roger roy russell samuel scott sean stephen steven terry thomas
-timothy tyler vincent walter wayne william willie zachary
+aaron alan albert andrew arthur austin benjamin billy bob bobby bradley brandon
+brian bruce bryan carl charles christian christopher daniel david dennis dick
+douglas dylan edward eric ethan eugene frank gabriel gary gerald gregory harold
+harry henry hiroko ivan jack james jason jeff jeremy jerry jesse jo joe john
+johnny jordan jose joseph juan justin keith kevin kyle larry lawrence logan louis
+mark matthew michael mike nathan nick noah patrick paul peter philip ralph randy
+raymond richard robert roger roy russell samuel scott sean stephen steven terry
+thomas timothy tom tyler vincent walter wayne william willie zachary
 anders boris dmitri erik jens lars nils olga sven
 """.split())
 
@@ -76,10 +76,16 @@ _SERIES_PATTERNS = (
 
 _FIRST_NAME_SET = frozenset(name.replace(" ", "") for name in FIRST_NAMES)
 
+# NFKD does not decompose ł/ø/ß/đ/æ/œ, so map them explicitly before folding.
+_FOLD_MAP = str.maketrans({
+    "ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "ß": "ss",
+    "đ": "d", "Đ": "D", "æ": "ae", "Æ": "AE", "œ": "oe", "Œ": "OE",
+})
+
 
 def fold(value) -> str:
-    """Lowercase ASCII form used for comparisons ('Mróz' == 'mroz')."""
-    text = unicodedata.normalize("NFKD", str(value or ""))
+    """Lowercase ASCII form used for comparisons ('Mróz' == 'mroz', 'Łukasz' == 'lukasz')."""
+    text = unicodedata.normalize("NFKD", str(value or "").translate(_FOLD_MAP))
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
     text = re.sub(r"[^a-z0-9]+", " ", text.lower())
     return " ".join(text.split())
@@ -177,14 +183,26 @@ def _clean_author(value: str) -> str:
     return text[:200]
 
 
+def _looks_like_person(value: str, allow_single: bool = False) -> bool:
+    """True when a dash-separated part reads as a human name, not a title."""
+    tokens = [token for token in str(value or "").split() if token]
+    if not tokens or len(tokens) > 4:
+        return False
+    if any(re.search(r"\d", token) for token in tokens):
+        return False
+    if any(fold(token) in AUTHOR_STOPWORDS for token in tokens):
+        return False
+    if any(_is_first_name(token) for token in tokens):
+        return True
+    if len(tokens) >= 3 and all(_INITIAL.match(token) for token in tokens[1:]):
+        return True
+    return allow_single and len(tokens) == 1 and tokens[0][:1].isupper()
+
+
 def _author_from_pair(left: str) -> str:
     left = _clean_author(left)
     tokens = [token for token in left.split() if token]
-    if not tokens or len(tokens) > 4:
-        return ""
-    if any(re.search(r"\d", token) for token in tokens):
-        return ""
-    if any(fold(token) in AUTHOR_STOPWORDS for token in tokens):
+    if not _looks_like_person(left, allow_single=True):
         return ""
     if len(tokens) == 1:
         return tokens[0]
@@ -205,15 +223,23 @@ def _title_from_tokens(tokens: list) -> str:
 def _parse_pair(text: str, result: dict) -> None:
     match = re.search(r"\s+[-–—]\s+", text)
     left, right = (text[: match.start()], text[match.end():]) if match else ("", text)
-    author = _author_from_pair(left)
-    if author:
-        result["author"] = author
-        known_name = any(_is_first_name(token) for token in left.split()[:2])
-        result["confidence"] = 0.9 if known_name else 0.78
     right, narrator = _take_narrator(right)
     right, year = _take_year(right)
     right, series, index = _take_series(right)
-    result["title"] = _tidy_title(_strip_noise(right))
+    author = _author_from_pair(left)
+    title_part = right
+    if not author:
+        # Some libraries use "Title - Author" (common for ebooks). Only swap
+        # when the right side really reads as a person name.
+        candidate = _strip_noise(right)
+        if _looks_like_person(candidate):
+            author = _author_from_pair(candidate)
+            title_part = left
+    if author:
+        result["author"] = author
+        known_name = any(_is_first_name(token) for token in author.split()[:3])
+        result["confidence"] = 0.88 if known_name else 0.7
+    result["title"] = _tidy_title(_strip_noise(title_part))
     result["narrator"] = narrator
     result["series"] = series
     result["series_index"] = index
@@ -319,6 +345,7 @@ def looks_like_release(name: str) -> bool:
         return False
     if _BITRATE.search(text) or re.search(r"\b(?:vbr|kbps|webrip|retail|audiobook|em)\b", text, re.I):
         return True
-    if text.count(".") >= 3 and " " not in text:
+    # Three or more dot-joined tokens without spaces: "Pilip.Lukasz.Podworko".
+    if " " not in text and re.fullmatch(r"[\w-]+(?:\.[\w-]+){2,}", text):
         return True
     return False

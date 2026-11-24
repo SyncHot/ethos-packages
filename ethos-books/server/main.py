@@ -51,7 +51,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import providers  # noqa: E402
 from naming import fold, looks_like_release, parse_name  # noqa: E402
 
-TOOL_VERSION = "2.0.0"
+TOOL_VERSION = "2.0.1"
 PORT = int(os.environ.get("ETHOS_PACKAGE_PORT", "8089"))
 STATE_DIR = os.environ.get("ETHOS_PACKAGE_DATA_DIR") or os.getcwd()
 COVER_DIR = os.path.join(STATE_DIR, "covers")
@@ -86,7 +86,6 @@ EDITABLE_FIELDS = tuple(MANUAL_FIELDS) + ("series_index", "year", "pages", "rati
 # outbound call: the browser cannot read those responses (no CORS), and the
 # provider module keeps an HTTPS host allowlist so this cannot become SSRF.
 ENRICH_MIN_SCORE = 0.72
-ENRICH_COVER_SCORE = 0.80
 ENRICH_RETRY_DAYS = 30
 
 AUDIO_EXTS = ("m4b", "m4a", "mp3", "flac", "ogg", "opus")
@@ -327,7 +326,10 @@ def _clean_book(raw, root: str = "") -> dict | None:
         fmt = _clean_format(raw.get("format"))
         kind = "audiobook" if fmt in AUDIO_EXTS else "book"
         tags = raw.get("tags") if isinstance(raw.get("tags"), dict) else {}
-        parsed = parse_name(os.path.basename(path))
+        name = os.path.basename(path)
+        if name.lower().endswith("." + fmt):
+            name = name[: -(len(fmt) + 1)]
+        parsed = parse_name(name)
         # A release folder name is never an author, even if an older client sent it.
         author = _text(raw.get("author"), 200)
         if author and looks_like_release(author):
@@ -868,8 +870,12 @@ _similarity = providers.similarity
 
 
 NOISE = re.compile(
-    r"\[[^\]]*\]|\([^)]*\)|\b(audiobook|ebook|e-book|epub|pdf|mp3|m4a|m4b|flac|ogg|opus|"
-    r"unabridged|retail|proper|webrip)\b",
+    r"\[[^\]]*\]|\([^)]*\)|"
+    r"\b(?:audiobook|ebook|e-book|epub|pdf|mp3|m4a|m4b|flac|ogg|opus|unabridged|retail|"
+    r"proper|webrip|em|pl)\b|"
+    r"\b\d{2,4}\s*(?:kbps|kb/s|kbit|vbrp|vbr|abr|cbr|p)\b|"
+    r"\b(?:19|20)\d{2}\b|"
+    r"\b(?:czyta|lektor)\b.*$",
     re.I,
 )
 
@@ -922,6 +928,48 @@ def _title_candidates(book) -> list:
 
 def _looks_auto_title(book) -> bool:
     return _fold(book.get("title")) in ("", _fold(_stem(book)))
+
+
+def _heal_from_name(book: dict) -> list:
+    """Repair metadata that an older scan took from a release folder name.
+
+    1.5.0 stored the parent folder as the author and the full folder name as the
+    title. Re-parsing the path here means a metadata refresh fixes such records
+    without a rescan; user-owned fields are never touched.
+    """
+    changed = []
+    parsed = parse_name(_stem(book))
+    if not parsed.get("title"):
+        return changed
+    manual = set(book.get("fields_manual") or [])
+    current_title = str(book.get("title") or "")
+    auto_title = (not current_title or _looks_auto_title(book)
+                  or looks_like_release(current_title)
+                  or re.search(r"\b(?:czyta|lektor)\b", current_title, re.I))
+    if "title" not in manual and auto_title:
+        if parsed["title"] and _fold(parsed["title"]) != _fold(current_title):
+            book["title"] = parsed["title"]
+            changed.append("title")
+    current_author = str(book.get("author") or "")
+    auto_author = (not current_author or looks_like_release(current_author)
+                   or "." in current_author or "_" in current_author)
+    if "author" not in manual and auto_author:
+        if parsed.get("author") and _fold(parsed["author"]) != _fold(current_author):
+            book["author"] = parsed["author"]
+            changed.append("author")
+    if not book.get("narrator") and parsed.get("narrator"):
+        book["narrator"] = parsed["narrator"]
+        changed.append("narrator")
+    if not book.get("series") and parsed.get("series"):
+        book["series"] = parsed["series"]
+        changed.append("series")
+    if not book.get("series_index") and parsed.get("series_index"):
+        book["series_index"] = parsed["series_index"]
+        changed.append("series_index")
+    if not book.get("year") and parsed.get("year"):
+        book["year"] = parsed["year"]
+        changed.append("year")
+    return changed
 
 
 def _author_hint(book) -> str:
@@ -1022,9 +1070,10 @@ def _candidate_queries(book, query: str) -> list:
     return _title_candidates(book) or [_stem(book)]
 
 
-def _search_candidates(book: dict, provider: str, google_key: str, query: str) -> tuple:
+def _search_candidates(book: dict, provider: str, google_key: str, query: str,
+                       titles: list | None = None) -> tuple:
     """Search every provider in order and score the results for this book."""
-    titles = _candidate_queries(book, query)
+    titles = titles or _candidate_queries(book, query)
     author = str(book.get("author") or "") or _author_hint(book)
     found, tried, errors = [], [], []
     for title in titles:
@@ -1089,9 +1138,11 @@ def search_books(user: str, book_id: str, payload: dict) -> dict:
         settings = _user_settings(_load(SETTINGS_FILE), user)
         if not book:
             raise ApiError("book not found", 404)
+    snapshot = dict(book)
+    _heal_from_name(snapshot)
     provider = _provider_choice(payload, settings)
     candidates, tried, errors = _search_candidates(
-        book, provider, settings.get("google_key") or "", _text(payload.get("query"), 200))
+        snapshot, provider, settings.get("google_key") or "", _text(payload.get("query"), 200))
     _remember_previews(candidates)
     return {"candidates": candidates, "tried": tried, "errors": errors,
             "provider": provider}
@@ -1109,8 +1160,10 @@ def apply_candidate(user: str, book_id: str, payload: dict) -> dict:
         if not book:
             raise ApiError("book not found", 404)
     query = _text(payload.get("query"), 200)
+    snapshot = dict(book)
+    _heal_from_name(snapshot)
     candidates, _, _ = _search_candidates(
-        book, source, settings.get("google_key") or "", query)
+        snapshot, source, settings.get("google_key") or "", query)
     candidate = next((item for item in candidates
                       if item.get("source") == source and item.get("source_id") == source_id), None)
     if not candidate:
@@ -1152,17 +1205,30 @@ def enrich_book(user: str, book_id: str, payload: dict) -> dict:
         if not book:
             raise ApiError("book not found", 404)
         snapshot = dict(book)
+        _heal_from_name(snapshot)
         if not force and not _enrich_retry_due(snapshot):
             return {"ok": True, "skipped": True, "status": "skipped", "book": snapshot}
 
     provider = _provider_choice(payload, settings)
+    titles = _candidate_queries(snapshot, _text(payload.get("query"), 200))
     candidates, tried, errors = _search_candidates(
-        snapshot, provider, settings.get("google_key") or "", _text(payload.get("query"), 200))
+        snapshot, provider, settings.get("google_key") or "", "", titles)
     best = candidates[0] if candidates else None
     best_score = float(best.get("score") or 0.0) if best else 0.0
     fmt = ""
-    if best and best_score >= ENRICH_COVER_SCORE and not snapshot.get("cover"):
-        fmt = _store_cover(book_id, best)
+    cover_source = ""
+    if not snapshot.get("cover"):
+        # Any accepted match may carry the artwork; the best-scoring one often
+        # does not (different edition without a cover).
+        for candidate in candidates:
+            if float(candidate.get("score") or 0.0) < ENRICH_MIN_SCORE:
+                continue
+            if not candidate.get("cover_url"):
+                continue
+            fmt = _store_cover(book_id, candidate)
+            if fmt:
+                cover_source = str(candidate.get("source") or "")
+                break
 
     status = "error" if errors and not tried else "no-match"
     changed = []
@@ -1171,26 +1237,29 @@ def enrich_book(user: str, book_id: str, payload: dict) -> dict:
         book = _user_library(store, user)["books"].get(book_id)
         if not book:
             raise ApiError("book not found", 404)
+        changed = _heal_from_name(book)
         if best and best_score >= ENRICH_MIN_SCORE:
-            changed = _apply_enrichment(book, best)
+            for key in _apply_enrichment(book, best):
+                if key not in changed:
+                    changed.append(key)
             book["source"] = str(best.get("source") or "")
             book["source_id"] = str(best.get("source_id") or "")
             book["source_url"] = _text(best.get("source_url"), 512)
             if fmt:
                 book["cover"] = True
                 book["cover_ext"] = fmt
-                book["cover_source"] = str(best.get("source") or "")
+                book["cover_source"] = cover_source
                 changed.append("cover")
             status = "updated" if changed else "unchanged"
         book["enriched_at"] = _now()
         book["enrich_status"] = status
-        book["enrich_query"] = _text(best.get("title") if best else "", 300)
+        book["enrich_query"] = " | ".join(titles)[:300]
         if changed:
             book["updated_at"] = _now()
         _save(LIBRARY_FILE, store)
         return {"ok": True, "status": status, "changed": changed, "score": round(best_score, 3),
                 "source": str(best.get("source") or "") if best else "",
-                "tried": tried, "errors": errors, "book": book}
+                "tried": tried, "errors": errors, "queries": titles, "book": book}
 
 
 def delete_cover(user: str, book_id: str) -> dict:
