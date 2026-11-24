@@ -9,15 +9,24 @@ in Docker, its web UI and API on port 3010, and a native EthOS window that embed
 - **Host requirements:** Docker (installed automatically through Package Center when missing).
 - **Network:** port 3010 is reachable on the LAN. Grafana has its own login.
 
-## First visit
+## Administrator account
 
-Open the **Grafana** window (or `http://<nas-ip>:3010`) and sign in with the built-in account:
+The login and password are chosen in the Package Center **install dialog** and can be changed
+later under **Installed → Settings**. EthOS stores them with the package and passes them to the
+container as `GF_SECURITY_ADMIN_USER` / `GF_SECURITY_ADMIN_PASSWORD`; Grafana creates the admin
+account from them on the **first start of an empty data volume**.
 
-| User | Password |
-|---|---|
-| `admin` | `admin` |
+- Left empty, the fields fall back to `admin` / `admin`. Change that immediately — port 3010 is
+  reachable on the LAN.
+- Changing the settings later recreates the container, but Grafana does not rewrite an account that
+  already exists. To change the password of an existing install, use the Grafana UI (Profile →
+  Change password) or reset it on the NAS:
+  `docker exec ethos-grafana grafana cli --homepath /usr/share/grafana admin reset-admin-password <new>`
+  and sign in again. The administrator **login** can only be renamed inside Grafana (Server admin →
+  Users).
+- Grafana 13 logs in through `POST /login` (JSON `{"user", "password"}`); the old `/api/login`
+  endpoint no longer exists.
 
-Grafana asks you to choose a new password immediately. Do it — the port is reachable on the LAN.
 Sign-up and organisation creation are disabled in the package environment.
 
 If the embedded window cannot keep a session (some browsers block third-party cookies inside

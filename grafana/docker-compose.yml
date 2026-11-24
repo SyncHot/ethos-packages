@@ -4,8 +4,11 @@ services:
     image: grafana/grafana:13.3.1
     container_name: ethos-grafana
     environment:
-      # Grafana keeps its own login. The first visit signs in with admin/admin
-      # and must change it; no credentials live in the public signed package.
+      # The admin account is created from the values chosen in the Package
+      # Center install dialog (or later under Installed → Settings). The
+      # defaults only apply when a field was left empty.
+      GF_SECURITY_ADMIN_USER: "${GF_SECURITY_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GF_SECURITY_ADMIN_PASSWORD:-admin}"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_USERS_ALLOW_ORG_CREATE: "false"
       # No outbound usage reports or update checks from a self-hosted NAS.
