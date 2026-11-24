@@ -2,7 +2,7 @@
   "schema": 2,
   "id": "grafana",
   "name": "Grafana",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Dashboards for the metrics that already live on the NAS: point Grafana at InfluxDB (or Prometheus, SQL and other sources) and build graphs, alerts and shared views in the browser. The first visit uses the built-in admin account, which you change immediately; dashboards, users and data sources live in a package volume that survives updates. The web UI opens in its own EthOS window on port 3010 and is reachable on the LAN.",
   "icon": "📈",
   "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/grafana/icon.svg",
@@ -28,7 +28,11 @@
   "system_requires": [
     "docker"
   ],
-  "changelog": "1.1.0: the administrator login and password can be set in the Package Center install dialog (Installed → Settings later); the values reach the container as GF_SECURITY_ADMIN_USER/PASSWORD and create the account on the first start. 1.0.0: first release — Grafana OSS 13.3.1 pinned, dashboards and users in a volume that survives updates, web UI on port 3010 (own login), resource caps and rotated logs.",
+  "changelog": "1.2.0: Grafana keeps its data in a folder on the NAS chosen at install time (default packages/data/grafana; Installed → Settings to change it) instead of a named volume, so it can live on a data disk and is visible in Files. 1.1.0: the administrator login and password can be set in the Package Center install dialog; the values reach the container as GF_SECURITY_ADMIN_USER/PASSWORD and create the account on the first start. 1.0.0: first release — Grafana OSS 13.3.1 pinned, web UI on port 3010 (own login), resource caps and rotated logs.",
+  "data": {
+    "mount": "/var/lib/grafana",
+    "label": "Grafana data folder"
+  },
   "settings": [
     {
       "key": "admin_user",
@@ -52,7 +56,7 @@
   ],
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/grafana/docker-compose.yml",
-    "sha256": "9d45ca0b94dccd258971bca795ef549a3c00d85ad8f73225c3181b393f37cdac"
+    "sha256": "982796276a69b62b16eebbe8be76c8c7dd00eff3f5c99eae392f60356073bb30"
   },
   "files": [
     {

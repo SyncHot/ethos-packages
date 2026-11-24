@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-24T16:02:44+00:00",
+  "generated_at": "2026-11-24T16:17:03+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -571,7 +571,7 @@
     {
       "id": "grafana",
       "name": "Grafana",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description": "Dashboards for the metrics that already live on the NAS: point Grafana at InfluxDB (or Prometheus, SQL and other sources) and build graphs, alerts and shared views in the browser. The first visit uses the built-in admin account, which you change immediately; dashboards, users and data sources live in a package volume that survives updates. The web UI opens in its own EthOS window on port 3010 and is reachable on the LAN.",
       "icon": "📈",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/grafana/icon.svg",
@@ -589,10 +589,10 @@
         "docker"
       ],
       "screenshots": [],
-      "changelog": "1.1.0: the administrator login and password can be set in the Package Center install dialog (Installed → Settings later); the values reach the container as GF_SECURITY_ADMIN_USER/PASSWORD and create the account on the first start. 1.0.0: first release — Grafana OSS 13.3.1 pinned, dashboards and users in a volume that survives updates, web UI on port 3010 (own login), resource caps and rotated logs.",
+      "changelog": "1.2.0: Grafana keeps its data in a folder on the NAS chosen at install time (default packages/data/grafana; Installed → Settings to change it) instead of a named volume, so it can live on a data disk and is visible in Files. 1.1.0: the administrator login and password can be set in the Package Center install dialog; the values reach the container as GF_SECURITY_ADMIN_USER/PASSWORD and create the account on the first start. 1.0.0: first release — Grafana OSS 13.3.1 pinned, web UI on port 3010 (own login), resource caps and rotated logs.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/grafana/manifest.json",
-      "manifest_sha256": "72e4410c955d4b9c4ad6138bb14dfecb1808eac463f7d86bbd184edf759e21b5",
-      "size_bytes": 2552
+      "manifest_sha256": "cce4c5dd83e98e749ee09b2dfee1634e1e76e7d87871e56c4a912e5aa34cd8e0",
+      "size_bytes": 2669
     },
     {
       "id": "influxdb",

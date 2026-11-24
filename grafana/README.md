@@ -4,17 +4,38 @@ Dashboards for the metrics that already live on the NAS. A Package Center app: G
 in Docker, its web UI and API on port 3010, and a native EthOS window that embeds the UI.
 
 - **Package id:** `grafana` · **Runtime:** compose · **UI:** window on `:3010`
-- **Data:** the `grafana-data` volume (`/var/lib/grafana`) holds the SQLite database, dashboards,
-  users, data sources and plugins. It survives updates.
+- **Data:** a folder on the NAS — by default `packages/data/grafana`, or any folder under
+  `/home`, `/mnt`, `/media` chosen in the install dialog and under **Installed → Settings** — is
+  mounted at `/var/lib/grafana`. It holds the SQLite database, dashboards, users, data sources and
+  plugins, survives updates and can live on a data disk.
 - **Host requirements:** Docker (installed automatically through Package Center when missing).
 - **Network:** port 3010 is reachable on the LAN. Grafana has its own login.
+
+## Data folder
+
+Grafana 1.2.0 replaced the `grafana-data` named volume with a folder on the NAS. Nothing is moved
+automatically:
+
+- Fresh install: pick the folder in the install dialog, or leave it empty for the package-named
+  default, and Grafana initialises there.
+- Updating from 1.1.0 with existing dashboards: copy the old volume once, then update. On the NAS
+  shell (`<target>` = the folder you choose in Settings):
+
+  ```bash
+  docker run --rm -v grafana_grafana-data:/from -v "<target>:/to" \
+    alpine:3.20 sh -c 'cp -a /from/. /to/'
+  ```
+
+  Keep the volume until Grafana shows the dashboards from the new location.
+- Changing the folder later recreates the container on the new path with an empty data set; move
+  the files first (Files app), then switch.
 
 ## Administrator account
 
 The login and password are chosen in the Package Center **install dialog** and can be changed
 later under **Installed → Settings**. EthOS stores them with the package and passes them to the
 container as `GF_SECURITY_ADMIN_USER` / `GF_SECURITY_ADMIN_PASSWORD`; Grafana creates the admin
-account from them on the **first start of an empty data volume**.
+account from them on the **first start of an empty data folder**.
 
 - Left empty, the fields fall back to `admin` / `admin`. Change that immediately — port 3010 is
   reachable on the LAN.
