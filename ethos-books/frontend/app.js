@@ -19,6 +19,7 @@ const ALL_EXTS = [...BOOK_EXTS, ...AUDIO_EXTS];
 // Folder artwork: a normal book layout keeps `cover.jpg` next to the file, so
 // those files are collected while walking but never treated as titles.
 const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp']);
+const ARCHIVE_EXTS = new Set(['rar', '7z', 'zip', 'tar', 'gz', 'bz2', 'xz']);
 const FOLDER_COVER_STEMS = ['cover', 'folder', 'front', 'frontcover', 'poster', 'smallcover', 'okladka'];
 const MAX_COVER_BYTES = 500 * 1024;
 const SKIP_DIRS = new Set(['@eaDir', '#recycle', '.@__thumb', 'lost+found', '.Trash-1000',
@@ -47,6 +48,13 @@ const _state = {
     coverUrls: new Map(),
     coverLoading: new Set(),
     reading: null,
+    detail: null,
+    candidates: [],
+    candidateInfo: {},
+    candidateQuery: '',
+    candidateBusy: false,
+    previewUrls: new Map(),
+    unsupported: [],
     scanCancel: false,
     enriching: false,
     progressTimer: null,
@@ -296,32 +304,55 @@ function filteredBooks() {
 
 // ── Covers (fetched with the auth header, cached as object URLs) ────────────
 
+function coverKey(book) {
+    return `${book.id}:${book.updated_at || ''}:${book.cover_ext || ''}`;
+}
+
+function posterHue(book) {
+    const seed = String(book.id || book.title || '');
+    let hash = 0;
+    for (let index = 0; index < seed.length; index += 1) hash = (hash * 31 + seed.charCodeAt(index)) % 360;
+    return hash;
+}
+
+function posterMarkup(book, size = '') {
+    const glyph = book.kind === 'audiobook' ? '🎧' : (book.format === 'pdf' ? '📄' : '📖');
+    return `<span class="bk-poster ${size}" style="--bk-hue:${posterHue(book)}" aria-hidden="true">
+      <em>${glyph}</em>
+      <strong>${escHtml(book.title || baseName(book.path))}</strong>
+      ${book.author ? `<small>${escHtml(book.author)}</small>` : ''}
+    </span>`;
+}
+
 function coverMarkup(book, size = '') {
-    const url = _state.coverUrls.get(book.id) || '';
+    const url = _state.coverUrls.get(coverKey(book)) || '';
     if (url) {
         return `<img class="bk-cover-img is-loaded ${size}" src="${escAttr(url)}" alt="" loading="lazy">`;
     }
     if (book.cover) _loadCover(book);
+    const posters = (_state.library.settings || {}).posters !== false;
+    if (posters && !book.cover) return posterMarkup(book, size);
     const glyph = book.kind === 'audiobook' ? '🎧' : (book.format === 'pdf' ? '📄' : '📖');
     return `<span class="bk-cover-fallback ${size}" aria-hidden="true">${glyph}</span>`;
 }
 
 async function _loadCover(book) {
-    if (_state.coverLoading.has(book.id) || _state.coverUrls.has(book.id)) return;
-    _state.coverLoading.add(book.id);
+    const key = coverKey(book);
+    if (_state.coverLoading.has(key) || _state.coverUrls.has(key)) return;
+    _state.coverLoading.add(key);
     try {
         const res = await _ctx.apiFetch(`${_pkgBase}/covers/${encodeURIComponent(book.id)}`);
         if (!res.ok) return;
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
-        _state.coverUrls.set(book.id, url);
+        _state.coverUrls.set(key, url);
         document.querySelectorAll(`[data-cover-slot="${book.id}"]`).forEach((host) => {
             host.innerHTML = `<img class="bk-cover-img is-loaded" src="${escAttr(url)}" alt="">`;
         });
     } catch (err) {
         log.debug('cover load failed', String(err?.detail || err?.message || err));
     } finally {
-        _state.coverLoading.delete(book.id);
+        _state.coverLoading.delete(key);
     }
 }
 
@@ -470,6 +501,56 @@ function injectStyles(container) {
 .bk-cover-btn:focus-visible { outline: 2px solid var(--pkg-accent); outline-offset: 2px; }
 .bk-cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .bk-cover-fallback { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 34px; opacity: 0.7; }
+.bk-poster {
+    display: flex; flex-direction: column; justify-content: flex-end; gap: 5px;
+    width: 100%; height: 100%; padding: 14px 12px; box-sizing: border-box; overflow: hidden;
+    background: linear-gradient(135deg, hsl(var(--bk-hue) 46% 34%), hsl(calc(var(--bk-hue) + 38) 52% 16%));
+    color: #fff; text-align: left;
+}
+.bk-poster em { font-style: normal; font-size: 26px; opacity: 0.55; margin-bottom: auto; }
+.bk-poster strong { font-size: 13px; line-height: 1.3; font-weight: 650; display: -webkit-box;
+    -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.bk-poster small { font-size: 11px; opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bk-detail {
+    position: absolute; inset: 0; z-index: 40; overflow: auto;
+    background: var(--pkg-bg); padding: 22px 26px;
+}
+.bk-detail-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.bk-detail-bar strong { flex: 1; min-width: 160px; font-size: 16px; }
+.bk-detail-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
+.bk-detail-cover { width: 100%; aspect-ratio: 2 / 3; border-radius: 12px; overflow: hidden;
+    background: var(--pkg-surface); box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18); }
+.bk-detail h2 { margin: 0 0 4px; font-size: 22px; }
+.bk-detail-author { margin: 0 0 14px; color: var(--pkg-muted); font-size: 14px; }
+.bk-detail-rows { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 6px 14px; font-size: 13px; margin: 0 0 16px; }
+.bk-detail-rows dt { color: var(--pkg-muted); }
+.bk-detail-rows dd { margin: 0; word-break: break-word; }
+.bk-detail-desc { white-space: pre-wrap; font-size: 13.5px; line-height: 1.55; max-height: 260px;
+    overflow: auto; padding-right: 6px; border-left: 3px solid var(--pkg-border); padding-left: 12px; }
+.bk-candidates { margin-top: 22px; }
+.bk-candidates h3 { margin: 0 0 4px; font-size: 15px; }
+.bk-candidate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-top: 12px; }
+.bk-candidate {
+    display: flex; gap: 10px; align-items: stretch; text-align: left; cursor: pointer;
+    background: var(--pkg-panel); border: 1px solid var(--pkg-border); border-radius: 10px; padding: 8px;
+    color: inherit; font: inherit;
+}
+.bk-candidate:hover { border-color: var(--pkg-accent); }
+.bk-candidate:disabled { opacity: 0.5; cursor: progress; }
+.bk-candidate-cover { flex: none; width: 52px; height: 76px; border-radius: 6px; overflow: hidden;
+    background: var(--pkg-surface); display: flex; align-items: center; justify-content: center; }
+.bk-candidate-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bk-candidate-empty { font-size: 20px; opacity: 0.6; }
+.bk-candidate-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bk-candidate-body strong { font-size: 12.5px; line-height: 1.3; display: -webkit-box;
+    -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.bk-candidate-body small { font-size: 11px; color: var(--pkg-muted); }
+.bk-score { margin-top: auto; font-size: 10.5px; color: var(--pkg-muted); }
+@media (max-width: 760px) {
+    .bk-detail { padding: 16px; }
+    .bk-detail-grid { grid-template-columns: 1fr; }
+    .bk-detail-cover { max-width: 220px; }
+}
 .bk-card-title {
     font-size: 12px; font-weight: 650; line-height: 1.35;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -710,7 +791,8 @@ function summaryMarkup() {
 function cardMarkup(book) {
     const progress = progressOf(book);
     const percent = pct(progress?.percent);
-    const authorLine = [book.author, book.series, book.format.toUpperCase()].filter(Boolean).join(' · ');
+    const authorLine = [book.author, book.narrator ? `🎙 ${book.narrator}` : '', book.series,
+        book.format.toUpperCase()].filter(Boolean).join(' · ');
     return `
 <article class="bk-card" data-testid="books-card" data-book="${escAttr(book.id)}" data-path="${escAttr(book.path)}">
   <button class="bk-cover-btn" type="button" data-open="${escAttr(book.id)}" data-testid="books-open" title="${escAttr(book.title || '')}">
@@ -772,9 +854,10 @@ function renderContinueView(host) {
         ? `<section class="bk-continue" data-testid="books-continue">${items.map((book) => {
             const percent = pct(progress[book.id]?.percent);
             const glyph = book.kind === 'audiobook' ? '🎧' : '📖';
+            const cached = _state.coverUrls.get(coverKey(book));
             return `
 <button class="bk-continue-card" type="button" data-open="${escAttr(book.id)}" data-testid="books-continue-card">
-  <span class="bk-continue-cover" data-cover-slot="${escAttr(book.id)}">${_state.coverUrls.get(book.id) ? `<img class="bk-cover-img" src="${escAttr(_state.coverUrls.get(book.id))}" alt="">` : glyph}</span>
+  <span class="bk-continue-cover" data-cover-slot="${escAttr(book.id)}">${cached ? `<img class="bk-cover-img" src="${escAttr(cached)}" alt="">` : glyph}</span>
   <span class="bk-continue-body">
     <strong>${escHtml(book.title || baseName(book.path))}</strong>
     <span>${escHtml(book.author || 'Unknown author')} · ${percent}%</span>
@@ -873,7 +956,12 @@ function renderFoldersView(host) {
     <div><span>Audiobooks</span><strong>.m4b titles and folders of .mp3/.flac tracks</strong></div>
     <div><span>Skipped</span><strong>Hidden folders, @eaDir, #recycle, system folders</strong></div>
   </div>
-</section>`;
+</section>
+${(_state.unsupported || []).length ? `<section class="bk-panel" data-testid="books-unsupported">
+  <div class="bk-toolbar"><div><h2>Not scanned</h2><p class="bk-hint">Archives stay closed on purpose — extract one next to the library and rescan to add its title.</p></div></div>
+  <table class="bk-table" style="margin-top:10px"><tbody>${(_state.unsupported || []).slice(0, 50).map((item) => `<tr>
+      <td class="path">${escHtml(item.path)}</td><td class="num">${escHtml(fmtBytes(item.size))}</td></tr>`).join('')}</tbody></table>
+</section>` : ''}`;
 }
 
 async function addFolder() {
@@ -994,8 +1082,14 @@ async function scanRoots(roots, { shared = false } = {}) {
 
 function needsEnrichment(book) {
     if (!book) return false;
-    if (!book.cover) return true;
-    return !book.author;
+    if (book.enrich_status === 'updated') return false;
+    // The service retries after 30 days; do not queue the same lookup on
+    // every scan just because it found nothing last time.
+    if (book.enriched_at) {
+        const age = Date.now() - Date.parse(book.enriched_at);
+        if (Number.isFinite(age) && age >= 0 && age < 30 * 86400 * 1000) return false;
+    }
+    return !book.cover || !book.author || !book.description;
 }
 
 /**
@@ -1004,9 +1098,11 @@ function needsEnrichment(book) {
  * responses), rate-limited and with a fixed host allowlist; titles already
  * tried are skipped server-side unless `force` is sent.
  */
-async function runEnrichment({ auto = false } = {}) {
+async function runEnrichment({ auto = false, force = false } = {}) {
     if (_state.enriching) return;
-    const books = (_state.library.books || []).filter(needsEnrichment);
+    const books = force
+        ? (_state.library.books || []).filter((book) => !book.cover || !book.description || !book.author)
+        : (_state.library.books || []).filter(needsEnrichment);
     if (!books.length) {
         if (!auto) setStatus('Every title already has metadata and a cover.');
         return;
@@ -1028,7 +1124,7 @@ async function runEnrichment({ auto = false } = {}) {
         for (let index = 0; index < batch.length; index += 1) {
             const book = batch[index];
             try {
-                const result = await json(`books/${book.id}/enrich`, { method: 'POST', body: {} });
+                const result = await json(`books/${book.id}/enrich`, { method: 'POST', body: { force } });
                 if (result?.status === 'updated') {
                     updated += 1;
                     if ((result.changed || []).includes('cover')) covers += 1;
@@ -1061,7 +1157,9 @@ async function scanOne(root, task, shared = false) {
     const settings = _state.library.settings || {};
     const exts = new Set((settings.extensions || ALL_EXTS).map((ext) => String(ext).toLowerCase()));
     const found = [];
+    const archives = [];
     const dirImages = new Map();
+    const dirOpf = new Map();
     const queue = [{ path: root, depth: 0 }];
     let nodes = 0;
     let dirs = 0;
@@ -1096,6 +1194,16 @@ async function scanOne(root, task, shared = false) {
                     if (!images) { images = []; dirImages.set(current.path, images); }
                     images.push({ path: entry.path, name, size, ext });
                 }
+                continue;
+            }
+            if (ext === 'opf') {
+                let list = dirOpf.get(current.path);
+                if (!list) { list = []; dirOpf.set(current.path, list); }
+                list.push({ path: entry.path, name });
+                continue;
+            }
+            if (ARCHIVE_EXTS.has(ext)) {
+                archives.push({ path: entry.path, name, size: Number(entry.size) || 0 });
                 continue;
             }
             if (!exts.has(ext)) continue;
@@ -1135,6 +1243,7 @@ async function scanOne(root, task, shared = false) {
                     entry.series = meta.series || '';
                     entry.series_index = meta.series_index || 0;
                     entry.language = meta.language || '';
+                    entry._epub = true;
                     if (meta.cover) entry._cover = meta.cover;
                 }
             }
@@ -1142,7 +1251,7 @@ async function scanOne(root, task, shared = false) {
         } else if (file.ext === 'm4b') {
             entries.push({
                 path: file.path, format: 'm4b', size: file.size, modified: file.modified,
-                title: fileTitle(file.name), author: dirAuthor(file.dir, root),
+                title: fileTitle(file.name),
                 _coverDir: file.dir, _coverStem: stemOf(file.name),
                 tracks: [{ path: file.path, title: fileTitle(file.name), size: file.size, modified: file.modified }],
             });
@@ -1161,7 +1270,6 @@ async function scanOne(root, task, shared = false) {
             size: items.reduce((sum, item) => sum + item.size, 0),
             modified: Math.max(...items.map((item) => item.modified)),
             title: baseName(dir),
-            author: dirAuthor(dir, root),
             _coverDir: dir,
             _coverStem: baseName(dir),
             tracks: items.map((item) => ({
@@ -1170,6 +1278,32 @@ async function scanOne(root, task, shared = false) {
                 size: item.size,
                 modified: item.modified,
             })),
+        });
+    }
+
+    // Calibre keeps a `metadata.opf` next to a title; a plain `<file>.opf` is
+    // accepted too. It only fills what the file itself could not provide.
+    const opfCandidates = entries.filter((entry) => entry._coverDir && dirOpf.get(entry._coverDir)
+        && !entry._epub && !(entry.tags && entry.tags.title)).slice(0, 200);
+    if (opfCandidates.length) {
+        task.update({ detail: `Reading sidecar metadata · ${root}` });
+        await mapLimit(opfCandidates, 4, async (entry) => {
+            if (_state.scanCancel) return;
+            const list = dirOpf.get(entry._coverDir) || [];
+            const stem = String(entry._coverStem || '').toLowerCase();
+            const match = list.find((item) => item.name.toLowerCase() === 'metadata.opf')
+                || list.find((item) => stemOf(item.name).toLowerCase() === stem);
+            if (!match) return;
+            const meta = await readOpf(match.path).catch((err) => {
+                log.debug('opf metadata failed', `${match.path}: ${String(err?.message || err)}`);
+                return null;
+            });
+            if (!meta) return;
+            if (meta.title) entry.title = meta.title;
+            if (meta.author) entry.author = meta.author;
+            if (meta.series) entry.series = meta.series;
+            if (meta.series_index) entry.series_index = meta.series_index;
+            if (meta.language) entry.language = meta.language;
         });
     }
 
@@ -1202,21 +1336,22 @@ async function scanOne(root, task, shared = false) {
         });
     }
 
-    // Embedded artwork: ID3 APIC for MP3, `covr` for M4B/M4A. Shared titles
-    // skip covers — the service only stores covers for owned books.
-    if (!shared) {
+    // Embedded tags and artwork (ID3, MP4, FLAC, OGG). Tags beat the folder
+    // name for title/author; artwork is only uploaded for owned titles.
+    {
         const candidates = entries
-            .filter((entry) => (entry.tracks || []).length && !entry._cover)
+            .filter((entry) => (entry.tracks || []).length)
             .slice(0, MAX_AUDIO_META);
         if (candidates.length) {
-            task.update({ detail: `Reading audio covers · ${root}` });
+            task.update({ detail: `Reading audio tags · ${root}` });
             await mapLimit(candidates, 2, async (entry) => {
-                if (_state.scanCancel || entry._cover) return;
+                if (_state.scanCancel) return;
                 try {
-                    const cover = await audioCover(entry.tracks[0].path);
-                    if (cover) entry._cover = cover;
+                    const meta = await audioMeta(entry.tracks[0].path);
+                    if (meta.tags && Object.keys(meta.tags).length) entry.tags = meta.tags;
+                    if (!shared && meta.cover && !entry._cover) entry._cover = meta.cover;
                 } catch (err) {
-                    log.debug('audio cover failed', `${entry.path}: ${String(err?.message || err)}`);
+                    log.debug('audio metadata failed', `${entry.path}: ${String(err?.message || err)}`);
                 }
             });
         }
@@ -1250,6 +1385,11 @@ async function scanOne(root, task, shared = false) {
         }
     }
 
+    if (!shared) {
+        _state.unsupported = (_state.unsupported || []).filter((item) => !under(item.path, root));
+        _state.unsupported.push(...archives);
+    }
+
     const sourceBooks = shared ? (_state.library.shared_books || []) : (_state.library.books || []);
     const known = sourceBooks.filter((book) => under(book.path, root)).map((book) => book.path);
     const seen = new Set(entries.map((entry) => entry.path));
@@ -1263,8 +1403,11 @@ async function scanOne(root, task, shared = false) {
     for (let index = 0; index < entries.length || index === 0; index += SCAN_BATCH) {
         if (_state.scanCancel) throw new Error('cancelled');
         const batch = entries.slice(index, index + SCAN_BATCH).map((entry) => {
-            const { _cover, _coverDir, _coverStem, ...rest } = entry;
-            return rest;
+            const clean = {};
+            for (const [key, value] of Object.entries(entry)) {
+                if (!key.startsWith('_')) clean[key] = value;
+            }
+            return clean;
         });
         const last = index + SCAN_BATCH >= entries.length;
         const result = await json('scan', {
@@ -1322,14 +1465,7 @@ async function scanOne(root, task, shared = false) {
     return { added, updated, removed };
 }
 
-function dirAuthor(dir, root) {
-    if (!dir || dir === root) return '';
-    const parent = dir.replace(/\/[^/]+$/, '');
-    if (!parent || parent === root || parent === '') return '';
-    return baseName(parent);
-}
-
-// ── Audio metadata (duration + embedded cover) ───────────────────────────
+// ── Audio metadata (duration, tags and embedded cover) ─────────────────
 
 /** Run `worker` over `items` with at most `limit` promises in flight. */
 async function mapLimit(items, limit, worker) {
@@ -1403,8 +1539,34 @@ async function readFolderCover(image) {
     return { data: base64FromBytes(bytes), format };
 }
 
-/** ID3v2 APIC (MP3) → {data, format}. */
-function id3Cover(bytes) {
+/** Decode one ID3/Vorbis text value (0 latin1, 1/2 UTF-16, 3 UTF-8). */
+function decodeText(bytes, encoding = 3) {
+    const label = encoding === 0 ? 'windows-1252'
+        : encoding === 1 ? 'utf-16le'
+            : encoding === 2 ? 'utf-16be' : 'utf-8';
+    try {
+        return new TextDecoder(label).decode(bytes);
+    } catch {
+        return '';
+    }
+}
+
+function id3Text(bytes, encoding) {
+    let start = 0;
+    let enc = encoding;
+    if (enc === 1 || enc === 2) {
+        if (bytes[0] === 0xff && bytes[1] === 0xfe) { start = 2; enc = 1; }
+        else if (bytes[0] === 0xfe && bytes[1] === 0xff) { start = 2; enc = 2; }
+    }
+    return decodeText(bytes.subarray(start), enc)
+        .replace(/^[\u0000\s]+/, '')
+        .replace(/[\u0000\s]+$/, '');
+}
+
+const ID3_FIELDS = { TIT2: 'title', TPE1: 'artist', TALB: 'album', TDRC: 'year', TYER: 'year', TCON: 'genre' };
+
+/** ID3v2 (MP3) → {tags, cover}; `cover` is {data, format} or null. */
+function id3Meta(bytes) {
     if (bytes.length < 10) return null;
     if (bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) return null;  // "ID3"
     const version = bytes[3];
@@ -1422,49 +1584,65 @@ function id3Cover(bytes) {
         }
     }
     const end = Math.min(bytes.length, 10 + size);
+    const tags = {};
+    let cover = null;
     while (offset + 10 <= end) {
         const id = String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]);
-        if (!/^[A-Z0-9]{4}$/.test(id)) return null;
+        if (!/^[A-Z0-9]{4}$/.test(id)) break;
         const frameSize = version >= 4
             ? ((bytes[offset + 4] & 0x7f) << 21) | ((bytes[offset + 5] & 0x7f) << 14)
                 | ((bytes[offset + 6] & 0x7f) << 7) | (bytes[offset + 7] & 0x7f)
             : (bytes[offset + 4] << 24) | (bytes[offset + 5] << 16) | (bytes[offset + 6] << 8) | bytes[offset + 7];
-        if (frameSize <= 0) return null;
-        if (id === 'APIC') {
+        if (frameSize <= 0) break;
+        const frameEnd = Math.min(end, offset + 10 + frameSize);
+        if (id === 'APIC' && !cover) {
             let position = offset + 10;
             const encoding = bytes[position];
             position += 1;
             let mime = '';
-            while (position < end && bytes[position] !== 0) {
+            while (position < frameEnd && bytes[position] !== 0) {
                 mime += String.fromCharCode(bytes[position]);
                 position += 1;
             }
             position += 1;  // MIME terminator
             position += 1;  // picture type
             if (encoding === 1 || encoding === 2) {
-                while (position + 1 < end && !(bytes[position] === 0 && bytes[position + 1] === 0)) position += 2;
+                while (position + 1 < frameEnd && !(bytes[position] === 0 && bytes[position + 1] === 0)) position += 2;
                 position += 2;
             } else {
-                while (position < end && bytes[position] !== 0) position += 1;
+                while (position < frameEnd && bytes[position] !== 0) position += 1;
                 position += 1;
             }
-            const frameEnd = Math.min(end, offset + 10 + frameSize);
             const data = bytes.subarray(position, frameEnd);
-            if (!data.length || data.length > 500 * 1024) return null;
-            return { data: base64FromBytes(data), format: mime.includes('png') ? 'png' : 'jpg' };
+            if (data.length && data.length <= 500 * 1024) {
+                cover = { data: base64FromBytes(data), format: mime.includes('png') ? 'png' : 'jpg' };
+            }
+        } else if (ID3_FIELDS[id]) {
+            const value = id3Text(bytes.subarray(offset + 10, frameEnd), bytes[offset + 10]);
+            if (value) tags[ID3_FIELDS[id]] = ID3_FIELDS[id] === 'year' ? value.slice(0, 4) : value;
         }
         offset += 10 + frameSize;
     }
-    return null;
+    return { tags, cover };
 }
 
-/** MP4 `covr` atom (M4B/M4A) → {data, format}. */
-function mp4Cover(bytes) {
+const MP4_FIELDS = { '©nam': 'title', '©ART': 'artist', 'aART': 'albumartist', '©alb': 'album', '©day': 'year', 'trkn': 'track' };
+
+/** MP4/M4B atoms → {tags, cover}. Scans head and tail windows. */
+function mp4Meta(bytes) {
+    const tags = {};
+    let cover = null;
     for (let index = 4; index + 8 < bytes.length; index += 1) {
-        if (!(bytes[index] === 0x63 && bytes[index + 1] === 0x6f
-                && bytes[index + 2] === 0x76 && bytes[index + 3] === 0x72)) continue;  // "covr"
+        // Only the first byte of every known atom is a cheap pre-filter; a
+        // JPEG-heavy 512 KB window otherwise costs a few million comparisons.
+        const first = bytes[index];
+        if (first !== 0xa9 && first !== 0x61 && first !== 0x63) continue;  // © a c
+        const name = String.fromCharCode(bytes[index], bytes[index + 1], bytes[index + 2], bytes[index + 3]);
+        const field = MP4_FIELDS[name];
+        if (!field && name !== 'covr') continue;
         const boxSize = (bytes[index - 4] << 24) | (bytes[index - 3] << 16)
             | (bytes[index - 2] << 8) | bytes[index - 1];
+        if (boxSize < 16) continue;
         let position = index + 4;
         const boxEnd = Math.min(bytes.length, index - 4 + boxSize);
         while (position + 16 <= boxEnd) {
@@ -1477,21 +1655,125 @@ function mp4Cover(bytes) {
                 const dataType = (bytes[position + 8] << 24) | (bytes[position + 9] << 16)
                     | (bytes[position + 10] << 8) | bytes[position + 11];
                 const payload = bytes.subarray(position + 16, Math.min(boxEnd, position + childSize));
-                if (!payload.length || payload.length > 500 * 1024) return null;
-                return { data: base64FromBytes(payload), format: dataType === 14 ? 'png' : 'jpg' };
+                if (name === 'covr') {
+                    if (!cover && payload.length && payload.length <= 500 * 1024) {
+                        cover = { data: base64FromBytes(payload), format: dataType === 14 ? 'png' : 'jpg' };
+                    }
+                } else if (name === 'trkn') {
+                    if (payload.length >= 4) tags.track = String((payload[2] << 8) | payload[3]);
+                } else if (!tags[field]) {
+                    const value = id3Text(payload, dataType === 2 ? 1 : 3);
+                    if (value) tags[field] = field === 'year' ? value.slice(0, 4) : value;
+                }
+                break;
             }
             position += childSize;
         }
     }
-    return null;
+    return { tags, cover };
+}
+
+function vorbisComments(bytes, tags) {
+    if (bytes.length < 8) return;
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let position = 0;
+    const vendorLength = view.getUint32(position, true);
+    position += 4 + vendorLength;
+    if (position + 4 > bytes.length) return;
+    const count = view.getUint32(position, true);
+    position += 4;
+    for (let index = 0; index < count && index < 64 && position + 4 <= bytes.length; index += 1) {
+        const length = view.getUint32(position, true);
+        position += 4;
+        if (length > bytes.length - position) break;
+        const entry = decodeText(bytes.subarray(position, position + length), 3);
+        position += length;
+        const split = entry.indexOf('=');
+        if (split <= 0) continue;
+        const key = entry.slice(0, split).toLowerCase();
+        const value = entry.slice(split + 1).trim();
+        if (!value) continue;
+        if (key === 'title') tags.title = value;
+        else if (key === 'artist') tags.artist = value;
+        else if (key === 'album') tags.album = value;
+        else if (key === 'date' || key === 'year') tags.year = value.slice(0, 4);
+        else if (key === 'tracknumber') tags.track = value.split('/')[0];
+        else if (key === 'genre') tags.genre = value;
+    }
+}
+
+function flacPicture(bytes) {
+    if (bytes.length < 32) return null;
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let position = 4;  // picture type
+    const mimeLength = view.getUint32(position, true);
+    position += 4;
+    const mime = decodeText(bytes.subarray(position, position + mimeLength), 3);
+    position += mimeLength;
+    const descLength = view.getUint32(position, true);
+    position += 4 + descLength + 16;  // width/height/depth/colors
+    if (position + 4 > bytes.length) return null;
+    const dataLength = view.getUint32(position, true);
+    position += 4;
+    if (!dataLength || dataLength > 500 * 1024 || position + dataLength > bytes.length) return null;
+    return { data: base64FromBytes(bytes.subarray(position, position + dataLength)),
+        format: mime.includes('png') ? 'png' : 'jpg' };
+}
+
+/** FLAC metadata blocks → {tags, cover}. */
+function flacMeta(bytes) {
+    if (bytes.length < 8) return null;
+    if (!(bytes[0] === 0x66 && bytes[1] === 0x4c && bytes[2] === 0x61 && bytes[3] === 0x43)) return null;  // "fLaC"
+    const tags = {};
+    let cover = null;
+    let offset = 4;
+    for (let guard = 0; guard < 64 && offset + 4 <= bytes.length; guard += 1) {
+        const header = bytes[offset];
+        const type = header & 0x7f;
+        const length = (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3];
+        const start = offset + 4;
+        const end = Math.min(bytes.length, start + length);
+        if (type === 4) vorbisComments(bytes.subarray(start, end), tags);
+        else if (type === 6 && !cover) cover = flacPicture(bytes.subarray(start, end));
+        if (header & 0x80) break;
+        offset = start + length;
+    }
+    return { tags, cover };
+}
+
+/** Find a short ASCII marker in the first `limit` bytes without building a string. */
+function findAscii(bytes, marker, limit = 8192) {
+    const end = Math.min(bytes.length, limit) - marker.length;
+    for (let index = 0; index <= end; index += 1) {
+        let hit = true;
+        for (let offset = 0; offset < marker.length; offset += 1) {
+            if (bytes[index + offset] !== marker.charCodeAt(offset)) { hit = false; break; }
+        }
+        if (hit) return index;
+    }
+    return -1;
+}
+
+/** OGG/Opus comment header → {tags, cover}. */
+function oggMeta(bytes) {
+    const tags = {};
+    let start = findAscii(bytes, 'OpusTags');
+    if (start >= 0) start += 8;
+    else {
+        start = findAscii(bytes, '\u0003vorbis');
+        if (start >= 0) start += 7;
+    }
+    if (start < 0) return null;
+    vorbisComments(bytes.subarray(start), tags);
+    return { tags, cover: null };
 }
 
 /**
- * Embedded cover of one audio file. Only the head and the tail are fetched:
- * ID3 sits at the start of an MP3 and MP4 `covr` lives in `moov`, which
- * ffmpeg often puts at the end. A 1 GB audiobook is never downloaded here.
+ * Embedded tags + artwork of one audio file. Only the head and the tail are
+ * fetched (512 KB each): ID3 sits at the start of an MP3, MP4 `moov` and some
+ * FLAC pictures sit at the end. A 1 GB audiobook is never downloaded here.
  */
-async function audioCover(path) {
+async function audioMeta(path) {
     const window = 512 * 1024;
     const chunks = [];
     for (const range of [`bytes=0-${window - 1}`, `bytes=-${window}`]) {
@@ -1499,14 +1781,23 @@ async function audioCover(path) {
             const res = await _ctx.apiFetch(rawUrl(path), { headers: { Range: range } });
             if (res.ok) chunks.push(new Uint8Array(await res.arrayBuffer()));
         } catch (err) {
-            log.debug('audio cover range failed', `${path}: ${String(err?.message || err)}`);
+            log.debug('audio meta range failed', `${path}: ${String(err?.message || err)}`);
         }
     }
+    const tags = {};
+    let cover = null;
     for (const chunk of chunks) {
-        const cover = id3Cover(chunk) || mp4Cover(chunk);
-        if (cover) return cover;
+        for (const reader of [id3Meta, mp4Meta, flacMeta, oggMeta]) {
+            let result = null;
+            try { result = reader(chunk); } catch { result = null; }
+            if (!result) continue;
+            for (const [key, value] of Object.entries(result.tags || {})) {
+                if (value && !tags[key]) tags[key] = value;
+            }
+            if (result.cover && !cover) cover = result.cover;
+        }
     }
-    return null;
+    return { tags, cover };
 }
 
 
@@ -1526,6 +1817,36 @@ function firstText(root, names) {
         }
     }
     return '';
+}
+
+/** Calibre-style sidecar OPF → {title, author, series, series_index, language}. */
+async function readOpf(path) {
+    const res = await _ctx.apiFetch(rawUrl(path));
+    if (!res.ok) return null;
+    const doc = xmlDoc(await res.text());
+    if (!doc) return null;
+    const pick = (names) => {
+        for (const name of names) {
+            const value = firstText(doc, [name]);
+            if (value) return value;
+        }
+        return '';
+    };
+    let series = '';
+    let index = 0;
+    for (const meta of doc.getElementsByTagName('meta')) {
+        const name = meta.getAttribute('name') || '';
+        if (name === 'calibre:series') series = String(meta.getAttribute('content') || '').trim();
+        if (name === 'calibre:series_index') index = parseFloat(meta.getAttribute('content') || '') || 0;
+    }
+    const author = pick(['dc:creator', 'creator']);
+    return {
+        title: pick(['dc:title', 'title']),
+        author: author.length <= 200 ? author : author.slice(0, 200),
+        language: pick(['dc:language', 'language']).toLowerCase().slice(0, 16),
+        series: series.slice(0, 200),
+        series_index: index,
+    };
 }
 
 function resolveHref(baseDir, href) {
@@ -1697,12 +2018,28 @@ function renderSettingsView(host) {
   </div>
 </section>
 <section class="bk-panel">
-  <div class="bk-toolbar"><div><h2>Metadata &amp; covers</h2><p class="bk-hint">Missing covers or authors are looked up on Open Library (the scanned title and author are sent to openlibrary.org). Manual edits are never overwritten.</p></div></div>
+  <div class="bk-toolbar"><div><h2>Metadata &amp; covers</h2><p class="bk-hint">Covers, descriptions and series come from Apple Books (Poland), Google Books and Open Library — the title and author of a missing record are sent to those services. Manual edits are never overwritten.</p></div></div>
+  <div class="bk-fields" style="margin-top:12px">
+    <div class="bk-field"><label for="bk-set-provider">Source</label>
+      <select class="bk-select" id="bk-set-provider" data-testid="books-set-provider">
+        <option value="auto"${settings.provider === 'auto' ? ' selected' : ''}>Automatic — Apple → Google → Open Library</option>
+        <option value="apple"${settings.provider === 'apple' ? ' selected' : ''}>Apple Books (best Polish coverage)</option>
+        <option value="google"${settings.provider === 'google' ? ' selected' : ''}>Google Books</option>
+        <option value="openlibrary"${settings.provider === 'openlibrary' ? ' selected' : ''}>Open Library</option>
+      </select></div>
+    <div class="bk-field"><label for="bk-set-google">Google Books API key (optional)</label>
+      <input class="bk-input" id="bk-set-google" type="password" autocomplete="off" data-testid="books-set-google" placeholder="${settings.google_key_set ? `stored ${escAttr(settings.google_key_masked || '…')}` : 'not set'}'>
+      <p class="bk-hint">Google's keyless quota is shared per IP; with heavy use it rate-limits itself for 15 minutes.</p></div>
+  </div>
   <div class="bk-row" style="margin-top:12px;flex-wrap:wrap">
     <label class="bk-tag" style="cursor:pointer">
       <input type="checkbox" id="bk-set-enrich" data-testid="books-set-enrich"${settings.enrich_after_scan !== false ? ' checked' : ''}> Fetch missing metadata after a scan
     </label>
+    <label class="bk-tag" style="cursor:pointer">
+      <input type="checkbox" id="bk-set-posters" data-testid="books-set-posters"${settings.posters !== false ? ' checked' : ''}> Generated posters for titles without a cover
+    </label>
     <button class="bk-btn" type="button" id="bk-enrich" data-testid="books-enrich">Fetch metadata now</button>
+    ${settings.google_key_set ? '<button class="bk-btn small" type="button" data-clear-google data-testid="books-clear-google">Forget Google key</button>' : ''}
   </div>
 </section>
 <section class="bk-panel">
@@ -2035,7 +2372,7 @@ async function openPlayer(book) {
     body.innerHTML = `
 <div class="bk-player">
   <div class="bk-player-head">
-    <div class="bk-player-art" data-cover-slot="${escAttr(book.id)}">${_state.coverUrls.get(book.id) ? `<img class="bk-cover-img" src="${escAttr(_state.coverUrls.get(book.id))}" alt="">` : '🎧'}</div>
+    <div class="bk-player-art" data-cover-slot="${escAttr(book.id)}">${_state.coverUrls.get(coverKey(book)) ? `<img class="bk-cover-img" src="${escAttr(_state.coverUrls.get(coverKey(book)))}" alt="">` : '🎧'}</div>
     <div class="bk-player-meta">
       <h2>${escHtml(book.title || baseName(book.path))}</h2>
       <p>${escHtml(book.author || 'Unknown author')}${book.series ? ` · ${escHtml(book.series)}` : ''}</p>
@@ -2225,6 +2562,7 @@ function toggleMenu(book, anchor) {
     menu.innerHTML = `
   <button type="button" data-act="open" data-testid="books-act-open">${book.kind === 'audiobook' ? 'Play' : 'Read'}</button>
   <button type="button" data-act="download" data-testid="books-act-download">⤓ ${book.kind === 'audiobook' ? 'Download tracks' : 'Download'}</button>
+  <button type="button" data-act="metadata" data-testid="books-act-metadata">Metadata &amp; cover</button>
   <button type="button" data-act="details" data-testid="books-act-details">Edit details</button>
   <button type="button" data-act="reset" data-testid="books-act-reset">Reset progress</button>
   <button type="button" class="danger" data-act="remove" data-testid="books-act-remove">Remove from library</button>`;
@@ -2235,6 +2573,7 @@ function toggleMenu(book, anchor) {
         closeMenus();
         if (action === 'open') return openBook(book);
         if (action === 'download') return downloadBook(book);
+        if (action === 'metadata') return openDetails(book);
         if (action === 'details') return editDetails(book);
         if (action === 'reset') return resetProgress(book);
         if (action === 'remove') return removeBook(book);
@@ -2251,12 +2590,30 @@ async function editDetails(book) {
       <input class="bk-input" id="bk-meta-title" name="title" value="${escAttr(book.title || '')}"></div>
     <div class="bk-field"><label for="bk-meta-author">Author</label>
       <input class="bk-input" id="bk-meta-author" name="author" value="${escAttr(book.author || '')}"></div>
+    <div class="bk-field"><label for="bk-meta-narrator">Narrator</label>
+      <input class="bk-input" id="bk-meta-narrator" name="narrator" value="${escAttr(book.narrator || '')}"></div>
     <div class="bk-field"><label for="bk-meta-series">Series</label>
       <input class="bk-input" id="bk-meta-series" name="series" value="${escAttr(book.series || '')}"></div>
     <div class="bk-field"><label for="bk-meta-index">Series number</label>
       <input class="bk-input" id="bk-meta-index" name="series_index" type="number" min="0" step="0.1" value="${Number(book.series_index) || 0}"></div>
+    <div class="bk-field"><label for="bk-meta-year">Year</label>
+      <input class="bk-input" id="bk-meta-year" name="year" type="number" min="0" max="2200" value="${Number(book.year) || 0}"></div>
+    <div class="bk-field"><label for="bk-meta-publisher">Publisher</label>
+      <input class="bk-input" id="bk-meta-publisher" name="publisher" value="${escAttr(book.publisher || '')}"></div>
+    <div class="bk-field"><label for="bk-meta-isbn">ISBN</label>
+      <input class="bk-input" id="bk-meta-isbn" name="isbn" value="${escAttr(book.isbn || '')}"></div>
+    <div class="bk-field"><label for="bk-meta-pages">Pages</label>
+      <input class="bk-input" id="bk-meta-pages" name="pages" type="number" min="0" value="${Number(book.pages) || 0}"></div>
+    <div class="bk-field"><label for="bk-meta-rating">Rating (0–5)</label>
+      <input class="bk-input" id="bk-meta-rating" name="rating" type="number" min="0" max="5" step="0.1" value="${Number(book.rating) || 0}"></div>
+    <div class="bk-field"><label for="bk-meta-language">Language</label>
+      <input class="bk-input" id="bk-meta-language" name="language" maxlength="16" value="${escAttr(book.language || '')}"></div>
+    <div class="bk-field full"><label for="bk-meta-genres">Genres (comma separated)</label>
+      <input class="bk-input" id="bk-meta-genres" name="genres" value="${escAttr((book.genres || []).join(', '))}"></div>
+    <div class="bk-field full"><label for="bk-meta-description">Description</label>
+      <textarea class="bk-input" id="bk-meta-description" name="description" rows="5" style="min-height:110px;resize:vertical">${escHtml(book.description || '')}</textarea></div>
   </div>
-  <p class="bk-hint" style="margin:12px 0 0">Manual values survive a rescan.</p>`,
+  <p class="bk-hint" style="margin:12px 0 0">Manual values survive a rescan and metadata refresh.</p>`,
         confirmLabel: 'Save',
         validate: (values) => (String(values.title || '').trim() ? '' : 'A title is required'),
         onSubmit: async (values) => {
@@ -2265,14 +2622,226 @@ async function editDetails(book) {
                 body: {
                     title: values.title,
                     author: values.author,
+                    narrator: values.narrator,
                     series: values.series,
                     series_index: Number(values.series_index) || 0,
+                    year: Number(values.year) || 0,
+                    publisher: values.publisher,
+                    isbn: values.isbn,
+                    pages: Number(values.pages) || 0,
+                    rating: Number(values.rating) || 0,
+                    language: values.language,
+                    genres: String(values.genres || '').split(',').map((item) => item.trim()).filter(Boolean),
+                    description: values.description,
                 },
             });
             await reloadLibrary();
             setStatus('Details saved.');
+            if (_state.detail) renderDetails();
+            renderView();
         },
     });
+}
+
+// ── Metadata & cover panel ─────────────────────────────────────────────────
+
+function detailBook() {
+    return findBook(_state.detail);
+}
+
+function openDetails(book) {
+    _state.detail = book.id;
+    _state.candidates = [];
+    _state.candidateInfo = {};
+    _state.candidateQuery = '';
+    renderDetails();
+}
+
+function closeDetails() {
+    _state.detail = null;
+    _state.candidates = [];
+    _state.previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    _state.previewUrls.clear();
+    document.querySelector('.bk-detail')?.remove();
+}
+
+function candidateMarkup(candidate) {
+    const key = `${candidate.source}:${candidate.source_id}`;
+    const preview = _state.previewUrls.get(key);
+    const cover = preview
+        ? `<img src="${escAttr(preview)}" alt="">`
+        : '<span class="bk-candidate-empty">📚</span>';
+    const line = [candidate.author, candidate.year || '', candidate.source].filter(Boolean).join(' · ');
+    return `<button class="bk-candidate" type="button" data-candidate data-source="${escAttr(candidate.source)}" data-id="${escAttr(candidate.source_id)}" data-testid="books-candidate">
+  <span class="bk-candidate-cover">${cover}</span>
+  <span class="bk-candidate-body">
+    <strong>${escHtml(candidate.title || 'Untitled')}</strong>
+    <small>${escHtml(line)}</small>
+    <span class="bk-score">match ${Math.round((Number(candidate.score) || 0) * 100)}%</span>
+  </span>
+</button>`;
+}
+
+function renderDetails() {
+    const book = detailBook();
+    if (!book) { closeDetails(); return; }
+    let overlay = document.querySelector('.bk-detail');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'bk-detail';
+        overlay.dataset.testid = 'books-details';
+        overlay.tabIndex = -1;
+        overlay.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDetails(); });
+        document.querySelector('.bk-root').appendChild(overlay);
+        try { overlay.focus({ preventScroll: true }); } catch { /* not focusable yet */ }
+    }
+    const rows = [
+        ['Author', book.author], ['Narrator', book.narrator],
+        ['Series', book.series ? `${book.series}${Number(book.series_index) ? ` · ${book.series_index}` : ''}` : ''],
+        ['Year', book.year || ''], ['Publisher', book.publisher],
+        ['Language', book.language ? String(book.language).toUpperCase() : ''],
+        ['ISBN', book.isbn], ['Pages', book.pages || ''],
+        ['Rating', Number(book.rating) ? `${book.rating}/5` : ''],
+        ['Genres', (book.genres || []).join(', ')],
+        ['Format', [String(book.format || '').toUpperCase(), `${(book.tracks || []).length} tracks`.replace('0 tracks', '')]
+            .filter(Boolean).join(' · ')],
+        ['Size', fmtBytes(book.size)],
+        ['Source', book.source ? `${book.source}${book.cover_source ? ` · cover: ${book.cover_source}` : ''}` : ''],
+    ].filter(([, value]) => value !== '' && value !== null && value !== undefined);
+    const info = _state.candidateInfo || {};
+    overlay.innerHTML = `
+  <div class="bk-detail-bar">
+    <button class="bk-btn small" type="button" data-detail-close data-testid="books-detail-close">← Close</button>
+    <strong>${escHtml(book.title || baseName(book.path))}</strong>
+    <button class="bk-btn small" type="button" data-detail-open>${book.kind === 'audiobook' ? '▶ Play' : '📖 Read'}</button>
+    <button class="bk-btn small" type="button" data-detail-edit>Edit</button>
+    <button class="bk-btn small" type="button" data-detail-cover>Change cover</button>
+    <button class="bk-btn small" type="button" data-detail-poster>Remove cover</button>
+  </div>
+  <div class="bk-detail-grid">
+    <div class="bk-detail-cover" data-cover-slot="${escAttr(book.id)}">${coverMarkup(book)}</div>
+    <div>
+      <h2>${escHtml(book.title || baseName(book.path))}</h2>
+      <p class="bk-detail-author">${escHtml(book.author || 'Unknown author')}${book.narrator ? ` · 🎙 ${escHtml(book.narrator)}` : ''}</p>
+      <dl class="bk-detail-rows">${rows.map(([label, value]) => `<dt>${escHtml(label)}</dt><dd>${escHtml(String(value))}</dd>`).join('')}</dl>
+      ${book.description ? `<div class="bk-detail-desc">${escHtml(book.description)}</div>` : '<p class="bk-hint">No description yet — run a metadata search below.</p>'}
+      ${book.source_url ? `<p class="bk-hint"><a href="${escAttr(book.source_url)}" target="_blank" rel="noopener noreferrer">Open on ${escHtml(book.source || 'the source')} ↗</a></p>` : ''}
+    </div>
+  </div>
+  <section class="bk-candidates">
+    <h3>Find metadata &amp; cover</h3>
+    <div class="bk-row" style="margin-top:8px;flex-wrap:wrap">
+      <input class="bk-input" id="bk-candidate-query" style="flex:1;min-width:220px" placeholder="Search title (empty = title and author from the library)" value="${escAttr(_state.candidateQuery)}">
+      <button class="bk-btn" type="button" data-detail-search ${_state.candidateBusy ? 'disabled' : ''} data-testid="books-detail-search">${_state.candidateBusy ? 'Searching…' : 'Search'}</button>
+    </div>
+    ${info.tried && info.tried.length ? `<p class="bk-hint">Sources: ${escHtml(info.tried.join(', '))}${info.errors && info.errors.length ? ` · ${escHtml(info.errors.join(' · '))}` : ''}</p>` : ''}
+    ${_state.candidates.length
+        ? `<div class="bk-candidate-grid" data-testid="books-candidates">${_state.candidates.map(candidateMarkup).join('')}</div>`
+        : '<p class="bk-hint" style="margin-top:12px">Results appear here. Pick one to apply its metadata and cover.</p>'}
+  </section>`;
+}
+
+async function hydratePreviews(candidates) {
+    for (const candidate of candidates) {
+        const path = candidate.cover_preview;
+        if (!path) continue;
+        const key = `${candidate.source}:${candidate.source_id}`;
+        if (_state.previewUrls.has(key)) continue;
+        try {
+            const res = await _ctx.apiFetch(`${_pkgBase}/${path}`);
+            if (!res.ok) continue;
+            _state.previewUrls.set(key, URL.createObjectURL(await res.blob()));
+        } catch (err) {
+            log.debug('cover preview failed', String(err?.message || err));
+        }
+    }
+}
+
+async function runCandidateSearch() {
+    const book = detailBook();
+    if (!book || _state.candidateBusy) return;
+    const input = document.querySelector('#bk-candidate-query');
+    _state.candidateQuery = String(input?.value || '').trim();
+    _state.candidateBusy = true;
+    renderDetails();
+    try {
+        const data = await json(`books/${book.id}/search?q=${encodeURIComponent(_state.candidateQuery)}`);
+        _state.candidates = Array.isArray(data.candidates) ? data.candidates : [];
+        _state.candidateInfo = { tried: data.tried || [], errors: data.errors || [] };
+        await hydratePreviews(_state.candidates);
+        setStatus(`Metadata search: ${_state.candidates.length} result${_state.candidates.length === 1 ? '' : 's'}.`);
+    } catch (err) {
+        setStatus(String(err?.detail || err?.message || err), 'error');
+    } finally {
+        _state.candidateBusy = false;
+        renderDetails();
+    }
+}
+
+async function applyCandidate(button) {
+    const book = detailBook();
+    if (!book) return;
+    button.disabled = true;
+    try {
+        await json(`books/${book.id}/apply`, {
+            method: 'POST',
+            body: { source: button.dataset.source, source_id: button.dataset.id, query: _state.candidateQuery },
+        });
+        await reloadLibrary();
+        _state.candidates = [];
+        closeDetails();
+        renderView();
+        setStatus('Metadata and cover applied.');
+        _ctx.notifications.toast('Metadata and cover updated.', 'success');
+    } catch (err) {
+        button.disabled = false;
+        setStatus(String(err?.detail || err?.message || err), 'error');
+    }
+}
+
+async function changeCover(book) {
+    let path = '';
+    try {
+        path = await _ctx.pickFile({
+            title: 'Choose a cover image (JPG, PNG or WebP)',
+            startPath: baseName(book.path),
+            acceptLabel: 'Images',
+        });
+    } catch (err) {
+        log.debug('cover pick cancelled', String(err?.message || err));
+        return;
+    }
+    if (!path) return;
+    try {
+        const res = await _ctx.apiFetch(rawUrl(path));
+        if (!res.ok) { setStatus('That image cannot be read.', 'error'); return; }
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        if (!bytes.length || bytes.length > MAX_COVER_BYTES) {
+            setStatus('Pick an image smaller than 500 KB.', 'warn');
+            return;
+        }
+        const lower = String(path).toLowerCase();
+        const format = lower.endsWith('.png') ? 'png' : lower.endsWith('.webp') ? 'webp' : 'jpg';
+        await json(`books/${book.id}/cover`, { method: 'POST', body: { data: base64FromBytes(bytes), format } });
+        await reloadLibrary();
+        renderDetails();
+        renderView();
+        setStatus('Cover updated.');
+    } catch (err) {
+        setStatus(String(err?.detail || err?.message || err), 'error');
+    }
+}
+
+async function removeCover(book) {
+    try {
+        await json(`books/${book.id}/cover`, { method: 'DELETE' });
+        await reloadLibrary();
+        renderDetails();
+        renderView();
+        setStatus('Cover removed — the generated poster is shown instead.');
+    } catch (err) {
+        setStatus(String(err?.detail || err?.message || err), 'error');
+    }
 }
 
 async function resetProgress(book) {
@@ -2297,8 +2866,9 @@ async function removeBook(book) {
     if (!ok) return;
     try {
         await json(`books/${book.id}`, { method: 'DELETE' });
-        const url = _state.coverUrls.get(book.id);
-        if (url) { URL.revokeObjectURL(url); _state.coverUrls.delete(book.id); }
+        const key = coverKey(book);
+        const url = _state.coverUrls.get(key);
+        if (url) { URL.revokeObjectURL(url); _state.coverUrls.delete(key); }
         await reloadLibrary();
         setStatus('Removed from the library.');
     } catch (err) {
@@ -2368,7 +2938,36 @@ function attachEvents(container) {
         if (!event.target.closest('.bk-menu')) closeMenus();
 
         if (event.target.closest('#bk-rescan')) { scanRoots([]); return; }
-        if (event.target.closest('#bk-enrich')) { runEnrichment(); return; }
+        if (event.target.closest('#bk-enrich')) { runEnrichment({ force: true }); return; }
+        if (event.target.closest('[data-clear-google]')) {
+            saveSettings({ clear_google_key: true }).then(() => { setStatus('Google key removed.'); renderView(); });
+            return;
+        }
+        if (event.target.closest('[data-detail-close]')) { closeDetails(); return; }
+        if (event.target.closest('[data-detail-open]')) {
+            const book = findBook(_state.detail);
+            closeDetails();
+            if (book) openBook(book);
+            return;
+        }
+        if (event.target.closest('[data-detail-edit]')) {
+            const book = findBook(_state.detail);
+            if (book) editDetails(book);
+            return;
+        }
+        if (event.target.closest('[data-detail-cover]')) {
+            const book = findBook(_state.detail);
+            if (book) changeCover(book);
+            return;
+        }
+        if (event.target.closest('[data-detail-poster]')) {
+            const book = findBook(_state.detail);
+            if (book) removeCover(book);
+            return;
+        }
+        if (event.target.closest('[data-detail-search]')) { runCandidateSearch(); return; }
+        const candidateBtn = event.target.closest('[data-candidate]');
+        if (candidateBtn) { applyCandidate(candidateBtn); return; }
         if (event.target.closest('#bk-add-folder')) { addFolder(); return; }
         const scanBtn = event.target.closest('[data-scan-root]');
         if (scanBtn) { scanRoots([scanBtn.dataset.scanRoot]); return; }
@@ -2416,6 +3015,14 @@ function attachEvents(container) {
         if (target.id === 'bk-filter') { _state.format = target.value; renderView(); return; }
         if (target.id === 'bk-sort') { _state.sort = target.value; renderView(); return; }
         if (target.id === 'bk-set-enrich') { saveSettings({ enrich_after_scan: !!target.checked }); return; }
+        if (target.id === 'bk-set-posters') { saveSettings({ posters: !!target.checked }).then(renderView); return; }
+        if (target.id === 'bk-set-provider') { saveSettings({ provider: target.value }); return; }
+        if (target.id === 'bk-set-google') {
+            const key = String(target.value || '').trim();
+            if (!key) return;
+            saveSettings({ google_key: key }).then(() => { target.value = ''; renderView(); });
+            return;
+        }
         const map = {
             'bk-set-theme': 'theme', 'bk-set-font': 'font_family', 'bk-set-flow': 'flow',
         };
@@ -2551,6 +3158,7 @@ export async function render(container, ctx) {
         ctx.windows.registerCloseGuard(`pkg-${ctx.pkg.id}`, () => {
             _flushProgress();
             closeReader();
+            closeDetails();
             _state.coverUrls.forEach((url) => URL.revokeObjectURL(url));
             _state.coverUrls.clear();
             return true;

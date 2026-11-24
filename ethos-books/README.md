@@ -24,21 +24,36 @@ The service never opens a book. It stores metadata, covers and reading positions
   `GET /api/files/download` (see Downloads below).
 - EPUB metadata (title, author, series, language, cover) is parsed in the browser with the vendored
   JSZip; the cover is downscaled to a 420 px WebP and posted to the service.
-- Audiobooks gain a **duration** per track (read from `<audio>` metadata, new/changed files only)
-  and the **embedded cover** is extracted from ID3 APIC (MP3) or the MP4 `covr` atom (M4B/M4A) by
-  fetching just the first/last 512 KB of the file — never the whole audiobook. The original
-  JPEG/PNG is stored as-is.
+- Audiobooks gain a **duration** per track (read from `<audio>` metadata, new/changed files only).
+  **Tags and artwork** are read from the first/last 512 KB only — never the whole audiobook: ID3v2
+  text frames (TIT2/TPE1/TALB/TKRC/TDRC) + APIC for MP3, `©nam`/`©ART`/`©alb`/`©day`/`trkn`/`covr`
+  for MP4/M4B, FLAC Vorbis comments + `METADATA_BLOCK_PICTURE`, and OGG/Opus comments.
+- **Folder names are parsed offline** (`server/naming.py`): `Nesbø Jo - Cykl Harry Hole Tom 14
+  Cięcie (czyta Mariusz Bonaszewski)` becomes author *Jo Nesbø*, series *Harry Hole* #14, title
+  *Cięcie* and narrator *Mariusz Bonaszewski*; scene names (`Author.First.Title.128vbr.EM.2026`)
+  and slugs (`title-author-ebookpoint`) are understood too. Tags beat a folder name, a folder name
+  beats the file name, and a release folder is never used as an author. Calibre `.opf` sidecars
+  next to a title are read as well.
 - Titles without embedded art fall back to **folder artwork**: the scan looks for `cover.*`,
   `folder.*`, `front.*`, `frontcover.*`, `poster.*`, `smallcover.*`, `okladka.*` or a sibling image
   named after the book file/folder (JPG/PNG/WebP, ≤ 500 KB). Embedded EPUB/audio art still wins,
   and for a PDF the folder image replaces the rendered first page.
-- Missing metadata and covers can be filled from **Open Library**: the library has a **Fetch
-  metadata** button and Settings can run it automatically after a scan. The package service does the
-  lookup (the browser cannot read Open Library responses — no CORS), sequential with a 250 ms gap,
-  a 8 s timeout and a fixed host allowlist (`openlibrary.org`, `archive.org`). Matching prefers the
-  correct title (including `Author - Title` file names), never overwrites manual edits, only sets
-  empty fields, retries unmatched titles after 30 days and downloads the cover as JPG/PNG/WebP
-  (≤ 512 KB). Titles and authors are sent to openlibrary.org; disable it in Settings if unwanted.
+- Missing metadata and covers are filled by a **provider chain** (`server/providers.py`):
+  **Apple Books** (`itunes.apple.com/search`, `media=ebook`, `country=PL`) first — it has the best
+  Polish coverage — then **Google Books** (works keyless, an optional API key raises the quota) and
+  **Open Library** last. A record fills title, author, narrator, series, year, publisher, ISBN,
+  pages, genres, rating and a description; the artwork is downloaded at up to 600 px (≤ 512 KB).
+  Matching is title (65 %) + author (35 %) with diacritic folding, so a same-title book by another
+  author is rejected. The service makes the calls (no CORS in the browser) behind an HTTPS host
+  allowlist, a timeout, a per-provider rate limit and a 15-minute cooldown after a 429. Manual
+  fields are never overwritten, retries happen after 30 days, and titles/authors are sent to the
+  selected providers — pick a source or switch automatic fetching off in Settings.
+- The **Metadata & cover** panel (card menu) shows the stored record and the ranked candidates with
+  thumbnails, and can apply one, upload a cover from the NAS, or drop the cover. Provider image URLs
+  never reach the browser directly: the service keeps them and serves short-lived previews.
+- When nothing is found, the service answers `GET /covers/{id}` with a deterministic **SVG poster**
+  (title, author, a colour derived from the book id), and the window draws a matching CSS poster, so
+  no card is an empty placeholder.
 - The phone client lives in the core at `/books` (`docs/books-pwa.md` in the EthOS NAS repo); the
   desktop window stays the only place that scans folders.
 
@@ -70,16 +85,25 @@ The UI calls `ctx.proxy(...)`, so every path below is
 | PUT | `folders` | `{folders: [{path}]}` | library |
 | POST | `scan` | `{root, entries[], removed[], done}` | `{added, updated, removed, total, ids}` |
 | POST | `books/{id}/cover` | `{data: base64, format}` | book |
-| GET | `covers/{id}` | — | `image/webp` |
+| DELETE | `books/{id}/cover` | — | book (poster takes over) |
+| GET | `covers/{id}` | — | `image/webp` / `image/svg+xml` poster |
+| GET | `covers/preview/{token}` | — | short-lived provider cover preview |
 | PUT | `books/{id}/progress` | `{percent, locator, position_s, finished, updated_at?}` | `{progress}` (newest write wins) |
-| PUT | `books/{id}/meta` | `{title, author, series, series_index}` | book |
-| POST | `books/{id}/enrich` | `{force?}` — fill empty fields/cover from Open Library | book |
+| PUT | `books/{id}/meta` | any editable field (`title`, `author`, `narrator`, `series`, `series_index`, `year`, `publisher`, `isbn`, `pages`, `rating`, `genres`, `language`, `description`) | book |
+| GET | `books/{id}/search?q=` | — | `{candidates[], tried, errors}` |
+| POST | `books/{id}/apply` | `{source, source_id, query?}` | book |
+| POST | `books/{id}/enrich` | `{force?, provider?, query?}` — provider chain | book |
 | DELETE | `books/{id}` | — | `{ok, removed}` |
-| GET/PUT | `settings` | reader/player preferences | `{settings}` |
+| GET/PUT | `settings` | reader/player preferences + `provider`, `google_key`, `posters` | `{settings}` (key masked) |
 | GET | `health` | — | `{ok, version}` |
 
-Limits: 20 000 titles, 64 folders, 500 scan entries per request, 512 KB covers per title, 2 000
-characters per metadata field. Paths must be absolute and inside `/home`, `/mnt` or `/media`.
+Limits: 20 000 titles, 64 folders, 500 scan entries per request, 512 KB covers per title, 4 000
+characters of description and 200–300 per other metadata field. Paths must be absolute and inside
+`/home`, `/mnt` or `/media`.
+
+`library.json` is schema 2: `description`, `narrator`, `publisher`, `year`, `isbn`, `pages`,
+`genres`, `rating`, `source`, `source_id`, `source_url`, `cover_source` and `fields_manual` (the
+fields the user owns). A version-1 store is migrated on the first read.
 
 Every GET answers an `ETag`; send it back as `If-None-Match` to get `304 Not Modified` (the phone
 revalidates its library on each start). JSON responses use `Cache-Control: private, no-cache`.
