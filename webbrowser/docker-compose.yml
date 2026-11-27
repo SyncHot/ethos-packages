@@ -11,10 +11,12 @@ services:
       PUID: "${ETHOS_SERVICE_UID:-1000}"
       PGID: "${ETHOS_SERVICE_GID:-1000}"
       TZ: "${TZ:-Etc/UTC}"
-      # The login chosen in the Package Center install dialog (Installed →
-      # Settings to change it). The image's own defaults are abc/abc.
+      # Optional login chosen in the Package Center install dialog (Installed →
+      # Settings to change it). Leave PASSWORD empty for no login: the image has
+      # no authentication by default, and an empty password disables the HTTP
+      # basic-auth gate entirely.
       CUSTOM_USER: "${CUSTOM_USER:-ethos}"
-      PASSWORD: "${PASSWORD:-changeme}"
+      PASSWORD: "${PASSWORD:-}"
       # Name of the browser tab/PWA title; EthOS shows the window header itself.
       TITLE: "Web Browser"
       # Start page. The image passes CHROME_CLI through to Chromium in full, so a

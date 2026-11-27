@@ -35,7 +35,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `influxdb` 📊 | 1.0.1 | window 8086 | Store metrics, sensor readings and events from your NAS, Home Assistant and other devices in a time-series database that lives on the NAS. InfluxDB 2… |
 | `tic-tac-toe` ❌ | 2.1.1 | native | A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port. |
 | `vmm` 🖥️ | 1.2.2 | native | Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO or boot a ready-made system image such as the… |
-| `webbrowser` 🧭 | 1.0.0 | window 8091 | A real Chromium browser inside an EthOS window. The pages are rendered on the NAS and streamed to whatever device you are holding, so a phone, a tabl… |
+| `webbrowser` 🧭 | 1.0.1 | window 8091 | A real Chromium browser inside an EthOS window. The pages are rendered on the NAS and streamed to whatever device you are holding, so a phone, a tabl… |
 <!-- catalog:end -->
 
 Every manifest declares the EthOS version it needs (`min_ethos_version`, enforced at install
