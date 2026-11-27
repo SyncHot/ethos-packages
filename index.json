@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-24T22:55:06+00:00",
+  "generated_at": "2026-11-27T07:33:27+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -668,6 +668,32 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/vmm/manifest.json",
       "manifest_sha256": "899ae6b52c80d40475189e297438d135f241f033560fb60563653abecbc3eab2",
       "size_bytes": 108613
+    },
+    {
+      "id": "webbrowser",
+      "name": "Web Browser",
+      "version": "1.0.0",
+      "description": "A real Chromium browser inside an EthOS window. The pages are rendered on the NAS and streamed to whatever device you are holding, so a phone, a tablet or a locked-down laptop gets a full desktop browser without installing one. Bookmarks, history and logins live in a folder on the NAS. The window is served on port 8091 and asks for the login set at install time.",
+      "icon": "🧭",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/webbrowser/icon.svg",
+      "category": "tools",
+      "author": "SyncHot",
+      "homepage": "https://github.com/SyncHot/ethos-packages",
+      "license": "MIT",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [
+        "compose"
+      ],
+      "system_requires": [
+        "docker"
+      ],
+      "screenshots": [],
+      "changelog": "1.0.0: first release — LinuxServer Chromium (Selkies) pinned by digest, streamed into an EthOS window on port 8091. The login and start page are chosen in the Package Center install dialog and can be changed later under Installed → Settings. Bookmarks, history and logins are kept in a browser profile folder on the NAS chosen at install time, so they survive a restart, an update and a reinstall. The window is served over HTTPS (the image's own self-signed certificate) because the streaming client needs a secure context to decode video: accept that certificate once in the browser and the window works. The container is kiosk-hardened (no terminal, no sudo, no file transfers, no printing, no sharing links) and capped at 2 GB / 2 CPUs. One shared browser session: the profile belongs to the NAS, not to individual EthOS accounts.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/webbrowser/manifest.json",
+      "manifest_sha256": "b913ead305ea460d425777fe27866f4cdbdfd20a87ffcf55bf7e68f65016e0ac",
+      "size_bytes": 4115
     }
   ]
 }

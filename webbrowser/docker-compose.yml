@@ -1,0 +1,69 @@
+services:
+  chromium:
+    # Pinned on purpose: the signed compose file must describe exactly what runs.
+    # The digest is the multi-arch OCI index for the LinuxServer tag
+    # version-b8f70cfa (linux/amd64 + linux/arm64), so one pin covers both.
+    image: lscr.io/linuxserver/chromium@sha256:03e51eb010a4c3ff93ae0440c5b5d22ff5ae0a3c2898e292cf4d0bcd1ef9088e
+    container_name: ethos-webbrowser
+    environment:
+      # Chromium runs as the EthOS service account, so the profile folder it
+      # writes stays editable from the Files app.
+      PUID: "${ETHOS_SERVICE_UID:-1000}"
+      PGID: "${ETHOS_SERVICE_GID:-1000}"
+      TZ: "${TZ:-Etc/UTC}"
+      # The login chosen in the Package Center install dialog (Installed →
+      # Settings to change it). The image's own defaults are abc/abc.
+      CUSTOM_USER: "${CUSTOM_USER:-ethos}"
+      PASSWORD: "${PASSWORD:-changeme}"
+      # Name of the browser tab/PWA title; EthOS shows the window header itself.
+      TITLE: "Web Browser"
+      # Start page. The image passes CHROME_CLI through to Chromium in full, so a
+      # bare URL is a valid argument list.
+      CHROME_CLI: "${CHROME_CLI:-https://start.duckduckgo.com/}"
+      # EthOS embeds this port in a window served from the NAS origin, so the
+      # baseimage's default CSP (frame-ancestors 'self') would leave an empty
+      # frame. Two scheme sources admit any http/https page; the frame still
+      # needs the login below, and no other site knows the address of a private
+      # LAN port.
+      SELKIES_FRAME_ANCESTORS: "http: https:"
+      # Kiosk hardening: no terminal, no sudo, no xdg-open helpers, no file
+      # transfers, no printing and no session sharing links. The desktop
+      # switches are the ones that matter for a full desktop session.
+      HARDEN_DESKTOP: "true"
+      SELKIES_ENABLE_SHARING: "false"
+      SELKIES_FILE_TRANSFERS: "none"
+    ports:
+      # HTTPS on purpose: the streaming client decodes with WebCodecs, which
+      # browsers only expose in a secure context, so the plain-HTTP port (3000)
+      # shows a black panel on every LAN address. The certificate is the image's
+      # own self-signed one — see the README for the one-time acceptance.
+      - "8091:3001"
+    volumes:
+      # Bookmarks, history, cookies, logins and the Chromium profile live in the
+      # folder chosen at install time (Installed → Settings to change it); EthOS
+      # defaults it to packages/data/webbrowser on the NAS.
+      # The `:-./data` fallback keeps a manual `docker compose up` in this folder
+      # from aborting with "empty section between colons".
+      - "${ETHOS_PACKAGE_DATA_DIR:-./data}:/config"
+    # Chromium needs its own /dev/shm sized chunk; the 64 MB default crashes tabs.
+    shm_size: "1gb"
+    restart: unless-stopped
+    # A browser tab with a runaway page is the realistic failure mode: cap the
+    # container so it is OOM-killed in its own cgroup instead of the NAS.
+    mem_limit: 2g
+    cpus: 2.0
+    pids_limit: 512
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      # Nginx in front of the session answers 401 until the browser sends the
+      # login, so a 401 is a healthy server: `curl -f` would report unhealthy
+      # forever. Anything else (000 while Nginx is down, 5xx) fails the probe.
+      test: ["CMD-SHELL", "curl -ks -o /dev/null -w '%{http_code}' https://127.0.0.1:3001/ | grep -qE '^(200|401)'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s

@@ -1,0 +1,83 @@
+{
+  "schema": 2,
+  "id": "webbrowser",
+  "name": "Web Browser",
+  "version": "1.0.0",
+  "description": "A real Chromium browser inside an EthOS window. The pages are rendered on the NAS and streamed to whatever device you are holding, so a phone, a tablet or a locked-down laptop gets a full desktop browser without installing one. Bookmarks, history and logins live in a folder on the NAS. The window is served on port 8091 and asks for the login set at install time.",
+  "icon": "🧭",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/webbrowser/icon.svg",
+  "category": "tools",
+  "author": "SyncHot",
+  "homepage": "https://github.com/SyncHot/ethos-packages",
+  "license": "MIT",
+  "channel": "stable",
+  "min_ethos_version": "2.35.0",
+  "runtime": "compose",
+  "capabilities": [
+    "compose"
+  ],
+  "ui": {
+    "mode": "window",
+    "scheme": "https",
+    "port": 8091,
+    "path": "/",
+    "expose": "lan",
+    "auth": "package"
+  },
+  "healthcheck": {
+    "scheme": "https",
+    "port": 8091,
+    "path": "/"
+  },
+  "settings": [
+    {
+      "key": "browser_user",
+      "env": "CUSTOM_USER",
+      "label": "Login",
+      "type": "text",
+      "default": "ethos",
+      "required": true,
+      "min_length": 1,
+      "max_length": 40
+    },
+    {
+      "key": "browser_password",
+      "env": "PASSWORD",
+      "label": "Password (at least 8 characters)",
+      "type": "password",
+      "required": true,
+      "min_length": 8,
+      "max_length": 128
+    },
+    {
+      "key": "home_page",
+      "env": "CHROME_CLI",
+      "label": "Start page",
+      "type": "text",
+      "default": "https://start.duckduckgo.com/",
+      "required": true,
+      "min_length": 1,
+      "max_length": 500
+    }
+  ],
+  "data": {
+    "mount": "/config",
+    "label": "Browser profile folder"
+  },
+  "changelog": "1.0.0: first release — LinuxServer Chromium (Selkies) pinned by digest, streamed into an EthOS window on port 8091. The login and start page are chosen in the Package Center install dialog and can be changed later under Installed → Settings. Bookmarks, history and logins are kept in a browser profile folder on the NAS chosen at install time, so they survive a restart, an update and a reinstall. The window is served over HTTPS (the image's own self-signed certificate) because the streaming client needs a secure context to decode video: accept that certificate once in the browser and the window works. The container is kiosk-hardened (no terminal, no sudo, no file transfers, no printing, no sharing links) and capped at 2 GB / 2 CPUs. One shared browser session: the profile belongs to the NAS, not to individual EthOS accounts.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/webbrowser/docker-compose.yml",
+    "sha256": "1552cb28480295d4a376c26086959289aff14acb192b4999318f62df041f66cb"
+  },
+  "files": [
+    {
+      "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/webbrowser/icon.svg",
+      "sha256": "ea6276e717db2d005034b2e632a912e9a0956c9a42688141c027ea8100d795c8",
+      "path": "icon.svg",
+      "mode": 420
+    }
+  ],
+  "system_requires": [
+    "docker"
+  ]
+}
