@@ -64,7 +64,10 @@
     "mount": "/config",
     "label": "Browser profile folder"
   },
-  "changelog": "1.0.0: first release — LinuxServer Chromium (Selkies) pinned by digest, streamed into an EthOS window on port 8091. The login and start page are chosen in the Package Center install dialog and can be changed later under Installed → Settings. Bookmarks, history and logins are kept in a browser profile folder on the NAS chosen at install time, so they survive a restart, an update and a reinstall. The window is served over HTTPS (the image's own self-signed certificate) because the streaming client needs a secure context to decode video: accept that certificate once in the browser and the window works. The container is kiosk-hardened (no terminal, no sudo, no file transfers, no printing, no sharing links) and capped at 2 GB / 2 CPUs. One shared browser session: the profile belongs to the NAS, not to individual EthOS accounts.",
+  "changelog": "1.0.0: first release — Chromium streamed into an EthOS window on port 8091 (HTTPS with the image's own certificate, accepted once), own login, profile folder on the NAS, kiosk-hardened and capped.",
+  "system_requires": [
+    "docker"
+  ],
   "compose": {
     "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/webbrowser/docker-compose.yml",
     "sha256": "1552cb28480295d4a376c26086959289aff14acb192b4999318f62df041f66cb"
@@ -76,8 +79,5 @@
       "path": "icon.svg",
       "mode": 420
     }
-  ],
-  "system_requires": [
-    "docker"
   ]
 }
