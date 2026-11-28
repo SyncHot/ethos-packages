@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Jellyfin">
+  <defs>
+    <linearGradient id="jf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7b5cff"/>
+      <stop offset="1" stop-color="#3d2bb3"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#jf)"/>
+  <path d="M26 20.5c0-1.9 2-3 3.6-2.1l13.2 11.5c1.2 1 1.2 2.9 0 4L29.6 45.6c-1.6 1.4-3.6 0.3-3.6-1.6z"
+        fill="#fff" opacity="0.95"/>
+</svg>

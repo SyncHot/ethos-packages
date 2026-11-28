@@ -1,0 +1,57 @@
+{
+  "schema": 2,
+  "id": "jellyfin",
+  "name": "Jellyfin",
+  "version": "1.0.0",
+  "description": "Free media server for your NAS: movies, series, music and photos with posters, subtitles and Chromecast. Hardware transcoding uses the NAS's Intel/AMD GPU (VAAPI/QuickSync) or an NVIDIA card when EthOS can pass one through, so 4K playback stays smooth without pinning the CPU. Data lives in a package folder that survives updates.",
+  "icon": "🎬",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/jellyfin/icon.svg",
+  "category": "media",
+  "author": "SyncHot",
+  "homepage": "https://jellyfin.org",
+  "license": "GPL-2.0",
+  "channel": "stable",
+  "min_ethos_version": "2.42.0",
+  "capabilities": [
+    "compose",
+    "dri",
+    "nvidia"
+  ],
+  "ui": {
+    "mode": "window",
+    "scheme": "http",
+    "port": 8096,
+    "path": "/",
+    "expose": "lan",
+    "auth": "package",
+    "embed": false
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 8096,
+    "path": "/health"
+  },
+  "data": {
+    "mount": "/config",
+    "label": "Jellyfin config folder"
+  },
+  "settings": [
+    {
+      "key": "tz",
+      "env": "TZ",
+      "label": "Timezone",
+      "default": "Europe/Warsaw",
+      "required": true,
+      "max_length": 64
+    }
+  ],
+  "system_requires": [
+    "docker"
+  ],
+  "changelog": "1.0.0: first release — Jellyfin 10.11.11 pinned, config in a package folder that survives updates, the library mounted read-only from /home, /mnt and /media, and hardware transcoding through the host GPU (VAAPI/QuickSync via /dev/dri, NVENC when the Docker nvidia runtime is configured). Falls back to software transcoding on a NAS without a GPU instead of failing to install.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/jellyfin/docker-compose.yml",
+    "sha256": "acba31d2db2121d681d488cd6248919c5f10caaf88caba41aaf75787ee6f1827"
+  },
+  "files": []
+}

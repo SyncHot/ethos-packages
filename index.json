@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-27T08:54:26+00:00",
+  "generated_at": "2026-11-28T10:51:37+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -619,6 +619,62 @@
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/influxdb/manifest.json",
       "manifest_sha256": "3df98e18035648c679cad42107508fdd54b5ecdff770acd7f1f4bb9d95a050c2",
       "size_bytes": 2095
+    },
+    {
+      "id": "jellyfin",
+      "name": "Jellyfin",
+      "version": "1.0.0",
+      "description": "Free media server for your NAS: movies, series, music and photos with posters, subtitles and Chromecast. Hardware transcoding uses the NAS's Intel/AMD GPU (VAAPI/QuickSync) or an NVIDIA card when EthOS can pass one through, so 4K playback stays smooth without pinning the CPU. Data lives in a package folder that survives updates.",
+      "icon": "🎬",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/jellyfin/icon.svg",
+      "category": "media",
+      "author": "SyncHot",
+      "homepage": "https://jellyfin.org",
+      "license": "GPL-2.0",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [
+        "compose",
+        "dri",
+        "nvidia"
+      ],
+      "system_requires": [
+        "docker"
+      ],
+      "screenshots": [],
+      "changelog": "1.0.0: first release — Jellyfin 10.11.11 pinned, config in a package folder that survives updates, the library mounted read-only from /home, /mnt and /media, and hardware transcoding through the host GPU (VAAPI/QuickSync via /dev/dri, NVENC when the Docker nvidia runtime is configured). Falls back to software transcoding on a NAS without a GPU instead of failing to install.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/jellyfin/manifest.json",
+      "manifest_sha256": "40a766d3818fdbc65fec265a32c5b6e91cd7775aad88e826804d31490745b65d",
+      "size_bytes": 1972
+    },
+    {
+      "id": "plex",
+      "name": "Plex Media Server",
+      "version": "1.0.0",
+      "description": "Plex for the NAS: films, series, music and photos with rich metadata, apps on every TV and phone, and hardware transcoding on the host GPU (Intel/AMD Quick Sync via /dev/dri, NVIDIA when the Docker nvidia runtime is configured). The library is mounted read-only from the shares and the database lives in a package folder that survives updates.",
+      "icon": "▶️",
+      "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/plex/icon.svg",
+      "category": "media",
+      "author": "SyncHot",
+      "homepage": "https://www.plex.tv",
+      "license": "Proprietary (Plex EULA)",
+      "channel": "stable",
+      "requires": [],
+      "runtime": "compose",
+      "capabilities": [
+        "compose",
+        "dri",
+        "nvidia"
+      ],
+      "system_requires": [
+        "docker"
+      ],
+      "screenshots": [],
+      "changelog": "1.0.0: first release — Plex Media Server 1.43.5 pinned, database in a package folder that survives updates, the library mounted read-only from /home, /mnt and /media, optional claim token and advertised URL, and hardware transcoding through the host GPU (VAAPI/QuickSync via /dev/dri, NVENC when the Docker nvidia runtime is configured). Requires a Plex Pass for hardware transcoding; falls back to software on a NAS without a GPU.",
+      "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/plex/manifest.json",
+      "manifest_sha256": "d5b00dbc65cc4e4ff1b102b6781b9b839f990ec19fa0013369fb45930489c63b",
+      "size_bytes": 1995
     },
     {
       "id": "tic-tac-toe",

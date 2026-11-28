@@ -1,0 +1,75 @@
+{
+  "schema": 2,
+  "id": "plex",
+  "name": "Plex Media Server",
+  "version": "1.0.0",
+  "description": "Plex for the NAS: films, series, music and photos with rich metadata, apps on every TV and phone, and hardware transcoding on the host GPU (Intel/AMD Quick Sync via /dev/dri, NVIDIA when the Docker nvidia runtime is configured). The library is mounted read-only from the shares and the database lives in a package folder that survives updates.",
+  "icon": "▶️",
+  "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/plex/icon.svg",
+  "category": "media",
+  "author": "SyncHot",
+  "homepage": "https://www.plex.tv",
+  "license": "Proprietary (Plex EULA)",
+  "channel": "stable",
+  "min_ethos_version": "2.42.0",
+  "capabilities": [
+    "compose",
+    "dri",
+    "nvidia"
+  ],
+  "ui": {
+    "mode": "window",
+    "scheme": "http",
+    "port": 32400,
+    "path": "/web",
+    "expose": "lan",
+    "auth": "package",
+    "embed": false
+  },
+  "healthcheck": {
+    "scheme": "http",
+    "port": 32400,
+    "path": "/identity"
+  },
+  "data": {
+    "mount": "/config",
+    "label": "Plex database folder"
+  },
+  "settings": [
+    {
+      "key": "tz",
+      "env": "TZ",
+      "label": "Timezone",
+      "default": "Europe/Warsaw",
+      "required": true,
+      "max_length": 64
+    },
+    {
+      "key": "plex_claim",
+      "env": "PLEX_CLAIM",
+      "label": "Claim token (plex.tv/claim, optional)",
+      "type": "text",
+      "default": "",
+      "required": false,
+      "max_length": 64
+    },
+    {
+      "key": "advertise_ip",
+      "env": "ADVERTISE_IP",
+      "label": "Advertised URL (optional, e.g. http://192.168.1.20:32400)",
+      "type": "text",
+      "default": "",
+      "required": false,
+      "max_length": 120
+    }
+  ],
+  "system_requires": [
+    "docker"
+  ],
+  "changelog": "1.0.0: first release — Plex Media Server 1.43.5 pinned, database in a package folder that survives updates, the library mounted read-only from /home, /mnt and /media, optional claim token and advertised URL, and hardware transcoding through the host GPU (VAAPI/QuickSync via /dev/dri, NVENC when the Docker nvidia runtime is configured). Requires a Plex Pass for hardware transcoding; falls back to software on a NAS without a GPU.",
+  "compose": {
+    "url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/plex/docker-compose.yml",
+    "sha256": "16c6769f66947620c7f2d53c185678fe1c107fee170fd8a785b14695e0778e97"
+  },
+  "files": []
+}

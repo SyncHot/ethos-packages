@@ -1,0 +1,49 @@
+services:
+  jellyfin:
+    # Pinned on purpose: the signed compose file must describe exactly what runs.
+    image: jellyfin/jellyfin:10.11.11
+    container_name: ethos-jellyfin
+    environment:
+      # Chosen in the Package Center install dialog (Installed → Settings later).
+      TZ: "${TZ:-Europe/Warsaw}"
+      # Only meaningful with the NVIDIA container runtime, which EthOS injects
+      # into docker-compose.override.yml when the host really has it. Inert
+      # otherwise, so the same signed file works on every NAS.
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "compute,video,utility"
+    ports:
+      # Web UI + API. Reachable on the LAN because Jellyfin refuses to be framed,
+      # so EthOS opens it in a browser tab instead of an iframe.
+      - "8096:8096"
+    volumes:
+      # Database, metadata, users and plugins live in the folder chosen at
+      # install time and survive an update (and a reinstall).
+      - "${ETHOS_PACKAGE_DATA_DIR:-./data}:/config"
+      # Transcode scratch space: a named volume, so it is writable by the image
+      # user and cleaned up by Docker rather than filling the config folder.
+      - jellyfin-cache:/cache
+      # The media itself, read-only: Jellyfin never writes to the shares.
+      - /home:/media/home:ro
+      - /mnt:/media/mnt:ro
+      - /media:/media/media:ro
+    restart: unless-stopped
+    # Library scans and transcoding are bursty; 3 GB leaves room for a 4K
+    # transcode without letting Jellyfin starve the rest of the NAS.
+    mem_limit: 3g
+    cpus: 3.0
+    pids_limit: 1024
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1:8096/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # The first start builds the database and scans nothing yet; 90 s is safe.
+      start_period: 90s
+
+volumes:
+  jellyfin-cache: {}

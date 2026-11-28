@@ -1,0 +1,48 @@
+services:
+  plex:
+    # Pinned on purpose: the signed compose file must describe exactly what runs.
+    image: plexinc/pms-docker:1.43.5.11079-b3b13e506
+    container_name: ethos-plex
+    environment:
+      # Values chosen in the Package Center install dialog (Installed → Settings
+      # later). The claim token only matters on the first start; ADVERTISE_IP
+      # helps clients find the server because host networking is not allowed.
+      TZ: "${TZ:-Europe/Warsaw}"
+      PLEX_CLAIM: "${PLEX_CLAIM:-}"
+      ADVERTISE_IP: "${ADVERTISE_IP:-}"
+      # The media server writes its database as the EthOS account, so the files
+      # in the data folder stay owned by whoever runs the NAS.
+      PLEX_UID: "${ETHOS_SERVICE_UID:-1000}"
+      PLEX_GID: "${ETHOS_SERVICE_GID:-1000}"
+      # Only meaningful with the NVIDIA container runtime, which EthOS injects
+      # into docker-compose.override.yml when the host really has it. Inert
+      # otherwise, so the same signed file works on every NAS.
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "compute,video,utility"
+    ports:
+      # Web UI + API. Plex refuses to be framed, so EthOS opens it in a tab.
+      - "32400:32400"
+    volumes:
+      # Database, metadata and settings. Survives updates and reinstalls.
+      - "${ETHOS_PACKAGE_DATA_DIR:-./data}:/config"
+      # The media itself, read-only: Plex never writes to the shares.
+      - /home:/media/home:ro
+      - /mnt:/media/mnt:ro
+      - /media:/media/media:ro
+    restart: unless-stopped
+    # Metadata refresh and transcoding are bursty; 4 GB covers a 4K transcode
+    # without letting Plex take the whole NAS.
+    mem_limit: 4g
+    cpus: 3.0
+    pids_limit: 1024
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1:32400/identity || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
