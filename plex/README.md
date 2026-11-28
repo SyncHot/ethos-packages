@@ -59,6 +59,7 @@ detail dialog (or Stop → Start) — devices are re-detected on every start.
 
 ## Changelog
 
+- **1.0.1** — the icon now ships in `files[]`.
 - **1.0.0** — first release: Plex Media Server 1.43.5 pinned, database in a package folder, read-only
   media from `/home`, `/mnt` and `/media`, optional claim token / advertised URL, VAAPI/QuickSync via
   `/dev/dri` and NVENC via the Docker nvidia runtime, CPU fallback when no GPU is available.

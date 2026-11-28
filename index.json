@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-28T10:51:37+00:00",
+  "generated_at": "2026-11-28T10:57:05+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -623,7 +623,7 @@
     {
       "id": "jellyfin",
       "name": "Jellyfin",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Free media server for your NAS: movies, series, music and photos with posters, subtitles and Chromecast. Hardware transcoding uses the NAS's Intel/AMD GPU (VAAPI/QuickSync) or an NVIDIA card when EthOS can pass one through, so 4K playback stays smooth without pinning the CPU. Data lives in a package folder that survives updates.",
       "icon": "🎬",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/jellyfin/icon.svg",
@@ -643,15 +643,15 @@
         "docker"
       ],
       "screenshots": [],
-      "changelog": "1.0.0: first release — Jellyfin 10.11.11 pinned, config in a package folder that survives updates, the library mounted read-only from /home, /mnt and /media, and hardware transcoding through the host GPU (VAAPI/QuickSync via /dev/dri, NVENC when the Docker nvidia runtime is configured). Falls back to software transcoding on a NAS without a GPU instead of failing to install.",
+      "changelog": "1.0.1: UI on host port 8094 (8096/8098 belong to other packages) and the icon ships in files[]. 1.0.0: first release — Jellyfin 10.11.11, data folder that survives updates, read-only media, VAAPI/QuickSync via /dev/dri and NVENC, CPU fallback without a GPU.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/jellyfin/manifest.json",
-      "manifest_sha256": "40a766d3818fdbc65fec265a32c5b6e91cd7775aad88e826804d31490745b65d",
-      "size_bytes": 1972
+      "manifest_sha256": "711cb4a75b69511fbe1b3831d85ced210d139025f34d6b10818a7daaa812afae",
+      "size_bytes": 2557
     },
     {
       "id": "plex",
       "name": "Plex Media Server",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "description": "Plex for the NAS: films, series, music and photos with rich metadata, apps on every TV and phone, and hardware transcoding on the host GPU (Intel/AMD Quick Sync via /dev/dri, NVIDIA when the Docker nvidia runtime is configured). The library is mounted read-only from the shares and the database lives in a package folder that survives updates.",
       "icon": "▶️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/plex/icon.svg",
@@ -671,10 +671,10 @@
         "docker"
       ],
       "screenshots": [],
-      "changelog": "1.0.0: first release — Plex Media Server 1.43.5 pinned, database in a package folder that survives updates, the library mounted read-only from /home, /mnt and /media, optional claim token and advertised URL, and hardware transcoding through the host GPU (VAAPI/QuickSync via /dev/dri, NVENC when the Docker nvidia runtime is configured). Requires a Plex Pass for hardware transcoding; falls back to software on a NAS without a GPU.",
+      "changelog": "1.0.1: the icon ships in files[]. 1.0.0: first release — Plex Media Server 1.43.5, data folder that survives updates, read-only media, VAAPI/QuickSync via /dev/dri and NVENC, CPU fallback without a GPU.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/plex/manifest.json",
-      "manifest_sha256": "d5b00dbc65cc4e4ff1b102b6781b9b839f990ec19fa0013369fb45930489c63b",
-      "size_bytes": 1995
+      "manifest_sha256": "7ba15bf7bd33527e38caa86bce51012a0864aea2b6f4d225648a9e5cf335c682",
+      "size_bytes": 2423
     },
     {
       "id": "tic-tac-toe",

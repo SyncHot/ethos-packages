@@ -11,7 +11,9 @@ web UI opens in a browser tab (Jellyfin refuses to be framed).
 - **Config in a folder you choose.** Installed → Settings → data folder; it survives updates and a
   reinstall (unless you tick “delete package data” on uninstall).
 - **Transcode scratch** on a named volume (`jellyfin-cache`), so it never fills the config folder.
-- Web UI and API on port **8096** (`ui.expose: lan`, Jellyfin's own login).
+- Web UI and API on host port **8094** (`ui.expose: lan`, Jellyfin's own login). Jellyfin still
+  listens on 8096 *inside* the container; only the host side moves, because 8096–8100 are already
+  declared by other EthOS packages (Music engine, Media enhance, Kanban, Sticky Notes, Velvet).
 
 ## Hardware transcoding
 
@@ -47,15 +49,17 @@ detail dialog (or Stop → Start) — the devices are re-detected on every start
 ## Notes and limits
 
 - **No host networking** (EthOS policy), so client auto-discovery and DLNA are unavailable. Add the
-  server by address in the Jellyfin app: `http://<nas>:8096`.
+  server by address in the Jellyfin app: `http://<nas>:8094`.
 - The port has **no EthOS login**: Jellyfin authenticates its own users. Keep the NAS on a trusted
-  network and do not forward port 8096 from the internet.
+  network and do not forward port 8094 from the internet.
 - Firmware/driver installation is the operator's job. EthOS only detects what is already there.
 - 3 GB memory, 3 CPUs and 1024 processes are the container caps; the package cannot take the NAS down
   with a runaway scan.
 
 ## Changelog
 
+- **1.0.1** — UI moved to host port 8094 (8096–8100 belong to other packages) and the icon now
+  ships in `files[]`.
 - **1.0.0** — first release: Jellyfin 10.11.11 pinned, config folder that survives updates, read-only
   media from `/home`, `/mnt` and `/media`, VAAPI/QuickSync via `/dev/dri` and NVENC via the Docker
   nvidia runtime, CPU fallback when no GPU is available.

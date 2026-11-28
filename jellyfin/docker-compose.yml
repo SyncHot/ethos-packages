@@ -12,9 +12,10 @@ services:
       NVIDIA_VISIBLE_DEVICES: "all"
       NVIDIA_DRIVER_CAPABILITIES: "compute,video,utility"
     ports:
-      # Web UI + API. Reachable on the LAN because Jellyfin refuses to be framed,
-      # so EthOS opens it in a browser tab instead of an iframe.
-      - "8096:8096"
+      # Web UI + API. Host side 8094 (Jellyfin itself listens on 8096; 8096–8100
+      # and 8098 are taken by other EthOS packages). Reachable on the LAN
+      # because Jellyfin refuses to be framed, so EthOS opens it in a tab.
+      - "8094:8096"
     volumes:
       # Database, metadata, users and plugins live in the folder chosen at
       # install time and survive an update (and a reinstall).
