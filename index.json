@@ -4,7 +4,7 @@
   "publisher": {
     "name": "SyncHot"
   },
-  "generated_at": "2026-11-28T10:57:05+00:00",
+  "generated_at": "2026-11-28T11:12:35+00:00",
   "packages": [
     {
       "id": "backup-manager",
@@ -651,7 +651,7 @@
     {
       "id": "plex",
       "name": "Plex Media Server",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "description": "Plex for the NAS: films, series, music and photos with rich metadata, apps on every TV and phone, and hardware transcoding on the host GPU (Intel/AMD Quick Sync via /dev/dri, NVIDIA when the Docker nvidia runtime is configured). The library is mounted read-only from the shares and the database lives in a package folder that survives updates.",
       "icon": "▶️",
       "icon_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/plex/icon.svg",
@@ -671,10 +671,10 @@
         "docker"
       ],
       "screenshots": [],
-      "changelog": "1.0.1: the icon ships in files[]. 1.0.0: first release — Plex Media Server 1.43.5, data folder that survives updates, read-only media, VAAPI/QuickSync via /dev/dri and NVENC, CPU fallback without a GPU.",
+      "changelog": "1.0.2: ALLOWED_NETWORKS setting (LAN + Docker ranges) so the claim/setup wizard can be reached without host networking, transcode scratch on its own volume, and a claim-token walkthrough. 1.0.1: the icon ships in files[]. 1.0.0: first release — Plex Media Server 1.43.5, data folder that survives updates, read-only media, VAAPI/QuickSync via /dev/dri and NVENC, CPU fallback without a GPU.",
       "manifest_url": "https://raw.githubusercontent.com/SyncHot/ethos-packages/main/plex/manifest.json",
-      "manifest_sha256": "7ba15bf7bd33527e38caa86bce51012a0864aea2b6f4d225648a9e5cf335c682",
-      "size_bytes": 2423
+      "manifest_sha256": "5b77ec65408ac7cae424269c1bdbf9cfea7b479b26fad9f31be3df44f477c9c5",
+      "size_bytes": 2995
     },
     {
       "id": "tic-tac-toe",

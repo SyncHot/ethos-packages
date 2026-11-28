@@ -34,7 +34,7 @@ The catalog is generated from `index.json` — run `ethos-pack readme` after a b
 | `grafana` 📈 | 1.3.1 | window 3010 | Dashboards for the metrics that already live on the NAS: point Grafana at InfluxDB (or Prometheus, SQL and other sources) and build graphs, alerts an… |
 | `influxdb` 📊 | 1.0.1 | window 8086 | Store metrics, sensor readings and events from your NAS, Home Assistant and other devices in a time-series database that lives on the NAS. InfluxDB 2… |
 | `jellyfin` 🎬 | 1.0.1 | window 8094 | Free media server for your NAS: movies, series, music and photos with posters, subtitles and Chromecast. Hardware transcoding uses the NAS's Intel/AM… |
-| `plex` ▶️ | 1.0.1 | window 32400 | Plex for the NAS: films, series, music and photos with rich metadata, apps on every TV and phone, and hardware transcoding on the host GPU (Intel/AMD… |
+| `plex` ▶️ | 1.0.2 | window 32400 | Plex for the NAS: films, series, music and photos with rich metadata, apps on every TV and phone, and hardware transcoding on the host GPU (Intel/AMD… |
 | `tic-tac-toe` ❌ | 2.1.1 | native | A tiny two-player tic-tac-toe game that opens directly in an EthOS window. No container, no port. |
 | `vmm` 🖥️ | 1.2.2 | native | Run Windows and Linux virtual machines on this NAS with hardware acceleration. Create a VM from an ISO or boot a ready-made system image such as the… |
 | `webbrowser` 🧭 | 1.0.1 | window 8091 | A real Chromium browser inside an EthOS window. The pages are rendered on the NAS and streamed to whatever device you are holding, so a phone, a tabl… |

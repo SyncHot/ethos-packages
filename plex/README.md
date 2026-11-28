@@ -8,6 +8,8 @@ browser tab (Plex refuses to be framed).
 
 - **Library from the shares.** `/home`, `/mnt` and `/media` are mounted **read-only** at
   `/media/home`, `/media/mnt`, `/media/media` — add those paths as Plex libraries.
+- **Transcode scratch** on a named volume (`plex-transcode`), so aggressive transcoding cannot bloat
+  the container layer or the config folder.
 - **Database in a folder you choose.** Installed → Settings → data folder; it survives updates and a
   reinstall (unless you tick “delete package data” on uninstall). The files are written as the EthOS
   account (`PLEX_UID`/`PLEX_GID`), not as root.
@@ -16,6 +18,40 @@ browser tab (Plex refuses to be framed).
   server appears in your Plex account without opening a browser on the NAS.
 - Optional **advertised URL** (`ADVERTISE_IP`, e.g. `http://192.168.1.20:32400`) — clients find the
   server faster, which matters because host networking is not allowed (see below).
+
+## First start: claim the server
+
+Plex refuses to talk to a browser until the server belongs to a Plex account. EthOS cannot use
+host networking (policy), so Plex sees every client as the **Docker gateway address** instead of the
+real device — an unclaimed server then answers *“You do not have access to this server”* even from
+your own LAN. The package ships `ALLOWED_NETWORKS` (default: `172.16.0.0/12,10.0.0.0/8,192.168.0.0/16`)
+exactly for that: those ranges are trusted without a Plex login, which lets the setup wizard load.
+
+Pick **one** of these, in order of preference:
+
+1. **Claim token (recommended, also enables Plex’s own remote access).** Open
+   <https://www.plex.tv/claim>, copy the token (`claim-…`, valid ~4 minutes), then
+   *Installed → Plex → Settings → Claim token* → **Save**. EthOS recreates the container and the
+   server is claimed as soon as it starts.
+2. **Sign in from the browser.** Open `http://<nas>:32400/web`, log in with your Plex account and
+   complete the wizard. Works because `ALLOWED_NETWORKS` covers the LAN and the Docker gateway.
+
+Once the server is claimed you can clear **Allowed networks** in Settings (the field stays empty
+afterwards) — Plex then authenticates every client with the Plex account. Leaving the default in
+place keeps the LAN usable without a login; that is Plex’s documented behaviour for these ranges.
+
+The claim is applied by the image’s *first run* script, which re-runs whenever the container is
+recreated, so you can claim later without wiping the database. If the wizard still refuses after a
+recreate, remove the package **with “delete package data”** and install it again with the claim token
+filled in.
+
+### Signs everything is fine
+
+```bash
+curl -s http://<nas>:32400/identity | grep -o 'claimed="[01]"'   # claimed="1"
+docker exec ethos-plex grep -o 'allowedNetworks="[^"]*"' \
+  "/config/Library/Application Support/Plex Media Server/Preferences.xml"
+```
 
 ## Hardware transcoding
 
@@ -59,6 +95,8 @@ detail dialog (or Stop → Start) — devices are re-detected on every start.
 
 ## Changelog
 
+- **1.0.2** — `ALLOWED_NETWORKS` setting (LAN + Docker ranges) so the claim/setup wizard is reachable
+  without host networking, transcode scratch on its own `plex-transcode` volume, and this walkthrough.
 - **1.0.1** — the icon now ships in `files[]`.
 - **1.0.0** — first release: Plex Media Server 1.43.5 pinned, database in a package folder, read-only
   media from `/home`, `/mnt` and `/media`, optional claim token / advertised URL, VAAPI/QuickSync via

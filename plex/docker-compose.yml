@@ -10,6 +10,11 @@ services:
       TZ: "${TZ:-Europe/Warsaw}"
       PLEX_CLAIM: "${PLEX_CLAIM:-}"
       ADVERTISE_IP: "${ADVERTISE_IP:-}"
+      # EthOS forbids host networking, so Plex sees every client as the Docker
+      # gateway address and refuses the setup wizard ("you do not have access to
+      # this server") until the server is claimed. These ranges are trusted
+      # without a Plex login; clear the value once the server is claimed.
+      ALLOWED_NETWORKS: "${ALLOWED_NETWORKS:-}"
       # The media server writes its database as the EthOS account, so the files
       # in the data folder stay owned by whoever runs the NAS.
       PLEX_UID: "${ETHOS_SERVICE_UID:-1000}"
@@ -25,6 +30,9 @@ services:
     volumes:
       # Database, metadata and settings. Survives updates and reinstalls.
       - "${ETHOS_PACKAGE_DATA_DIR:-./data}:/config"
+      # Transcode scratch on its own volume: it can grow into tens of GB and must
+      # not live in the container layer (or in the config folder).
+      - plex-transcode:/transcode
       # The media itself, read-only: Plex never writes to the shares.
       - /home:/media/home:ro
       - /mnt:/media/mnt:ro
@@ -46,3 +54,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 120s
+
+volumes:
+  plex-transcode: {}
